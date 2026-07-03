@@ -1,0 +1,47 @@
+<%- include('partials/header') %>
+
+<%- include('partials/sidebar', { activeTab: 'levels' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-arrow-up-right-dots"></i> نظام المستويات</h1>
+        <p>اضبط نظام الـ XP والمستويات لأعضاء سيرفرك.</p>
+    </div>
+
+    <div class="glass-panel">
+        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+            <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= req.query.success %></div>
+        <% } %>
+
+        <form action="/dashboard/<%= guild.id %>/levels" method="POST" class="settings-form">
+            <div class="form-group">
+                <label for="enabled">حالة نظام المستويات</label>
+                <select id="enabled" name="enabled" class="glass-input">
+                    <option value="1" <%= settings.enabled === 1 ? 'selected' : '' %>>مفعّل</option>
+                    <option value="0" <%= settings.enabled === 0 ? 'selected' : '' %>>معطّل</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="channel">قناة إعلانات الترقية (معرّف القناة)</label>
+                <input type="text" id="channel" name="channel" class="glass-input" value="<%= settings.channel || '' %>" placeholder="مثال: 1234567890">
+                <small>اتركه فارغاً لإرسال إعلان الترقية في نفس القناة التي كتب بها العضو.</small>
+            </div>
+
+            <div class="form-group" style="display: flex; gap: 20px;">
+                <div style="flex: 1;">
+                    <label for="xp_min">الحد الأدنى من الـ XP لكل رسالة</label>
+                    <input type="number" id="xp_min" name="xp_min" class="glass-input" value="<%= settings.xp_min %>" required>
+                </div>
+                <div style="flex: 1;">
+                    <label for="xp_max">الحد الأقصى من الـ XP لكل رسالة</label>
+                    <input type="number" id="xp_max" name="xp_max" class="glass-input" value="<%= settings.xp_max %>" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> حفظ التغييرات</button>
+        </form>
+    </div>
+</main>
+
+<%- include('partials/footer') %>

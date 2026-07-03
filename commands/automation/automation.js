@@ -1,0 +1,94 @@
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ChannelType } = require('discord.js');
+const locale = require('../../utils/locale');
+const { success, error } = require('../../utils/embeds');
+const db = require('../../database/db');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('automation')
+    .setDescription('إدارة إعدادات الأوتوميشن في السيرفر')
+    .addSubcommand(s => s.setName('show').setDescription('عرض جميع إعدادات الأوتوميشن في السيرفر'))
+    .addSubcommand(s => s.setName('images').setDescription('تفعيل أو تعطيل وضع الصور فقط في روم')
+      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText)))
+    .addSubcommand(s => s.setName('youtube').setDescription('تفعيل أو تعطيل وضع روابط يوتيوب فقط في روم')
+      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText)))
+    .addSubcommand(s => s.setName('lineadd').setDescription('إضافة خط أو فاصل تلقائي إلى روم')
+      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText))
+      .addStringOption(o => o.setName('separator').setDescription('نص الفاصل').setRequired(true)))
+    .addSubcommand(s => s.setName('reactadd').setDescription('إضافة تفاعل تلقائي إلى روم')
+      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText))
+      .addStringOption(o => o.setName('emoji').setDescription('الإيموجي المستخدم للتفاعل').setRequired(true)))
+    .addSubcommand(s => s.setName('remove').setDescription('حذف أتمتة من روم')
+      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText))
+      .addStringOption(o => o.setName('type').setDescription('النوع المراد حذفه').setRequired(true).addChoices(
+        { name: 'Images Only', value: 'images' },
+        { name: 'YouTube Only', value: 'youtube' },
+        { name: 'Auto Line', value: 'line' },
+        { name: 'Auto React', value: 'react' }
+      )))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+
+  async execute(interaction) {
+    const sub = interaction.options.getSubcommand();
+
+    if (sub === 'show') {
+      const all = db.getAllAutomation(interaction.guildId);
+      if (!all.length) return interaction.reply({ embeds: [error(locale.get('automation.noAutomation'))], flags: ['Ephemeral'] });
+
+      const lines = all.map(a => {
+        const types = { images: '<:photo:1519212224239898745> Images Only', youtube: '<:playerplay:1519212218867253258> YouTube Only', line: '<:adjustments:1519212254720167996> Auto-Line', react: '<:moodsmile:1519212226723188907> Auto-React' };
+        return `${types[a.type] || a.type} — <#${a.channelId}>${a.value ? ` (\`${a.value}\`)` : ''}`;
+      });
+
+      const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle('<:settings:1519212212227407953> Automation Settings')
+        .setDescription(lines.join('\n'))
+        .setTimestamp();
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    if (sub === 'images') {
+      const ch = interaction.options.getChannel('channel');
+      const existing = db.getAutomation(interaction.guildId, ch.id).find(a => a.type === 'images');
+      if (existing) {
+        db.removeAutomation(interaction.guildId, ch.id, 'images');
+        return interaction.reply({ embeds: [success(locale.get('automation.imagesDisabled', { channel: ch }))] });
+      }
+      db.addAutomation(interaction.guildId, ch.id, 'images', null);
+      return interaction.reply({ embeds: [success(locale.get('automation.imagesEnabled', { channel: ch }))] });
+    }
+
+    if (sub === 'youtube') {
+      const ch = interaction.options.getChannel('channel');
+      const existing = db.getAutomation(interaction.guildId, ch.id).find(a => a.type === 'youtube');
+      if (existing) {
+        db.removeAutomation(interaction.guildId, ch.id, 'youtube');
+        return interaction.reply({ embeds: [success(locale.get('automation.youtubeDisabled', { channel: ch }))] });
+      }
+      db.addAutomation(interaction.guildId, ch.id, 'youtube', null);
+      return interaction.reply({ embeds: [success(locale.get('automation.youtubeEnabled', { channel: ch }))] });
+    }
+
+    if (sub === 'lineadd') {
+      const ch = interaction.options.getChannel('channel');
+      const sep = interaction.options.getString('separator');
+      db.addAutomation(interaction.guildId, ch.id, 'line', sep);
+      return interaction.reply({ embeds: [success(locale.get('automation.autoLineAdded', { channel: ch, sep }))] });
+    }
+
+    if (sub === 'reactadd') {
+      const ch = interaction.options.getChannel('channel');
+      const emoji = interaction.options.getString('emoji');
+      db.addAutomation(interaction.guildId, ch.id, 'react', emoji);
+      return interaction.reply({ embeds: [success(locale.get('automation.autoReactAdded', { channel: ch, emoji }))] });
+    }
+
+    if (sub === 'remove') {
+      const ch = interaction.options.getChannel('channel');
+      const type = interaction.options.getString('type');
+      db.removeAutomation(interaction.guildId, ch.id, type);
+      return interaction.reply({ embeds: [success(locale.get('automation.automationRemoved', { type, channel: ch }))] });
+    }
+  }
+};

@@ -1,0 +1,96 @@
+<%- include('partials/header') %>
+
+<%- include('partials/sidebar', { activeTab: 'logs' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-clipboard-list"></i> سجلات الأحداث</h1>
+        <p>حدد قناة مختلفة لكل نوع من أنواع السجلات. اتركها فارغة لتعطيل تسجيل ذلك الحدث.</p>
+    </div>
+
+    <div class="glass-panel">
+        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+            <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= req.query.success %></div>
+        <% } %>
+
+        <form action="/dashboard/<%= guild.id %>/logs" method="POST" class="settings-form">
+            <div class="guild-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px;">
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="ban_channel"><i class="fa-solid fa-ban" style="color: var(--danger); margin-left: 8px;"></i> سجل الباند</label>
+                    <input type="text" id="ban_channel" name="ban_channel" class="glass-input" value="<%= settings.ban_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="unban_channel"><i class="fa-solid fa-user-check" style="color: #57F287; margin-left: 8px;"></i> سجل رفع الباند</label>
+                    <input type="text" id="unban_channel" name="unban_channel" class="glass-input" value="<%= settings.unban_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="kick_channel"><i class="fa-solid fa-person-walking-arrow-right" style="color: #FEE75C; margin-left: 8px;"></i> سجل الكيك</label>
+                    <input type="text" id="kick_channel" name="kick_channel" class="glass-input" value="<%= settings.kick_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="timeout_channel"><i class="fa-solid fa-clock" style="color: #FEE75C; margin-left: 8px;"></i> سجل التايم اوت</label>
+                    <input type="text" id="timeout_channel" name="timeout_channel" class="glass-input" value="<%= settings.timeout_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="warn_channel"><i class="fa-solid fa-triangle-exclamation" style="color: #FEE75C; margin-left: 8px;"></i> سجل التحذيرات</label>
+                    <input type="text" id="warn_channel" name="warn_channel" class="glass-input" value="<%= settings.warn_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="message_delete_channel"><i class="fa-solid fa-trash" style="color: var(--danger); margin-left: 8px;"></i> سجل حذف الرسائل</label>
+                    <input type="text" id="message_delete_channel" name="message_delete_channel" class="glass-input" value="<%= settings.message_delete_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="message_edit_channel"><i class="fa-solid fa-pen" style="color: var(--primary); margin-left: 8px;"></i> سجل تعديل الرسائل</label>
+                    <input type="text" id="message_edit_channel" name="message_edit_channel" class="glass-input" value="<%= settings.message_edit_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="member_join_channel"><i class="fa-solid fa-user-plus" style="color: #57F287; margin-left: 8px;"></i> سجل انضمام الأعضاء</label>
+                    <input type="text" id="member_join_channel" name="member_join_channel" class="glass-input" value="<%= settings.member_join_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="member_leave_channel"><i class="fa-solid fa-user-minus" style="color: var(--danger); margin-left: 8px;"></i> سجل مغادرة الأعضاء</label>
+                    <input type="text" id="member_leave_channel" name="member_leave_channel" class="glass-input" value="<%= settings.member_leave_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="channel_create_channel"><i class="fa-solid fa-hashtag" style="color: #57F287; margin-left: 8px;"></i> سجل إنشاء الروم</label>
+                    <input type="text" id="channel_create_channel" name="channel_create_channel" class="glass-input" value="<%= settings.channel_create_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="channel_delete_channel"><i class="fa-solid fa-hashtag" style="color: var(--danger); margin-left: 8px;"></i> سجل حذف الروم</label>
+                    <input type="text" id="channel_delete_channel" name="channel_delete_channel" class="glass-input" value="<%= settings.channel_delete_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="role_create_channel"><i class="fa-solid fa-shield" style="color: #57F287; margin-left: 8px;"></i> سجل إنشاء الرتب</label>
+                    <input type="text" id="role_create_channel" name="role_create_channel" class="glass-input" value="<%= settings.role_create_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="role_delete_channel"><i class="fa-solid fa-shield" style="color: var(--danger); margin-left: 8px;"></i> سجل حذف الرتب</label>
+                    <input type="text" id="role_delete_channel" name="role_delete_channel" class="glass-input" value="<%= settings.role_delete_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+                <div class="form-group" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 18px; border-radius: 12px; margin-bottom: 0;">
+                    <label for="nick_change_channel"><i class="fa-solid fa-tag" style="color: var(--primary); margin-left: 8px;"></i> سجل تغيير الأسماء</label>
+                    <input type="text" id="nick_change_channel" name="nick_change_channel" class="glass-input" value="<%= settings.nick_change_channel || '' %>" placeholder="معرّف القناة">
+                </div>
+
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> حفظ إعدادات القنوات</button>
+        </form>
+    </div>
+</main>
+
+<%- include('partials/footer') %>

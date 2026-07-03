@@ -1,0 +1,18 @@
+    </div> <!-- close app-wrapper -->
+    <script>
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.querySelector('.app-sidebar');
+        if (sidebarToggle && sidebar) {
+            sidebarToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sidebar.classList.toggle('active');
+            });
+            document.addEventListener('click', (e) => {
+                if (sidebar.classList.contains('active') && !sidebar.contains(e.target) && e.target !== sidebarToggle) {
+                    sidebar.classList.remove('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

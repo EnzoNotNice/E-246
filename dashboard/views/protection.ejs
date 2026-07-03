@@ -1,0 +1,50 @@
+<%- include('partials/header') %>
+
+<%- include('partials/sidebar', { activeTab: 'protection' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-shield-halved"></i> إعدادات الحماية</h1>
+        <p>حدود مكافحة النيوك لحماية سيرفرك من المشرفين المتهورين.</p>
+    </div>
+
+    <div class="glass-panel">
+        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+            <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= req.query.success %></div>
+        <% } %>
+
+        <form action="/dashboard/<%= guild.id %>/protection" method="POST" class="settings-form">
+            <div class="form-group">
+                <label for="enabled">حالة نظام الحماية</label>
+                <select id="enabled" name="enabled" class="glass-input">
+                    <option value="1" <%= settings.enabled === 1 ? 'selected' : '' %>>مفعّل</option>
+                    <option value="0" <%= settings.enabled === 0 ? 'selected' : '' %>>معطّل</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="display: flex; gap: 20px;">
+                <div style="flex: 1;">
+                    <label for="ban_limit">حد عمليات الباند في الدقيقة</label>
+                    <input type="number" id="ban_limit" name="ban_limit" class="glass-input" value="<%= settings.ban_limit %>" required>
+                </div>
+                <div style="flex: 1;">
+                    <label for="kick_limit">حد عمليات الكيك في الدقيقة</label>
+                    <input type="number" id="kick_limit" name="kick_limit" class="glass-input" value="<%= settings.kick_limit %>" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="action">الإجراء عند تجاوز الحد</label>
+                <select id="action" name="action" class="glass-input">
+                    <option value="ban" <%= settings.action === 'ban' ? 'selected' : '' %>>باند المخالف</option>
+                    <option value="kick" <%= settings.action === 'kick' ? 'selected' : '' %>>كيك المخالف</option>
+                    <option value="timeout" <%= settings.action === 'timeout' ? 'selected' : '' %>>تايم اوت للمخالف (28 يوم)</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> حفظ التغييرات</button>
+        </form>
+    </div>
+</main>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,44 @@
+<%- include('partials/header') %>
+<%- include('partials/sidebar', { activeTab: 'servers' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1>اختر سيرفراً لإدارته</h1>
+        <p>قم بالتحكم الشامل في إعدادات البوت عبر سيرفراتك بكل سهولة.</p>
+    </div>
+
+    <div class="guild-grid">
+        <% guilds.forEach(guild => { %>
+            <% const isBotInGuild = botGuilds.has(guild.id); %>
+            <div class="guild-card">
+                <% if (guild.icon) { %>
+                    <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" alt="Guild Icon">
+                <% } else { %>
+                    <div class="no-icon"><%= guild.name.charAt(0) %></div>
+                <% } %>
+
+                <h3 style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><%= guild.name %></h3>
+
+                <% if (isBotInGuild) { %>
+                    <a href="/dashboard/<%= guild.id %>" class="btn btn-primary btn-large" style="width: 100%;">
+                        <i class="fa-solid fa-gear"></i> إدارة السيرفر
+                    </a>
+                <% } else { %>
+                    <a href="#" class="btn btn-secondary btn-large disabled" style="width: 100%;">
+                        البوت ليس متواجداً
+                    </a>
+                <% } %>
+            </div>
+        <% }) %>
+    </div>
+
+    <% if (guilds.length === 0) { %>
+        <div class="glass-panel text-center" style="margin-top: 50px;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size: 4rem; color: var(--danger); margin-bottom: 20px;"></i>
+            <h2>لا يوجد صلاحيات</h2>
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 10px;">ليس لديك صلاحيات إدارية في أي سيرفر متواجد فيه البوت حالياً.</p>
+        </div>
+    <% } %>
+</main>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,268 @@
+<%- include('partials/header') %>
+
+<style>
+/* Discord Embed Preview Styles */
+.discord-preview-container {
+    background-color: #313338;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'gg sans', 'Inter', sans-serif;
+    color: #dbdee1;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.discord-embed {
+    background-color: #2b2d31;
+    border-radius: 4px;
+    border-left: 4px solid #5865F2; /* Default color */
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    max-width: 520px;
+    width: 100%;
+}
+
+.embed-title { font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px; display: none; }
+.embed-description { font-size: 14px; line-height: 1.375; white-space: pre-wrap; display: none; }
+.embed-thumbnail { max-width: 80px; max-height: 80px; border-radius: 4px; margin-left: 16px; display: none; }
+.embed-image { max-width: 100%; border-radius: 4px; margin-top: 16px; display: none; }
+.embed-content-wrapper { display: flex; justify-content: space-between; }
+
+/* Components */
+.discord-button {
+    background-color: #5865F2;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 3px;
+    font-size: 14px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    cursor: default;
+}
+.discord-select {
+    background-color: #1e1f22;
+    color: #dbdee1;
+    border: 1px solid #1e1f22;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+</style>
+
+<%
+let pData = {};
+try { pData = JSON.parse(settings.panel_data); } catch(e) {}
+%>
+
+<%- include('partials/sidebar', { activeTab: 'tickets' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-ticket"></i> منشئ نظام التذاكر</h1>
+        <p>خصّص نظام التذاكر بالكامل من تصميم الإمبيد وحتى شكل الزر.</p>
+    </div>
+    <div class="glass-panel">
+        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+            <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= req.query.success %></div>
+        <% } %>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
+
+                <!-- Form Section -->
+                <div>
+                    <form action="/dashboard/<%= guild.id %>/tickets" method="POST" class="settings-form">
+
+                        <h3 style="margin-bottom: 15px; color: var(--primary);">١. الإعدادات الأساسية</h3>
+                        <div class="guild-grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>تصنيف التذاكر</label>
+                                <select name="category_id" class="glass-input">
+                                    <option value="">-- اختر --</option>
+                                    <% categories.forEach(c => { %><option value="<%= c.id %>" <%= settings.category_id === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>رتبة طاقم الدعم</label>
+                                <select name="staff_role" class="glass-input">
+                                    <option value="">-- اختر --</option>
+                                    <% roles.forEach(r => { %><option value="<%= r.id %>" <%= settings.staff_role === r.id ? 'selected' : '' %>><%= r.name %></option><% }) %>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>قناة سجل التذاكر</label>
+                                <select name="log_channel" class="glass-input">
+                                    <option value="">-- اختر --</option>
+                                    <% channels.forEach(c => { %><option value="<%= c.id %>" <%= settings.log_channel === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>قناة نشر اللوحة</label>
+                                <select name="panel_channel" class="glass-input">
+                                    <option value="">-- اختر --</option>
+                                    <% channels.forEach(c => { %><option value="<%= c.id %>" <%= settings.panel_channel === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>رسالة الترحيب (داخل التذكرة)</label>
+                            <textarea name="ticket_message" class="glass-input" rows="2" placeholder="مرحباً بك في تذكرتك..."><%= settings.ticket_message %></textarea>
+                        </div>
+
+                        <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
+
+                        <h3 style="margin-bottom: 15px; color: var(--primary);">٢. نوع المكوّن التفاعلي</h3>
+                        <div class="guild-grid" style="grid-template-columns: 1fr 2fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>نوع المكوّن</label>
+                                <select id="comp_type" name="comp_type" class="glass-input">
+                                    <option value="button" <%= pData.comp_type === 'button' ? 'selected' : '' %>>زر (Button)</option>
+                                    <option value="select" <%= pData.comp_type === 'select' ? 'selected' : '' %>>قائمة منسدلة (Select Menu)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>نص الزر</label>
+                                <input type="text" id="comp_label" name="comp_label" class="glass-input" value="<%= pData.label || 'افتح تذكرة' %>">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>الإيموجي</label>
+                            <input type="text" id="comp_emoji" name="comp_emoji" class="glass-input" value="<%= pData.emoji || '🎫' %>">
+                        </div>
+
+                        <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
+
+                        <h3 style="margin-bottom: 15px; color: var(--primary);">٣. تصميم إمبيد اللوحة</h3>
+                        <div class="guild-grid" style="grid-template-columns: 2fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>عنوان الإمبيد</label>
+                                <input type="text" id="title" name="title" class="glass-input" value="<%= pData.title || 'دعم فني' %>">
+                            </div>
+                            <div class="form-group">
+                                <label>اللون</label>
+                                <input type="color" id="color" name="color" class="glass-input" value="<%= pData.color || '#5865F2' %>" style="height: 48px; padding: 0 10px;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>وصف الإمبيد</label>
+                            <textarea id="description" name="description" class="glass-input" rows="4"><%= pData.description || 'اضغط على الزر أدناه لفتح تذكرة!' %></textarea>
+                        </div>
+                        <div class="guild-grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                            <div class="form-group">
+                                <label>رابط الصورة المصغرة</label>
+                                <input type="url" id="thumbnail" name="thumbnail" class="glass-input" value="<%= pData.thumbnail || '' %>">
+                            </div>
+                            <div class="form-group">
+                                <label>رابط الصورة الكبيرة</label>
+                                <input type="url" id="image" name="image" class="glass-input" value="<%= pData.image || '' %>">
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 25px; display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="send_panel" name="send_panel" value="yes" style="width: 20px; height: 20px;">
+                            <label for="send_panel" style="margin: 0; font-weight: bold; color: #57F287;">إرسال / تحديث لوحة التذاكر الآن؟</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="margin-top: 15px; width: 100%;"><i class="fa-solid fa-save"></i> حفظ ونشر لوحة التذاكر</button>
+                    </form>
+                </div>
+
+                <!-- Preview Section -->
+                <div>
+                    <h3>معاينة مباشرة</h3>
+                    <div class="discord-preview-container">
+                        <div class="discord-embed" id="preview_embed">
+                            <div class="embed-content-wrapper">
+                                <div style="flex-grow: 1;">
+                                    <div class="embed-title" id="preview_title"></div>
+                                    <div class="embed-description" id="preview_description"></div>
+                                </div>
+                                <img class="embed-thumbnail" id="preview_thumbnail" src="" alt="">
+                            </div>
+                            <img class="embed-image" id="preview_image" src="" alt="">
+                        </div>
+
+                        <!-- Component Preview -->
+                        <div id="preview_button" class="discord-button" style="display: none;">
+                            <span id="preview_btn_emoji"></span>
+                            <span id="preview_btn_label"></span>
+                        </div>
+
+                        <div id="preview_select" class="discord-select" style="display: none;">
+                            <div style="display: flex; gap: 8px;">
+                                <span id="preview_sel_emoji"></span>
+                                <span id="preview_sel_label"></span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down" style="font-size: 10px;"></i>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    function updatePreview() {
+        const color = document.getElementById('color').value;
+        const title = document.getElementById('title').value;
+        const description = document.getElementById('description').value;
+        const thumbnail = document.getElementById('thumbnail').value;
+        const image = document.getElementById('image').value;
+        const compType = document.getElementById('comp_type').value;
+        const compLabel = document.getElementById('comp_label').value;
+        const compEmoji = document.getElementById('comp_emoji').value;
+
+        document.getElementById('preview_embed').style.borderLeftColor = color;
+
+        const titleEl = document.getElementById('preview_title');
+        titleEl.textContent = title;
+        titleEl.style.display = title ? 'block' : 'none';
+
+        const descEl = document.getElementById('preview_description');
+        descEl.textContent = description;
+        descEl.style.display = description ? 'block' : 'none';
+
+        const thumbEl = document.getElementById('preview_thumbnail');
+        thumbEl.src = thumbnail;
+        thumbEl.style.display = thumbnail ? 'block' : 'none';
+
+        const imgEl = document.getElementById('preview_image');
+        imgEl.src = image;
+        imgEl.style.display = image ? 'block' : 'none';
+
+        const btnDiv = document.getElementById('preview_button');
+        const selDiv = document.getElementById('preview_select');
+
+        if (compType === 'button') {
+            btnDiv.style.display = 'inline-flex';
+            selDiv.style.display = 'none';
+            document.getElementById('preview_btn_label').textContent = compLabel;
+            document.getElementById('preview_btn_emoji').textContent = compEmoji;
+        } else {
+            btnDiv.style.display = 'none';
+            selDiv.style.display = 'flex';
+            document.getElementById('preview_sel_label').textContent = compLabel;
+            document.getElementById('preview_sel_emoji').textContent = compEmoji;
+        }
+    }
+
+    const inputs = ['color', 'title', 'description', 'thumbnail', 'image', 'comp_type', 'comp_label', 'comp_emoji'];
+    inputs.forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+
+    updatePreview();
+</script>
+
+<%- include('partials/footer') %>

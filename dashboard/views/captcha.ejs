@@ -1,0 +1,169 @@
+<%- include('partials/header') %>
+
+<%- include('partials/sidebar', { guild, activeTab: 'captcha' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-shield-cat"></i> نظام التحقق البشري</h1>
+        <p>تحقق من أن الأعضاء الجدد بشر حقيقيون قبل أن يدخلوا السيرفر.</p>
+    </div>
+
+    <% if (typeof success !== 'undefined') { %>
+        <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= success %></div>
+    <% } %>
+    <% if (typeof error !== 'undefined') { %>
+        <div class="alert alert-success" style="background: rgba(237, 66, 69, 0.1); border-color: rgba(237,66,69,0.3); color: #ED4245;"><i class="fa-solid fa-triangle-exclamation"></i> <%= error %></div>
+    <% } %>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+        <!-- نموذج الإعدادات -->
+        <div class="glass-panel">
+            <form action="/dashboard/<%= guild.id %>/captcha" method="POST">
+                <h3 style="margin-bottom: 15px; color: var(--primary);">١. الحالة والرتب</h3>
+                <div class="form-group" style="margin-top:15px;">
+                    <label>حالة نظام التحقق</label>
+                    <select name="enabled" class="glass-input">
+                        <option value="1" <%= settings.enabled === 1 ? 'selected' : '' %>>مفعّل</option>
+                        <option value="0" <%= settings.enabled === 0 ? 'selected' : '' %>>معطّل</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>رتبة المتحقق (تُعطى عند النجاح)</label>
+                    <select name="verified_role" class="glass-input" required>
+                        <option value="">-- اختر الرتبة --</option>
+                        <% roles.forEach(r => { %>
+                            <option value="<%= r.id %>" <%= settings.verified_role === r.id ? 'selected' : '' %>>@<%= r.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>رتبة غير المتحقق (تُزال عند النجاح - اختياري)</label>
+                    <select name="unverified_role" class="glass-input">
+                        <option value="">-- لا شيء --</option>
+                        <% roles.forEach(r => { %>
+                            <option value="<%= r.id %>" <%= settings.unverified_role === r.id ? 'selected' : '' %>>@<%= r.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
+
+                <h3 style="margin-bottom: 15px; color: var(--primary);">٢. تصميم لوحة التحقق</h3>
+                <div class="form-group" style="margin-top:15px;">
+                    <label>عنوان الإمبيد</label>
+                    <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'التحقق البشري' %>" required>
+                </div>
+                <div class="form-group">
+                    <label>وصف الإمبيد</label>
+                    <textarea name="description" id="description" class="glass-input" rows="4" required><%= settings.panel_data.description || 'للوصول إلى السيرفر، اضغط على الزر أدناه وأكمل التحقق البشري.' %></textarea>
+                </div>
+                <div class="form-group">
+                    <label>لون الإمبيد</label>
+                    <input type="color" name="color" id="color" class="glass-input" style="height: 50px; padding: 5px;" value="<%= settings.panel_data.color || '#57F287' %>">
+                </div>
+                <div class="form-group">
+                    <label>نص الزر</label>
+                    <input type="text" name="btn_text" id="btn_text" class="glass-input" value="<%= settings.panel_data.btn_text || 'تحقق الآن' %>" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>إيموجي الزر</label>
+                        <input type="text" name="btn_emoji" id="btn_emoji" class="glass-input" value="<%= settings.panel_data.btn_emoji || '✅' %>">
+                    </div>
+                    <div class="form-group">
+                        <label>لون الزر</label>
+                        <select name="btn_style" id="btn_style" class="glass-input">
+                            <option value="Primary" <%= settings.panel_data.btn_style === 'Primary' ? 'selected' : '' %>>أزرق بنفسجي</option>
+                            <option value="Success" <%= settings.panel_data.btn_style === 'Success' ? 'selected' : (!settings.panel_data.btn_style ? 'selected' : '') %>>أخضر</option>
+                            <option value="Danger" <%= settings.panel_data.btn_style === 'Danger' ? 'selected' : '' %>>أحمر</option>
+                            <option value="Secondary" <%= settings.panel_data.btn_style === 'Secondary' ? 'selected' : '' %>>رمادي</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
+
+                <h3 style="margin-bottom: 15px; color: var(--primary);">٣. نشر اللوحة</h3>
+                <div class="form-group" style="margin-top:15px;">
+                    <label>قناة نشر لوحة التحقق</label>
+                    <select name="panel_channel" class="glass-input">
+                        <option value="">-- اختر القناة --</option>
+                        <% textChannels.forEach(c => { %>
+                            <option value="<%= c.id %>" <%= settings.panel_channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="send_panel" value="yes">
+                        إرسال / تحديث اللوحة الآن
+                    </label>
+                    <small>فعّل هذا لإرسال لوحة التحقق إلى القناة المختارة.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fa-solid fa-save"></i> حفظ الإعدادات
+                </button>
+            </form>
+        </div>
+
+        <!-- المعاينة المباشرة -->
+        <div>
+            <div class="glass-panel" style="position: sticky; top: 90px;">
+                <h3 style="margin-bottom: 20px;"><i class="fa-brands fa-discord"></i> معاينة مباشرة</h3>
+                <div style="background: #36393f; border-radius: 8px; padding: 16px; font-family: 'gg sans', Arial, sans-serif;">
+                    <div style="display: flex; gap: 16px;">
+                        <img src="<%= client.user.displayAvatarURL() %>" style="width: 40px; height: 40px; border-radius: 50%;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                <span style="color: #fff; font-weight: 500;"><%= client.user.username %></span>
+                                <span style="background: #5865F2; color: #fff; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: 600;">BOT</span>
+                            </div>
+                            <div id="preview-embed" style="border-left: 4px solid #57F287; background: #2f3136; padding: 16px; border-radius: 4px;">
+                                <div id="preview-title" style="color: #fff; font-weight: 600; font-size: 1rem; margin-bottom: 8px;"></div>
+                                <div id="preview-desc" style="color: #dcddde; font-size: 0.875rem; white-space: pre-wrap; line-height: 1.375;"></div>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <div id="preview-btn" style="background: #3ba55c; color: #fff; padding: 8px 16px; border-radius: 3px; font-weight: 500; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 8px; cursor: default;">
+                                    <span id="preview-btn-emoji">✅</span> <span id="preview-btn-text">تحقق الآن</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    const formInputs = ['title', 'description', 'color', 'btn_text', 'btn_emoji', 'btn_style'];
+    formInputs.forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+
+    function updatePreview() {
+        const title = document.getElementById('title').value;
+        const desc = document.getElementById('description').value;
+        const color = document.getElementById('color').value;
+        const btnText = document.getElementById('btn_text').value;
+        const btnEmoji = document.getElementById('btn_emoji').value;
+        const btnStyle = document.getElementById('btn_style').value;
+
+        document.getElementById('preview-embed').style.borderLeftColor = color;
+        document.getElementById('preview-title').innerText = title;
+        document.getElementById('preview-desc').innerText = desc;
+        document.getElementById('preview-btn-text').innerText = btnText || 'تحقق الآن';
+
+        const emojiEl = document.getElementById('preview-btn-emoji');
+        if (btnEmoji) { emojiEl.innerText = btnEmoji; emojiEl.style.display = 'inline'; } else { emojiEl.style.display = 'none'; }
+
+        const btnEl = document.getElementById('preview-btn');
+        if (btnStyle === 'Primary') btnEl.style.background = '#5865F2';
+        else if (btnStyle === 'Success') btnEl.style.background = '#3ba55c';
+        else if (btnStyle === 'Danger') btnEl.style.background = '#ed4245';
+        else if (btnStyle === 'Secondary') btnEl.style.background = '#4f545c';
+    }
+
+    updatePreview();
+</script>
+
+<%- include('partials/footer') %>

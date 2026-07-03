@@ -1,0 +1,49 @@
+<%- include('partials/header') %>
+<%- include('partials/sidebar', { activeTab: 'home' }) %>
+
+<main class="app-content">
+    <div class="content-header text-center" style="margin-bottom: 60px; margin-top: 40px;">
+        <% if (bot) { %>
+            <img src="<%= bot.displayAvatarURL() %>" alt="Bot Avatar" style="width: 110px; height: 110px; border-radius: 50%; border: 2px solid rgba(88,101,242,0.4); margin-bottom: 20px;">
+            <h1><%= bot.username %></h1>
+        <% } else { %>
+            <h1>ديسكورد بوت</h1>
+        <% } %>
+        <p>التجربة المثالية والشاملة لإدارة سيرفرك باحترافية.</p>
+    </div>
+
+    <% if (typeof stats !== 'undefined') { %>
+        <div class="guild-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 50px;">
+            <div class="glass-panel" style="text-align: center; padding: 30px 20px; margin-bottom: 0;">
+                <i class="fa-solid fa-server" style="font-size: 30px; color: var(--primary); margin-bottom: 15px;"></i>
+                <h3 style="font-size: 2rem; margin-bottom: 5px;"><%= stats.totalGuilds %></h3>
+                <small style="color: var(--text-muted); font-size: 1rem;">إجمالي السيرفرات</small>
+            </div>
+            <div class="glass-panel" style="text-align: center; padding: 30px 20px; margin-bottom: 0;">
+                <i class="fa-solid fa-users" style="font-size: 30px; color: var(--primary); margin-bottom: 15px;"></i>
+                <h3 style="font-size: 2rem; margin-bottom: 5px;"><%= stats.totalUsers %></h3>
+                <small style="color: var(--text-muted); font-size: 1rem;">المستخدمين</small>
+            </div>
+            <div class="glass-panel" style="text-align: center; padding: 30px 20px; margin-bottom: 0;">
+                <i class="fa-solid fa-microchip" style="font-size: 30px; color: var(--primary); margin-bottom: 15px;"></i>
+                <h3 style="font-size: 2rem; margin-bottom: 5px; direction: ltr;"><%= stats.ram %></h3>
+                <small style="color: var(--text-muted); font-size: 1rem;">استهلاك الذاكرة</small>
+            </div>
+            <div class="glass-panel" style="text-align: center; padding: 30px 20px; margin-bottom: 0;">
+                <i class="fa-solid fa-clock" style="font-size: 30px; color: var(--primary); margin-bottom: 15px;"></i>
+                <h3 style="font-size: 1.5rem; margin-bottom: 5px; direction: ltr;"><%= stats.uptime %></h3>
+                <small style="color: var(--text-muted); font-size: 1rem;">مدة التشغيل</small>
+            </div>
+        </div>
+    <% } %>
+
+    <div style="text-align: center;">
+        <% if (!user) { %>
+            <a href="/auth/login" class="btn btn-primary btn-large" style="max-width: 300px;"><i class="fa-brands fa-discord"></i> ابدأ الآن بتسجيل الدخول</a>
+        <% } else { %>
+            <a href="/dashboard" class="btn btn-primary btn-large" style="max-width: 300px;"><i class="fa-solid fa-server"></i> الذهاب للوحة التحكم</a>
+        <% } %>
+    </div>
+</main>
+
+<%- include('partials/footer') %>

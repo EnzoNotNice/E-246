@@ -1,0 +1,42 @@
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const locale = require('../../utils/locale');
+const { success, error, modlog } = require('../../utils/embeds');
+const { sendLog } = require('../../utils/logger');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('unban')
+    .setDescription('رفع الحظر عن عضو أو عن جميع المحظورين')
+    .addStringOption(o => o.setName('user_id').setDescription('معرّف العضو المراد رفع حظره اتركه فارغاً لرفع الحظر عن الكل'))
+    .addStringOption(o => o.setName('reason').setDescription('سبب رفع الحظر'))
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
+
+  async execute(interaction) {
+    await interaction.deferReply();
+    const userId = interaction.options.getString('user_id');
+    const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
+
+    if (!userId) {
+      const bans = await interaction.guild.bans.fetch();
+      if (bans.size === 0) return interaction.editReply({ embeds: [error(locale.get('moderation.noBans'))] });
+
+      let count = 0;
+      for (const [, ban] of bans) {
+        await interaction.guild.members.unban(ban.user, reason).catch(() => null);
+        count++;
+      }
+      const logEmbed = modlog('رفع حظر جماعي', { tag: `${count} عضو`, id: 'غير متاح' }, interaction.user, reason);
+      await sendLog(interaction.client, interaction.guildId, logEmbed, 'unban');
+      return interaction.editReply({ embeds: [success(locale.get('moderation.massUnbanSuccess', { count }))] });
+    }
+
+    const ban = await interaction.guild.bans.fetch(userId).catch(() => null);
+    if (!ban) return interaction.editReply({ embeds: [error(locale.get('moderation.notBanned'))] });
+
+    await interaction.guild.members.unban(userId, reason);
+    const logEmbed = modlog('تم رفع الحظر', { tag: ban.user.tag, id: ban.user.id }, interaction.user, reason);
+    await sendLog(interaction.client, interaction.guildId, logEmbed, 'unban');
+
+    return interaction.editReply({ embeds: [success(locale.get('moderation.unbanSuccess', { user: ban.user.tag }))] });
+  }
+};

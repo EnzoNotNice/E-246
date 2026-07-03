@@ -1,0 +1,233 @@
+<%- include('partials/header') %>
+
+<%- include('partials/sidebar', { activeTab: 'welcome' }) %>
+
+    <main class="app-content">
+        <div class="glass-panel">
+            <h2><i class="fa-solid fa-handshake"></i> الترحيب والمغادرة</h2>
+            <p>الترحيب بالأعضاء الجدد عند انضمامهم للسيرفر.</p>
+
+            <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+                <div class="alert alert-success">
+                    <%= req.query.success %>
+                </div>
+            <% } %>
+
+            <form action="/dashboard/<%= guild.id %>/welcome" method="POST" class="settings-form">
+                <div class="form-group">
+                    <label for="enabled">تفعيل نظام الترحيب</label>
+                    <select id="enabled" name="enabled" class="glass-input">
+                        <option value="1" <%= settings.enabled === 1 ? 'selected' : '' %>>مفعل</option>
+                        <option value="0" <%= settings.enabled === 0 ? 'selected' : '' %>>معطل</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="channel">أيدي روم الترحيب (مرحباً Channel ID)</label>
+                    <input type="text" id="channel" name="channel" class="glass-input" value="<%= settings.channel || '' %>" placeholder="e.g. 1234567890">
+                </div>
+
+                <div class="form-group">
+                    <label for="message">رسالة الترحيب النصية</label>
+                    <textarea id="message" name="message" class="glass-input" rows="4"><%= settings.message %></textarea>
+                    <small>المتغيرات المتاحة: <code>{user}</code> <code>{server}</code> <code>{membercount}</code></small>
+                </div>
+
+                <hr style="border: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
+                <h3>إعدادات صورة الترحيب</h3>
+
+                <div class="form-group">
+                    <label for="image_url">رابط صورة الخلفية (اختياري)</label>
+                    <input type="text" id="image_url" name="image_url" class="glass-input" value="<%= settings.image_url || '' %>" placeholder="https://example.com/bg.png">
+                    <small>اتركه فارغاً لاستخدام الترحيب النصي فقط.</small>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="avatar_x">صورة العضو X (محور السينات)</label>
+                        <input type="number" id="avatar_x" name="avatar_x" class="glass-input" value="<%= settings.avatar_x || 100 %>">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="avatar_y">صورة العضو Y (محور الصادات)</label>
+                        <input type="number" id="avatar_y" name="avatar_y" class="glass-input" value="<%= settings.avatar_y || 100 %>">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="avatar_size">حجم صورة العضو</label>
+                        <input type="number" id="avatar_size" name="avatar_size" class="glass-input" value="<%= settings.avatar_size || 150 %>">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="username_x">موقع الاسم X</label>
+                        <input type="number" id="username_x" name="username_x" class="glass-input" value="<%= settings.username_x || 100 %>">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="username_y">موقع الاسم Y</label>
+                        <input type="number" id="username_y" name="username_y" class="glass-input" value="<%= settings.username_y || 300 %>">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="username_color">لون الاسم</label>
+                        <input type="color" id="username_color" name="username_color" class="glass-input" value="<%= settings.username_color || '#ffffff' %>" style="height: 40px; padding: 2px;">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="username_size">حجم خط الاسم</label>
+                        <input type="number" id="username_size" name="username_size" class="glass-input" value="<%= settings.username_size || 40 %>">
+                    </div>
+                </div>
+
+                <hr style="border: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
+                <h3>المعاينة المباشرة (Live Preview)</h3>
+                <p>قم بسحب الأفتار واسم العضو بالفأرة لتحريكهم بحرية، أو استخدم الأرقام بالأعلى.</p>
+
+                <style>
+                    @font-face {
+                        font-family: 'CustomFont';
+                        src: url('/fonts/font.ttf') format('truetype');
+                    }
+                </style>
+                <div id="preview-container" style="position: relative; width: 100%; max-width: 800px; height: 400px; background-color: rgba(0,0,0,0.5); background-size: contain; background-repeat: no-repeat; background-position: top left; border: 2px dashed rgba(255,255,255,0.2); margin-bottom: 20px; overflow: hidden; user-select: none;">
+
+                    <div id="preview-avatar" style="position: absolute; border: 2px solid #57F287; border-radius: 50%; background-color: rgba(255,255,255,0.2); cursor: move; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        <i class="fa-solid fa-user" style="font-size: 3rem; color: rgba(255,255,255,0.8);"></i>
+                    </div>
+
+                    <div id="preview-username" style="position: absolute; cursor: move; font-family: 'CustomFont', sans-serif; font-weight: bold; white-space: nowrap;">
+                        Username
+                    </div>
+
+                </div>
+
+                <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+            </form>
+        </div>
+    </main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const bgInput = document.getElementById('image_url');
+        const container = document.getElementById('preview-container');
+
+        const avatarEl = document.getElementById('preview-avatar');
+        const axInput = document.getElementById('avatar_x');
+        const ayInput = document.getElementById('avatar_y');
+        const asizeInput = document.getElementById('avatar_size');
+
+        const usernameEl = document.getElementById('preview-username');
+        const uxInput = document.getElementById('username_x');
+        const uyInput = document.getElementById('username_y');
+        const ucolorInput = document.getElementById('username_color');
+        const usizeInput = document.getElementById('username_size');
+
+        let bgNativeWidth = 800;
+        let bgNativeHeight = 400;
+
+        function updateBackground() {
+            const url = bgInput.value.trim();
+            if (url) {
+                container.style.backgroundImage = `url('${url}')`;
+                const img = new Image();
+                img.onload = function() {
+                    bgNativeWidth = this.width;
+                    bgNativeHeight = this.height;
+
+                    const containerWidth = container.clientWidth;
+                    const aspect = this.height / this.width;
+                    container.style.height = (containerWidth * aspect) + 'px';
+
+                    updatePositions();
+                };
+                img.src = url;
+            } else {
+                container.style.backgroundImage = 'none';
+                container.style.height = '400px';
+                bgNativeWidth = container.clientWidth || 800;
+                bgNativeHeight = 400;
+                updatePositions();
+            }
+        }
+
+        function getScale() {
+            const cw = container.clientWidth;
+            return cw / bgNativeWidth;
+        }
+
+        function updatePositions() {
+            const scale = getScale();
+
+            const ax = parseInt(axInput.value) || 0;
+            const ay = parseInt(ayInput.value) || 0;
+            const asize = parseInt(asizeInput.value) || 150;
+
+            avatarEl.style.left = (ax * scale) + 'px';
+            avatarEl.style.top = (ay * scale) + 'px';
+            avatarEl.style.width = (asize * scale) + 'px';
+            avatarEl.style.height = (asize * scale) + 'px';
+
+            const icon = avatarEl.querySelector('i');
+            if (icon) icon.style.fontSize = Math.max(10, (asize * scale * 0.5)) + 'px';
+
+            const ux = parseInt(uxInput.value) || 0;
+            const uy = parseInt(uyInput.value) || 0;
+            const usize = parseInt(usizeInput.value) || 40;
+
+            usernameEl.style.left = (ux * scale) + 'px';
+            usernameEl.style.top = (uy * scale - (usize * scale)) + 'px';
+            usernameEl.style.color = ucolorInput.value || '#ffffff';
+            usernameEl.style.fontSize = (usize * scale) + 'px';
+        }
+
+        function makeDraggable(el, xInput, yInput, isUsername = false) {
+            let isDragging = false;
+            let startX, startY, initialX, initialY;
+
+            el.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialX = parseInt(xInput.value) || 0;
+                initialY = parseInt(yInput.value) || 0;
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const scale = getScale();
+
+                const dx = (e.clientX - startX) / scale;
+                const dy = (e.clientY - startY) / scale;
+
+                xInput.value = Math.round(initialX + dx);
+                yInput.value = Math.round(initialY + dy);
+
+                updatePositions();
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+        }
+
+        bgInput.addEventListener('input', updateBackground);
+
+        [axInput, ayInput, asizeInput, uxInput, uyInput, ucolorInput, usizeInput].forEach(inp => {
+            inp.addEventListener('input', updatePositions);
+        });
+
+        window.addEventListener('resize', () => {
+            updateBackground();
+        });
+
+        makeDraggable(avatarEl, axInput, ayInput);
+        makeDraggable(usernameEl, uxInput, uyInput, true);
+
+        updateBackground();
+        setTimeout(updateBackground, 100);
+    });
+</script>
+        </div>
+    </main>
+<%- include('partials/footer') %>

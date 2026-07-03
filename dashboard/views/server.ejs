@@ -1,0 +1,30 @@
+<%- include('partials/header') %>
+
+<!-- Sidebar -->
+    <%- include('partials/sidebar', { activeTab: 'general' }) %>
+
+    <!-- Content Area -->
+    <main class="app-content">
+        <div class="glass-panel">
+            <h2>الإعدادات العامة</h2>
+            <p>تكوين الإعدادات الأساسية لسيرفرك.</p>
+
+            <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+                <div class="alert alert-success">
+                    <%= req.query.success %>
+                </div>
+            <% } %>
+
+            <form action="/dashboard/<%= guild.id %>/general" method="POST" class="settings-form">
+
+                <div class="form-group">
+                    <label for="log_channel">أيدي روم سجلات الإشراف (Mod Log)</label>
+                    <input type="text" id="log_channel" name="log_channel" class="glass-input" value="<%= (settings && settings.log_channel) ? settings.log_channel : 'none' %>">
+                    <small>اكتب 'none' لتعطيل سجلات الإشراف.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+            </form>
+        </div>
+    </main>
+<%- include('partials/footer') %>

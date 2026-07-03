@@ -1,0 +1,56 @@
+<%- include('partials/header') %>
+
+<%- include('partials/sidebar', { activeTab: 'aliases' }) %>
+
+    <main class="app-content">
+        <div class="glass-panel">
+            <h2><i class="fa-solid fa-link"></i> الاختصارات المخصصة للأوامر</h2>
+            <p>قم بإنشاء اختصارات لتنفيذ أوامر البوت بكلماتك الخاصة (e.g. typing <code>باند</code> to execute the <code>ban</code> command).</p>
+
+            <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+                <div class="alert alert-success">
+                    <%= req.query.success %>
+                </div>
+            <% } %>
+
+            <div class="guild-grid" style="grid-template-columns: 1fr;">
+                <% if (aliases && aliases.length > 0) { %>
+                    <% aliases.forEach(alias => { %>
+                        <div class="glass" style="padding: 15px 25px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>الاختصار:</strong> <span style="color: var(--primary);"><%= alias.shortcut %></span><br>
+                                <span style="color: var(--text-muted);"><strong>ينفذ الأمر:</strong> <%= alias.command %></span>
+                            </div>
+                            <form action="/dashboard/<%= guild.id %>/aliases/delete" method="POST" style="margin:0;">
+                                <input type="hidden" name="shortcut" value="<%= alias.shortcut %>">
+                                <button type="submit" class="btn btn-danger" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </div>
+                    <% }) %>
+                <% } else { %>
+                    <p class="text-center" style="color: var(--text-muted); padding: 20px;">لم يتم تعيين أي اختصارات بعد.</p>
+                <% } %>
+            </div>
+
+            <hr style="border-color: var(--glass-border); margin: 30px 0;">
+
+            <h3>إضافة اختصار جديد</h3>
+            <form action="/dashboard/<%= guild.id %>/aliases" method="POST" class="settings-form" style="margin-top: 20px;">
+                <div class="form-group" style="display: flex; gap: 20px;">
+                    <div style="flex: 1;">
+                        <label for="shortcut">كلمة الاختصار (مثال: باند)</label>
+                        <input type="text" id="shortcut" name="shortcut" class="glass-input" required placeholder="e.g. باند or b">
+                        <small>يمكن للأعضاء كتابتها كبديل للأمر الأساسي.</small>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="command">أمر البوت الأساسي المراد تنفيذه</label>
+                        <input type="text" id="command" name="command" class="glass-input" required placeholder="e.g. ban">
+                        <small>لا تضع البادئة (اكتب ban أو kick فقط)</small>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> إضافة</button>
+            </form>
+        </div>
+    </main>
+<%- include('partials/footer') %>

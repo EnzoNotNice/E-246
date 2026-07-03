@@ -1,0 +1,90 @@
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ChannelType } = require('discord.js');
+const locale = require('../../utils/locale');
+const { success, error } = require('../../utils/embeds');
+const db = require('../../database/db');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('settings')
+    .setDescription('إدارة إعدادات نظام المستويات')
+    .addSubcommand(s => s.setName('show').setDescription('عرض إعدادات نظام المستويات'))
+    .addSubcommand(s => s.setName('toggle').setDescription('تفعيل أو تعطيل نظام المستويات'))
+    .addSubcommand(s => s.setName('channel').setDescription('تحديد روم إعلانات الترقية')
+      .addChannelOption(o => o.setName('channel').setDescription('الروم أو اتركه فارغاً لاستخدام روم الرسالة').addChannelTypes(ChannelType.GuildText)))
+    .addSubcommand(s => s.setName('xp').setDescription('تحديد نطاق نقاط الخبرة لكل رسالة')
+      .addIntegerOption(o => o.setName('min').setDescription('الحد الأدنى من نقاط الخبرة').setRequired(true).setMinValue(1).setMaxValue(1000))
+      .addIntegerOption(o => o.setName('max').setDescription('الحد الأقصى من نقاط الخبرة').setRequired(true).setMinValue(1).setMaxValue(1000)))
+    .addSubcommand(s => s.setName('cooldown').setDescription('تحديد وقت التهدئة بالثواني')
+      .addIntegerOption(o => o.setName('seconds').setDescription('ثواني التهدئة').setRequired(true).setMinValue(0).setMaxValue(3600)))
+    .addSubcommand(s => s.setName('reward').setDescription('إضافة رتبة مكافأة لمستوى')
+      .addIntegerOption(o => o.setName('level').setDescription('المستوى').setRequired(true).setMinValue(1))
+      .addRoleOption(o => o.setName('role').setDescription('الرتبة المكافأة').setRequired(true)))
+    .addSubcommand(s => s.setName('removereward').setDescription('إزالة رتبة مكافأة')
+      .addIntegerOption(o => o.setName('level').setDescription('المستوى المراد حذف مكافأته').setRequired(true)))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+
+  async execute(interaction) {
+    const sub = interaction.options.getSubcommand();
+    const settings = db.getLevelSettings(interaction.guildId);
+
+    if (sub === 'show') {
+      const rewards = JSON.parse(settings.role_rewards || '[]');
+      const rewardStr = rewards.length ? rewards.map(r => `المستوى **${r.level}** → <@&${r.roleId}>`).join('\n') : 'لا يوجد';
+      const embed = new EmbedBuilder()
+        .setColor(0xFFD700)
+        .setTitle('<:settings:1519212212227407953> إعدادات نظام المستويات')
+        .addFields(
+          { name: '<:chartpie:1519212248479043634> الحالة', value: settings.enabled ? '<:circlecheck:1519212246876557413> مفعّل' : '<:circlex:1519212245559672914> معطّل', inline: true },
+          { name: '<:mail:1519212229445029971> الروم', value: settings.channel ? `<#${settings.channel}>` : 'غير محدد', inline: true },
+          { name: '<:star:1519212199309082705> نطاق XP', value: `${settings.xp_min} – ${settings.xp_max}`, inline: true },
+          { name: '<:clock:1519212244263632916> وقت التهدئة', value: `${settings.xp_cooldown} ثانية`, inline: true },
+          { name: '<:user:1519212186633764995> مكافآت الرتب', value: rewardStr }
+        )
+        .setTimestamp();
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    if (sub === 'toggle') {
+      const newVal = settings.enabled ? 0 : 1;
+      db.db.prepare('UPDATE level_settings SET enabled = ? WHERE guildId = ?').run(newVal, interaction.guildId);
+      return interaction.reply({ embeds: [success(locale.get('levels.systemStatus', { status: newVal ? 'مفعل' : 'معطل' }))] });
+    }
+
+    if (sub === 'channel') {
+      const ch = interaction.options.getChannel('channel');
+      db.db.prepare('UPDATE level_settings SET channel = ? WHERE guildId = ?').run(ch ? ch.id : null, interaction.guildId);
+      return interaction.reply({ embeds: [success(ch ? locale.get('levels.channelSet', { channel: ch }) : locale.get('levels.channelDefault'))] });
+    }
+
+    if (sub === 'xp') {
+      const min = interaction.options.getInteger('min');
+      const max = interaction.options.getInteger('max');
+      if (min > max) return interaction.reply({ embeds: [error(locale.get('general.invalidValue'))], flags: ['Ephemeral'] });
+      db.db.prepare('UPDATE level_settings SET xp_min = ?, xp_max = ? WHERE guildId = ?').run(min, max, interaction.guildId);
+      return interaction.reply({ embeds: [success(locale.get('levels.xpRangeSet', { min, max }))] });
+    }
+
+    if (sub === 'cooldown') {
+      const secs = interaction.options.getInteger('seconds');
+      db.db.prepare('UPDATE level_settings SET xp_cooldown = ? WHERE guildId = ?').run(secs, interaction.guildId);
+      return interaction.reply({ embeds: [success(locale.get('levels.cooldownSet', { secs }))] });
+    }
+
+    if (sub === 'reward') {
+      const level = interaction.options.getInteger('level');
+      const role = interaction.options.getRole('role');
+      const rewards = JSON.parse(settings.role_rewards || '[]').filter(r => r.level !== level);
+      rewards.push({ level, roleId: role.id });
+      rewards.sort((a, b) => a.level - b.level);
+      db.db.prepare('UPDATE level_settings SET role_rewards = ? WHERE guildId = ?').run(JSON.stringify(rewards), interaction.guildId);
+      return interaction.reply({ embeds: [success(locale.get('levels.rewardAdded', { level, role }))] });
+    }
+
+    if (sub === 'removereward') {
+      const level = interaction.options.getInteger('level');
+      const rewards = JSON.parse(settings.role_rewards || '[]').filter(r => r.level !== level);
+      db.db.prepare('UPDATE level_settings SET role_rewards = ? WHERE guildId = ?').run(JSON.stringify(rewards), interaction.guildId);
+      return interaction.reply({ embeds: [success(locale.get('levels.rewardRemoved', { level }))] });
+    }
+  }
+};

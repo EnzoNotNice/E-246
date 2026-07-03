@@ -1,0 +1,24 @@
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const locale = require('../../utils/locale');
+const { success, error } = require('../../utils/embeds');
+const db = require('../../database/db');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('autoreply')
+    .setDescription('إضافة رد تلقائي')
+    .addStringOption(o => o.setName('trigger').setDescription('نص التشغيل').setRequired(true))
+    .addStringOption(o => o.setName('response').setDescription('نص الرد').setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+
+  async execute(interaction) {
+    const trigger = interaction.options.getString('trigger').toLowerCase();
+    const response = interaction.options.getString('response');
+
+    const existing = db.getAutoReplies(interaction.guildId).find(r => r.trigger === trigger);
+    if (existing) return interaction.reply({ embeds: [error(locale.get('general.alreadyExists'))], flags: ['Ephemeral'] });
+
+    db.addAutoReply(interaction.guildId, trigger, response);
+    return interaction.reply({ embeds: [success(locale.get('moderation.autoReplyAdded', { trigger, response }))] });
+  }
+};

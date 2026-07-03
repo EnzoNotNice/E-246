@@ -1,0 +1,115 @@
+<aside class="app-sidebar">
+    <div class="sidebar-header">
+        <h2><i class="fa-solid fa-robot"></i> E-246</h2>
+    </div>
+
+    <div class="sidebar-content">
+        <ul class="nav-menu">
+            <li>
+                <a href="/" class="<%= (typeof activeTab !== 'undefined' && activeTab === 'home') ? 'active' : '' %>">
+                    <i class="fa-solid fa-house"></i> الرئيسية
+                </a>
+            </li>
+            <% if (user) { %>
+                <li>
+                    <a href="/dashboard" class="<%= (typeof activeTab !== 'undefined' && activeTab === 'servers') ? 'active' : '' %>">
+                        <i class="fa-solid fa-server"></i> قائمة السيرفرات
+                    </a>
+                </li>
+            <% } %>
+        </ul>
+
+        <% if (typeof guild !== 'undefined' && guild) { %>
+            <div class="nav-divider">إعدادات السيرفر الحالي</div>
+
+            <div class="active-server-widget">
+                <% if (guild.iconURL()) { %>
+                    <img src="<%= guild.iconURL() %>" alt="Guild Icon">
+                <% } else { %>
+                    <div class="no-icon" style="width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(135deg, var(--primary), #8A2BE2); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: white; margin: 0 auto 15px;"><%= guild.name.charAt(0) %></div>
+                <% } %>
+                <strong style="display: block; font-size: 1.1rem;"><%= guild.name %></strong>
+            </div>
+
+            <ul class="nav-menu">
+                <li>
+                    <a href="/dashboard/<%= guild.id %>" class="<%= activeTab === 'general' ? 'active' : '' %>">
+                        <i class="fa-solid fa-gear"></i> الإعدادات العامة
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/levels" class="<%= activeTab === 'levels' ? 'active' : '' %>">
+                        <i class="fa-solid fa-arrow-up-right-dots"></i> المستويات (Levels)
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/welcome" class="<%= activeTab === 'welcome' ? 'active' : '' %>">
+                        <i class="fa-solid fa-handshake"></i> الترحيب والمغادرة
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/protection" class="<%= activeTab === 'protection' ? 'active' : '' %>">
+                        <i class="fa-solid fa-shield-halved"></i> الحماية
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/autoreplies" class="<%= activeTab === 'autoreplies' ? 'active' : '' %>">
+                        <i class="fa-solid fa-reply-all"></i> الردود التلقائية
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/aliases" class="<%= activeTab === 'aliases' ? 'active' : '' %>">
+                        <i class="fa-solid fa-link"></i> اختصارات الأوامر
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/logs" class="<%= activeTab === 'logs' ? 'active' : '' %>">
+                        <i class="fa-solid fa-clipboard-list"></i> سجلات الأحداث (Logs)
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/tickets" class="<%= activeTab === 'tickets' ? 'active' : '' %>">
+                        <i class="fa-solid fa-ticket"></i> التذاكر
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/embed" class="<%= activeTab === 'embed' ? 'active' : '' %>">
+                        <i class="fa-solid fa-paintbrush"></i> صانع الإمبيد (Embed Builder)
+                    </a>
+                </li>
+
+                <li class="nav-divider">أدوات متقدمة</li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/reactionroles" class="<%= activeTab === 'reactionroles' ? 'active' : '' %>">
+                        <i class="fa-solid fa-masks-theater"></i> التفاعل بالرتب
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/forms" class="<%= activeTab === 'forms' ? 'active' : '' %>">
+                        <i class="fa-solid fa-clipboard-question"></i> نظام التقديمات
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/captcha" class="<%= activeTab === 'captcha' ? 'active' : '' %>">
+                        <i class="fa-solid fa-shield-cat"></i> التحقق البشري
+                    </a>
+                </li>
+            </ul>
+        <% } %>
+    </div>
+
+    <div class="sidebar-footer">
+        <% if (user) { %>
+            <div class="user-profile-widget">
+                <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" alt="Avatar">
+                <div class="user-profile-info">
+                    <span><%= user.username %></span>
+                    <small>المشرف العام</small>
+                </div>
+            </div>
+            <a href="/auth/logout" class="btn btn-danger" style="width: 100%;"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</a>
+        <% } else { %>
+            <a href="/auth/login" class="btn btn-primary" style="width: 100%;"><i class="fa-brands fa-discord"></i> تسجيل الدخول</a>
+        <% } %>
+    </div>
+</aside>

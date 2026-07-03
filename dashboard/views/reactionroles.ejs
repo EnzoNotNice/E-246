@@ -1,0 +1,238 @@
+<%- include('partials/header') %>
+
+<%- include('partials/sidebar', { guild, activeTab: 'reactionroles' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-masks-theater"></i> التفاعل بالرتب</h1>
+        <p>أنشئ لوحة رتب تفاعلية يختار منها الأعضاء رتبهم بأنفسهم.</p>
+    </div>
+
+    <% if (typeof success !== 'undefined') { %>
+        <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= success %></div>
+    <% } %>
+    <% if (typeof error !== 'undefined') { %>
+        <div class="alert alert-success" style="background: rgba(237, 66, 69, 0.1); border-color: rgba(237,66,69,0.3); color: #ED4245;"><i class="fa-solid fa-triangle-exclamation"></i> <%= error %></div>
+    <% } %>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+        <!-- نموذج الإنشاء -->
+        <div class="glass-panel">
+            <form action="/dashboard/<%= guild.id %>/reactionroles" method="POST" id="rrForm">
+                <h3 style="margin-bottom: 20px; color: var(--primary);">١. تصميم الإمبيد</h3>
+                <div class="form-group">
+                    <label>عنوان الإمبيد</label>
+                    <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'اختر رتبتك' %>" required>
+                </div>
+                <div class="form-group">
+                    <label>وصف الإمبيد</label>
+                    <textarea name="description" id="description" class="glass-input" rows="4" required><%= settings.panel_data.description || 'اضغط على الأزرار أدناه لاختيار رتبتك' %></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>لون الإمبيد</label>
+                        <input type="color" name="color" id="color" class="glass-input" style="height: 50px; padding: 5px;" value="<%= settings.panel_data.color || '#5865F2' %>">
+                    </div>
+                    <div class="form-group">
+                        <label>رابط الصورة المصغرة (اختياري)</label>
+                        <input type="url" name="thumbnail" id="thumbnail" class="glass-input" placeholder="https://..." value="<%= settings.panel_data.thumbnail || '' %>">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>رابط الصورة الكبيرة (اختياري)</label>
+                    <input type="url" name="image" id="image" class="glass-input" placeholder="https://..." value="<%= settings.panel_data.image || '' %>">
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
+
+                <h3 style="margin-bottom: 15px; color: var(--primary);">٢. نوع المكوّن</h3>
+                <div class="form-group" style="margin-top:15px;">
+                    <label>اختر نوع المكوّن</label>
+                    <select name="comp_type" id="comp_type" class="glass-input">
+                        <option value="button" <%= settings.panel_data.comp_type === 'button' ? 'selected' : '' %>>أزرار (Buttons)</option>
+                        <option value="select" <%= settings.panel_data.comp_type === 'select' ? 'selected' : '' %>>قائمة منسدلة (Select Menu)</option>
+                    </select>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="color: var(--primary);">٣. قائمة الرتب</h3>
+                    <button type="button" class="btn btn-secondary" onclick="addRoleRow()"><i class="fa-solid fa-plus"></i> إضافة رتبة</button>
+                </div>
+                <div id="rolesContainer"></div>
+                <input type="hidden" name="roles_data" id="roles_data">
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
+
+                <h3 style="margin-bottom: 15px; color: var(--primary);">٤. نشر اللوحة</h3>
+                <div class="form-group" style="margin-top:15px;">
+                    <label>قناة النشر</label>
+                    <select name="panel_channel" id="panel_channel" class="glass-input">
+                        <option value="">-- اختر القناة --</option>
+                        <% textChannels.forEach(c => { %>
+                            <option value="<%= c.id %>"># <%= c.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="send_panel" value="yes">
+                        إرسال / تحديث اللوحة الآن
+                    </label>
+                    <small>فعّل هذا الخيار لإرسال لوحة الرتب إلى القناة المختارة.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;" onclick="prepareSubmit(event)">
+                    <i class="fa-solid fa-save"></i> حفظ ونشر
+                </button>
+            </form>
+        </div>
+
+        <!-- المعاينة المباشرة -->
+        <div>
+            <div class="glass-panel" style="position: sticky; top: 90px;">
+                <h3 style="margin-bottom: 20px;"><i class="fa-brands fa-discord"></i> معاينة مباشرة</h3>
+                <div style="background: #36393f; border-radius: 8px; padding: 16px; font-family: 'gg sans', Arial, sans-serif;">
+                    <div style="display: flex; gap: 16px;">
+                        <img src="<%= client.user.displayAvatarURL() %>" style="width: 40px; height: 40px; border-radius: 50%;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                <span style="color: #fff; font-weight: 500;"><%= client.user.username %></span>
+                                <span style="background: #5865F2; color: #fff; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: 600;">BOT</span>
+                            </div>
+                            <div id="preview-embed" style="border-left: 4px solid #5865F2; background: #2f3136; padding: 16px; border-radius: 4px; display: flex; gap: 16px;">
+                                <div style="flex: 1;">
+                                    <div id="preview-title" style="color: #fff; font-weight: 600; font-size: 1rem; margin-bottom: 8px;"></div>
+                                    <div id="preview-desc" style="color: #dcddde; font-size: 0.875rem; white-space: pre-wrap; line-height: 1.375;"></div>
+                                    <img id="preview-image" src="" style="max-width: 100%; max-height: 300px; border-radius: 4px; margin-top: 16px; display: none;">
+                                </div>
+                                <img id="preview-thumb" src="" style="width: 80px; height: 80px; border-radius: 4px; object-fit: contain; display: none;">
+                            </div>
+                            <div id="preview-components" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    const existingRoles = <%- settings.roles_data || '[]' %>;
+    const serverRoles = <%- JSON.stringify(roles) %>;
+</script>
+
+<script>
+    const rolesContainer = document.getElementById('rolesContainer');
+    let roleCount = 0;
+
+    function addRoleRow(data = null) {
+        if (roleCount >= 25) {
+            alert('الحد الأقصى هو 25 رتبة فقط بسبب قيود ديسكورد.');
+            return;
+        }
+
+        const div = document.createElement('div');
+        div.className = "role-row";
+        div.style.cssText = "background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative;";
+
+        let roleOptions = '<option value="">-- اختر الرتبة --</option>';
+        serverRoles.forEach(r => {
+            const selected = (data && data.roleId === r.id) ? 'selected' : '';
+            roleOptions += `<option value="${r.id}" ${selected}>@${r.name}</option>`;
+        });
+
+        div.innerHTML = `
+            <button type="button" onclick="this.parentElement.remove(); updatePreview();" style="position: absolute; top: 10px; left: 10px; background: transparent; border: none; color: var(--danger); cursor: pointer;"><i class="fa-solid fa-trash"></i></button>
+            <div class="form-group" style="margin-bottom: 10px;">
+                <label style="font-size: 0.85rem;">الرتبة</label>
+                <select class="glass-input role-select" required onchange="updatePreview()">
+                    ${roleOptions}
+                </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 10px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.85rem;">الإيموجي</label>
+                    <input type="text" class="glass-input role-emoji" placeholder="🎟️" value="${data ? data.emoji : ''}" oninput="updatePreview()">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 0.85rem;">النص</label>
+                    <input type="text" class="glass-input role-label" placeholder="احصل على الرتبة" value="${data ? data.label : 'احصل على الرتبة'}" oninput="updatePreview()">
+                </div>
+            </div>
+        `;
+        rolesContainer.appendChild(div);
+        roleCount++;
+        updatePreview();
+    }
+
+    if (existingRoles.length > 0) {
+        existingRoles.forEach(r => addRoleRow(r));
+    } else {
+        addRoleRow();
+    }
+
+    function prepareSubmit(e) {
+        const rows = document.querySelectorAll('.role-row');
+        const rolesData = [];
+        rows.forEach(row => {
+            const roleId = row.querySelector('.role-select').value;
+            const emoji = row.querySelector('.role-emoji').value.trim();
+            const label = row.querySelector('.role-label').value.trim();
+            if (roleId) rolesData.push({ roleId, emoji, label });
+        });
+        if (rolesData.length === 0) {
+            e.preventDefault();
+            alert('يجب إضافة رتبة واحدة على الأقل');
+            return;
+        }
+        document.getElementById('roles_data').value = JSON.stringify(rolesData);
+    }
+
+    const inputs = ['title', 'description', 'color', 'thumbnail', 'image', 'comp_type'];
+    inputs.forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+
+    function updatePreview() {
+        const title = document.getElementById('title').value;
+        const desc = document.getElementById('description').value;
+        const color = document.getElementById('color').value;
+        const thumb = document.getElementById('thumbnail').value;
+        const img = document.getElementById('image').value;
+        const compType = document.getElementById('comp_type').value;
+
+        document.getElementById('preview-embed').style.borderLeftColor = color;
+        document.getElementById('preview-title').innerText = title;
+        document.getElementById('preview-desc').innerText = desc;
+
+        const pThumb = document.getElementById('preview-thumb');
+        if (thumb) { pThumb.src = thumb; pThumb.style.display = 'block'; } else { pThumb.style.display = 'none'; }
+
+        const pImg = document.getElementById('preview-image');
+        if (img) { pImg.src = img; pImg.style.display = 'block'; } else { pImg.style.display = 'none'; }
+
+        const compContainer = document.getElementById('preview-components');
+        compContainer.innerHTML = '';
+        const rows = document.querySelectorAll('.role-row');
+        if (compType === 'button') {
+            rows.forEach(row => {
+                const emoji = row.querySelector('.role-emoji').value.trim();
+                const label = row.querySelector('.role-label').value.trim();
+                const btn = document.createElement('div');
+                btn.style.cssText = "background: #5865F2; color: #fff; padding: 8px 16px; border-radius: 3px; font-weight: 500; font-size: 0.875rem; display: flex; align-items: center; gap: 8px; cursor: default;";
+                btn.innerHTML = `${emoji ? `<span>${emoji}</span>` : ''} <span>${label || 'زر'}</span>`;
+                compContainer.appendChild(btn);
+            });
+        } else if (rows.length > 0) {
+            const sel = document.createElement('div');
+            sel.style.cssText = "width: 100%; background: #202225; color: #dcddde; padding: 10px; border-radius: 4px; border: 1px solid #202225; display: flex; justify-content: space-between; align-items: center;";
+            sel.innerHTML = `<span>اختر رتبتك...</span> <i class="fa-solid fa-chevron-down" style="font-size: 0.8rem;"></i>`;
+            compContainer.appendChild(sel);
+        }
+    }
+
+    updatePreview();
+</script>
+
+<%- include('partials/footer') %>

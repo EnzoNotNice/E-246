@@ -1,0 +1,207 @@
+{
+  "general": {
+    "userNotFound": "**لم يتم العثور على العضو** <:circlex:1519212245559672914>",
+    "noPermission": "**لا تملك الصلاحيات الكافية** <:alerttriangle:1519212253054767205>",
+    "botRoleTooLow": "**لا يمكنني إعطاء هذه الرتبة لأن رتبتي أقل منها أو تساويها في التسلسل** <:alerttriangle:1519212253054767205>",
+    "errorOccurred": "**حدث خطأ غير متوقع  {error}** <:alerttriangle:1519212253054767205>",
+    "invalidValue": "**قيمة غير صالحة** <:circlex:1519212245559672914>",
+    "alreadyExists": "**هذا الخيار موجود بالفعل** <:circlex:1519212245559672914>",
+    "notFound": "**لم يتم العثور على المطلوب** <:circlex:1519212245559672914>",
+    "noTarget": "**يرجى تحديد عضو أو رتبة** <:alerttriangle:1519212253054767205>",
+    "roleIconUsage": "**الاستخدام  `#roleicon <roleId> <imageURL>`** <:circlex:1519212245559672914>",
+    "roleIconSuccess": "<:circlecheck:1519212246876557413> **تم تحديث أيقونة الرتبة {role}**",
+    "setLogUsage": "**الاستخدام  `#setlog <#channel>`** <:circlex:1519212245559672914>",
+    "setLogSuccess": "<:circlecheck:1519212246876557413> **تم تعيين روم السجلات إلى {channel}**",
+    "pingMsg": "<:bolt:1519212174529134754> **جاري التحقق من الاتصال**",
+    "competitionStarted": "<:circlecheck:1519212246876557413> **بدأت المسابقة في {channel}**"
+  },
+  "buttons": {
+    "ticketClose": {
+      "label": "إغلاق التذكرة",
+      "emoji": "<:lock:1519212231332593785>"
+    },
+    "ticketDelete": {
+      "label": "حذف",
+      "emoji": "<:trash:1519212192912637962>"
+    },
+    "ticketReopen": {
+      "label": "إعادة فتح",
+      "emoji": "<:lock:1519212231332593785>"
+    },
+    "formApply": {
+      "label": "تقديم الآن",
+      "emoji": "<:list:1519212232670580868>"
+    },
+    "formAccept": {
+      "label": "قبول",
+      "emoji": "<:circlecheck:1519212246876557413>"
+    },
+    "formReject": {
+      "label": "رفض",
+      "emoji": "<:circlex:1519212245559672914>"
+    },
+    "captchaAnswer": {
+      "label": "حل الكابتشا",
+      "emoji": "<:circlecheck:1519212246876557413>"
+    },
+    "mysteryBoxClaim": {
+      "label": "تم الاستلام",
+      "emoji": "<:gift:1519212237317865553>"
+    }
+  },
+  "tickets": {
+    "notSetup": "**لم يتم إعداد نظام التذاكر بعد**",
+    "ticketExists": "**لديك تذكرة مفتوحة بالفعل**",
+    "openedTitle": "تذكرة جديدة",
+    "openedDesc": "تم فتح التذكرة بنجاح  فريق الدعم سيكون معك قريباً\n\nاستخدم زر الإغلاق لإنهاء التذكرة",
+    "userField": "العضو",
+    "successCreated": "**تم إنشاء تذكرتك ** {channel}",
+    "closedTitle": "تذكرة مغلقة",
+    "closedDesc": "أُغلقت بواسطة {user}",
+    "reopenedDesc": "**تم إعادة فتح التذكرة بواسطة {user}**",
+    "deletingDesc": "**جاري حفظ السجل وحذف التذكرة**",
+    "deletedLogTitle": "تذكرة محذوفة",
+    "deletedLogDesc": "**الروم ** {channel}\n**بواسطة ** {user}",
+    "setupSuccess": "<:circlecheck:1519212246876557413> **تم إعداد نظام التذاكر بنجاح**\n**القسم ** {category}\n**رتبة الدعم ** {staffRole}\n**روم السجلات ** {logChannel}",
+    "panelSent": "**تم إرسال لوحة التذاكر بنجاح**",
+    "notTicket": "**هذه القناة ليست تذكرة** <:circlex:1519212245559672914>",
+    "alreadyOpen": "**هذه التذكرة مفتوحة بالفعل** <:infocircle:1519212235258335324>",
+    "alreadyClosed": "**هذه التذكرة مغلقة بالفعل** <:infocircle:1519212235258335324>",
+    "reopened": "<:lock:1519212231332593785> **تم إعادة فتح التذكرة بواسطة {user}**"
+  },
+  "reactionRoles": {
+    "roleNotFound": "<:circlex:1519212245559672914> **لم يتم العثور على الرتبة في السيرفر**",
+    "roleRemoved": "<:circlecheck:1519212246876557413> **تم سحب رتبة {role} منك**",
+    "roleAdded": "<:circlecheck:1519212246876557413> **تم إعطاؤك رتبة {role}**",
+    "roleError": "<:circlex:1519212245559672914> **فشلت العملية  تأكد من صلاحيات البوت وأنه أعلى من الرتبة**",
+    "selectSuccess": "<:circlecheck:1519212246876557413> **تم التحديث بنجاح**"
+  },
+  "forms": {
+    "noQuestions": "<:circlex:1519212245559672914> **هذا التقديم لا يحتوي على أسئلة مبرمجة**",
+    "modalTitle": "استمارة تقديم",
+    "noLogChannel": "<:circlex:1519212245559672914> **تم إرسال الطلب  ولكن لا يوجد روم مخصص لاستقبال الطلبات**",
+    "successSubmit": "<:circlecheck:1519212246876557413> **تم إرسال تقديمك بنجاح**",
+    "newAppTitle": "<:list:1519212232670580868> طلب تقديم جديد",
+    "dmAccepted": "<:circlecheck:1519212246876557413> **مبارك تم قبول تقديمك في سيرفر {server}**",
+    "dmRejected": "<:circlex:1519212245559672914> **نأسف  تم رفض تقديمك في سيرفر {server}**",
+    "panelAccepted": "تم القبول بواسطة {user}",
+    "panelRejected": "تم الرفض بواسطة {user}"
+  },
+  "captcha": {
+    "disabled": "<:circlex:1519212245559672914> **نظام التحقق معطل حالياً**",
+    "instruction": "**يرجى كتابة الـ 5 أحرف التي تراها في الصورة أسفله **",
+    "modalTitle": "حل الكابتشا",
+    "modalInput": "ماذا ترى في الصورة؟",
+    "expired": "<:circlex:1519212245559672914> **انتهت صلاحية الجلسة  الرجاء الضغط على التوثيق مجدداً**",
+    "incorrect": "<:circlex:1519212245559672914> **الرمز خاطئ  الرجاء المحاولة مرة أخرى**",
+    "success": "<:circlecheck:1519212246876557413> **تم التوثيق بنجاح أهلاً بك في السيرفر**",
+    "roleError": "<:circlecheck:1519212246876557413> **أجبت بشكل صحيح ولكن البوت لا يملك صلاحية لتغيير رتبك**"
+  },
+  "moderation": {
+    "noBans": "**لا يوجد أعضاء محظورين**",
+    "notBanned": "**هذا العضو غير محظور**",
+    "cannotBan": "**لا يمكنني حظر هذا العضو**",
+    "cannotKick": "**لا يمكنني طرد هذا العضو**",
+    "cannotTimeout": "**لا يمكنني إسكات هذا العضو**",
+    "notTimedOut": "**هذا العضو غير مسكت**",
+    "noWarnings": "**هذا العضو ليس لديه تحذيرات**",
+    "banSuccess": "<:circlecheck:1519212246876557413> **تم حظر {user} بنجاح**\n**السبب ** {reason}",
+    "unbanSuccess": "<:circlecheck:1519212246876557413> **تم فك حظر {user} بنجاح**",
+    "kickSuccess": "<:circlecheck:1519212246876557413> **تم طرد {user} بنجاح**\n**السبب ** {reason}",
+    "timeoutSuccess": "<:circlecheck:1519212246876557413> **تم إسكات {user} بنجاح لمدة {time}**\n**السبب ** {reason}",
+    "untimeoutSuccess": "<:circlecheck:1519212246876557413> **تم فك الإسكات عن {user} بنجاح**",
+    "warnSuccess": "<:circlecheck:1519212246876557413> **تم تحذير {user} بنجاح**\n**السبب ** {reason}\n**إجمالي التحذيرات ** {total}",
+    "clearSuccess": "<:circlecheck:1519212246876557413> **تم مسح {count} رسالة بنجاح**",
+    "lockSuccess": "<:lock:1519212231332593785> **تم قفل {channel} بنجاح**\n**السبب ** {reason}",
+    "unlockSuccess": "<:lock:1519212231332593785> **تم فتح {channel} بنجاح**\n**السبب ** {reason}",
+    "topChannelSuccess": "<:bolt:1519212174529134754> **تم نقل {channel} للأعلى بنجاح**",
+    "logChannelSet": "<:list:1519212232670580868> **تم تحديد روم السجلات إلى {channel}**",
+    "logToggled": "<:circlecheck:1519212246876557413> **تم {status} سجلات {type}**",
+    "mainLogSet": "<:list:1519212232670580868> **تم تحديد الروم الأساسي للسجلات إلى {channel}**",
+    "autoReplyAdded": "<:circlecheck:1519212246876557413> **تم إضافة الرد التلقائي بنجاح**\n**الكلمة ** `{trigger}`\n**الرد ** {response}",
+    "autoReplyRemoved": "<:trash:1519212192912637962> **تم حذف الرد التلقائي `{trigger}` بنجاح**",
+    "massUnbanSuccess": "<:circlecheck:1519212246876557413> **تم فك حظر {count} عضو بنجاح**",
+    "dmWarned": "<:alerttriangle:1519212253054767205> **لقد تم تحذيرك في سيرفر {server}**\n**السبب ** {reason}\n**إجمالي التحذيرات ** {total}"
+  },
+  "levels": {
+    "systemStatus": "<:circlecheck:1519212246876557413> **نظام المستويات الآن {status}**",
+    "channelSet": "<:circlecheck:1519212246876557413> **تم تحديد روم إشعارات المستوى إلى {channel}**",
+    "channelDefault": "<:circlecheck:1519212246876557413> **سيتم إرسال إشعارات المستوى في نفس الروم**",
+    "xpRangeSet": "<:circlecheck:1519212246876557413> **تم تحديث نقاط الخبرة  {min}   {max}**",
+    "cooldownSet": "<:circlecheck:1519212246876557413> **تم تحديد وقت الانتظار إلى {secs} ثانية**",
+    "rewardAdded": "<:circlecheck:1519212246876557413> **الأعضاء الذين يصلون للمستوى {level} سيحصلون على {role}**",
+    "rewardRemoved": "<:circlecheck:1519212246876557413> **تم حذف جائزة المستوى {level}**"
+  },
+  "greet": {
+    "greetEnabled": "<:user:1519212186633764995> **سيتم إرسال رسائل الترحيب في {channel}**",
+    "autoDeleteSet": "<:circlecheck:1519212246876557413> **سيتم حذف رسائل الترحيب بعد {secs} ثانية**",
+    "autoDeleteDisabled": "<:circlecheck:1519212246876557413> **لن يتم حذف رسائل الترحيب تلقائياً**",
+    "messageSet": "<:circlecheck:1519212246876557413> **تم تحديث رسالة الترحيب بنجاح**",
+    "dmMessageSet": "<:circlecheck:1519212246876557413> **تم تحديث رسالة الترحيب في الخاص بنجاح**",
+    "dmMessageDisabled": "<:circlex:1519212245559672914> **تم تعطيل رسائل الترحيب في الخاص**"
+  },
+  "automation": {
+    "noAutomation": "**لا يوجد إعدادات تلقائية** <:infocircle:1519212235258335324>",
+    "imagesDisabled": "<:circlecheck:1519212246876557413> **تم تعطيل نظام الصور فقط في {channel}**",
+    "imagesEnabled": "<:circlecheck:1519212246876557413> **تم تفعيل نظام الصور فقط في {channel}**",
+    "youtubeDisabled": "<:circlecheck:1519212246876557413> **تم تعطيل نظام اليوتيوب فقط في {channel}**",
+    "youtubeEnabled": "<:circlecheck:1519212246876557413> **تم تفعيل نظام اليوتيوب فقط في {channel}**",
+    "autoLineAdded": "<:circlecheck:1519212246876557413> **سيتم إرسال الخط التلقائي `{sep}` في {channel}**",
+    "autoReactAdded": "<:circlecheck:1519212246876557413> **سيتم التفاعل بـ {emoji} في {channel}**",
+    "automationRemoved": "<:circlecheck:1519212246876557413> **تم حذف إعداد {type} من {channel}**"
+  },
+  "giveaway": {
+    "emojiSet": "<:circlecheck:1519212246876557413> **سيتم استخدام {emoji} لتفاعلات القيف أواي**",
+    "boxSent": "**تم إرسال الصندوق السري بنجاح** <:gift:1519212237317865553>",
+    "notFound": "**لم يتم العثور على القيف أواي** <:circlex:1519212245559672914>",
+    "alreadyEnded": "**انتهى هذا القيف أواي بالفعل** <:circlex:1519212245559672914>",
+    "ended": "<:circlecheck:1519212246876557413> **تم إنهاء القيف أواي**",
+    "usageGend": "**الاستخدام  `#gend <messageId>`** <:circlex:1519212245559672914>",
+    "usageGprize": "**الاستخدام  `#gprize <messageId> <new prize>`** <:circlex:1519212245559672914>",
+    "prizeUpdated": "<:circlecheck:1519212246876557413> **تم تحديث الجائزة إلى {prize}**",
+    "usageGtime": "**الاستخدام  `#gtime <messageId> <new duration>`** <:circlex:1519212245559672914>",
+    "timeUpdated": "<:circlecheck:1519212246876557413> **تم تحديث وقت القيف أواي**",
+    "usageGstop": "**الاستخدام  `#gstop <messageId>`** <:circlex:1519212245559672914>",
+    "paused": "<:playerpause:1519212222448926811> **تم إيقاف القيف أواي مؤقتاً**",
+    "usageGresume": "**الاستخدام  `#gresume <messageId>`** <:circlex:1519212245559672914>",
+    "notPaused": "**هذا القيف أواي ليس متوقفاً مؤقتاً** <:circlex:1519212245559672914>",
+    "resumed": "<:playerplay:1519212218867253258> **تم استئناف القيف أواي**",
+    "noReactions": "**لا توجد تفاعلات على هذه الرسالة** <:circlex:1519212245559672914>",
+    "noEligible": "**لا يوجد مشاركين مؤهلين** <:circlex:1519212245559672914>",
+    "usageGwin": "**الاستخدام  `#gwin <messageId>`** <:circlex:1519212245559672914>"
+  },
+  "protection": {
+    "enabled": "**تم تفعيل حماية السيرفر بنجاح** <:shield:1519212202676977788>",
+    "disabled": "**تم تعطيل حماية السيرفر** <:lock:1519212231332593785>",
+    "actionSet": "<:circlecheck:1519212246876557413> **تم تعيين إجراء الحماية إلى {action}**",
+    "whitelisted": "<:circlecheck:1519212246876557413> **تم إضافة {target} إلى القائمة البيضاء**",
+    "unwhitelisted": "<:circlecheck:1519212246876557413> **تم إزالة {target} من القائمة البيضاء**",
+    "unblacklisted": "<:circlecheck:1519212246876557413> **تم إزالة {target} من القائمة السوداء**"
+  },
+  "invites": {
+    "userReset": "<:circlecheck:1519212246876557413> **تم إعادة تعيين دعوات {user}**",
+    "serverReset": "**تم إعادة تعيين جميع الدعوات** <:circlecheck:1519212246876557413>",
+    "logsSet": "<:circlecheck:1519212246876557413> **سيتم إرسال سجلات الدعوات في {channel}**",
+    "rankAdded": "<:circlecheck:1519212246876557413> **الأعضاء الذين يملكون {count} دعوة سيحصلون على {role}**"
+  },
+  "prefix": {
+    "noPermission": "**لا تملك الصلاحيات الكافية** <:alerttriangle:1519212253054767205>",
+    "invalidUrl": "**الرابط غير صحيح** <:circlex:1519212245559672914>",
+    "channelNotFound": "**لم يتم العثور على الروم** <:circlex:1519212245559672914>",
+    "roleNotFound": "**لم يتم العثور على الرتبة** <:circlex:1519212245559672914>",
+    "invalidDuration": "**المدة غير صحيحة** <:circlex:1519212245559672914>"
+  },
+  "broadcast": {
+    "modalTitle": "إرسال رسالة للجميع",
+    "modalInputLabel": "محتوى الرسالة",
+    "modalPlaceholder": "اكتب الرسالة التي تود إرسالها للأعضاء",
+    "sessionExpired": "<:circlex:1519212245559672914> **انتهت صلاحية الجلسة  الرجاء استخدام الأمر مرة أخرى**",
+    "starting": "<:clock:1519212244263632916> **جاري الإرسال قد تستغرق العملية بعض الوقت**",
+    "fetchFailed": "<:circlex:1519212245559672914> **حدث خطأ أثناء جلب قائمة الأعضاء**",
+    "completed": "<:circlecheck:1519212246876557413> **تم الانتهاء من إرسال الرسائل**\n> <:user:1519212186633764995> **الناجحة ** `{sent}`\n> <:circlex:1519212245559672914> **الفاشلة ** `{failed}`",
+    "selectTarget": "**حدد من تريد إرسال هذه الرسالة إليه **\n\n```text\n{message}\n```",
+    "btnOnline": "متصل",
+    "btnOffline": "غير متصل",
+    "btnAll": "الجميع"
+  }
+}
