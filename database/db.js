@@ -28,6 +28,8 @@ try {
 try { db.exec("ALTER TABLE protection_settings ADD COLUMN antilink INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE protection_settings ADD COLUMN antispam INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE protection_settings ADD COLUMN antiraid INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE levels ADD COLUMN reactionsCount INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE reactroles ADD COLUMN guildId TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE protection_settings ADD COLUMN bypass_role TEXT"); } catch (e) {}
 
 db.exec(`
@@ -58,6 +60,7 @@ db.exec(`
     voice_level INTEGER DEFAULT 0,
     messages INTEGER DEFAULT 0,
     last_message INTEGER DEFAULT 0,
+    reactionsCount INTEGER DEFAULT 0,
     PRIMARY KEY (userId, guildId)
   );
 
@@ -246,6 +249,14 @@ db.exec(`
     role_create_channel TEXT,
     role_delete_channel TEXT,
     nick_change_channel TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS reactroles (
+    messageId TEXT NOT NULL,
+    guildId TEXT NOT NULL,
+    emoji TEXT NOT NULL,
+    roleId TEXT NOT NULL,
+    UNIQUE(messageId, emoji)
   );
 
   CREATE TABLE IF NOT EXISTS aliases (

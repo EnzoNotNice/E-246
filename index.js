@@ -23,7 +23,7 @@ client.prefixCommands = new Collection();
 client.inviteCache = new Map();
 client.voiceSessions = new Map();
 
-const ACTIVE_COMMAND_DIRS = ['admin', 'greet', 'invite', 'levels', 'protection', 'giveaway', 'automation', 'ticket', 'public'];
+const ACTIVE_COMMAND_DIRS = ['admin', 'greet', 'invite', 'levels', 'protection', 'giveaway', 'automation', 'ticket', 'public', 'games', 'utils'];
 
 for (const dir of ACTIVE_COMMAND_DIRS) {
   const dirPath = path.join(__dirname, 'commands', dir);

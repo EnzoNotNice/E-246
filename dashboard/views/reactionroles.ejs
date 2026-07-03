@@ -117,6 +117,48 @@
             </div>
         </div>
     </div>
+
+    <!-- الرتب التفاعلية المنشأة من الأوامر (Native React Roles) -->
+    <hr style="border-color: rgba(255,255,255,0.1); margin: 40px 0;">
+    <div class="content-header" style="margin-bottom: 20px;">
+        <h2><i class="fa-brands fa-discord"></i> رتب تفاعلية (عبر الأوامر المباشرة)</h2>
+        <p>هذه الرتب تم إنشاؤها عبر أمر <code>/reactrole</code> في الديسكورد وتسمح للأعضاء بالتفاعل مع أي رسالة قديمة لأخذ رتبة.</p>
+    </div>
+
+    <div class="glass-panel" style="overflow-x: auto;">
+        <table class="table" style="width: 100%; text-align: right; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <th style="padding: 10px;">ID الرسالة</th>
+                    <th style="padding: 10px;">الإيموجي</th>
+                    <th style="padding: 10px;">الرتبة</th>
+                    <th style="padding: 10px; text-align: left;">إجراء</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (typeof nativeReactionRoles !== 'undefined' && nativeReactionRoles.length > 0) { %>
+                    <% nativeReactionRoles.forEach(rr => { %>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 10px;"><code><%= rr.messageId %></code></td>
+                            <td style="padding: 10px;"><%= rr.emoji.includes(':') ? `<${rr.emoji}>` : rr.emoji %></td>
+                            <td style="padding: 10px;"><span class="badge" style="background: var(--primary); padding: 5px 10px; border-radius: 4px;">&lt;@&amp;<%= rr.roleId %>&gt;</span></td>
+                            <td style="padding: 10px; text-align: left;">
+                                <form action="/dashboard/<%= guild.id %>/reactionroles/delete" method="POST" style="display:inline;">
+                                    <input type="hidden" name="messageId" value="<%= rr.messageId %>">
+                                    <input type="hidden" name="emoji" value="<%= rr.emoji %>">
+                                    <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;" onclick="return confirm('هل أنت متأكد من حذف هذه الرتبة التفاعلية؟');">حذف</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }) %>
+                <% } else { %>
+                    <tr>
+                        <td colspan="4" style="padding: 20px; text-align: center; color: rgba(255,255,255,0.5);">لا توجد رتب تفاعلية مضافة عبر الديسكورد حالياً.</td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
 </main>
 
 <script>

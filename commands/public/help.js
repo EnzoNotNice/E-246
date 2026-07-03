@@ -19,7 +19,9 @@ module.exports = {
       automation: '1519212254720167996',
       invite: '1519212239876395138',
       greet: '1519212238160924692',
-      economy: '1519212237317865553'
+      economy: '1519212237317865553',
+      games: '1519212218867253258',
+      utils: '1519212254720167996'
     };
 
     const arNames = {
@@ -32,7 +34,9 @@ module.exports = {
       automation: 'الردود التلقائية والخطوط',
       invite: 'الدعوات',
       greet: 'الترحيب',
-      economy: 'الاقتصاد'
+      economy: 'الاقتصاد',
+      games: 'الألعاب والتسلية',
+      utils: 'الأدوات'
     };
 
     const commandDirs = fs.readdirSync(path.join(__dirname, '..')).filter(d => d !== 'prefix' && fs.statSync(path.join(__dirname, '..', d)).isDirectory());

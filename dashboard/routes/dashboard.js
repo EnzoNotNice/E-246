@@ -372,10 +372,13 @@ module.exports = (client) => {
         if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
         if (typeof settings.roles_data === 'string') settings.roles_data = settings.roles_data;
 
+        const nativeReactionRoles = db.prepare('SELECT * FROM reactroles WHERE guildId = ?').all(req.guild.id);
+
         res.render('reactionroles', {
             guild: req.guild,
             settings,
             client,
+            nativeReactionRoles,
             roles: req.guild.roles.cache.sort((a, b) => b.position - a.position).map(r => ({id: r.id, name: r.name})),
             textChannels: req.guild.channels.cache.filter(c => c.type === 0)
         });
@@ -598,6 +601,25 @@ module.exports = (client) => {
         }
 
         res.redirect(`/dashboard/${req.guild.id}/captcha?success=تم+حفظ+إعدادات+التحقق`);
+    });
+
+    router.get('/:id/stats', checkAuth, checkGuildAccess, (req, res) => {
+        const topMessages = db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY messages DESC LIMIT 10').all(req.guild.id);
+        const topVoice = db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY voice_xp DESC LIMIT 10').all(req.guild.id);
+        const topReactions = db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY reactionsCount DESC LIMIT 10').all(req.guild.id);
+
+        res.render('stats', {
+            guild: req.guild,
+            topMessages,
+            topVoice,
+            topReactions
+        });
+    });
+
+    router.post('/:id/reactionroles/delete', checkAuth, checkGuildAccess, (req, res) => {
+        const { messageId, emoji } = req.body;
+        db.prepare('DELETE FROM reactroles WHERE guildId = ? AND messageId = ? AND emoji = ?').run(req.guild.id, messageId, emoji);
+        res.redirect(`/dashboard/${req.guild.id}/reactionroles?success=تم+حذف+الرتبة+التفاعلية+بنجاح`);
     });
 
     return router;

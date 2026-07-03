@@ -17,7 +17,7 @@ module.exports = {
 
     if (!target) return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
     if (!target.kickable) return interaction.reply({ embeds: [error(locale.get('moderation.cannotKick'))], flags: ['Ephemeral'] });
-    if (target.roles.highest.position >= interaction.member.roles.highest.position)
+    if (interaction.user.id !== interaction.guild.ownerId && target.roles.highest.position >= interaction.member.roles.highest.position)
       return interaction.reply({ embeds: [error(locale.get('general.noPermission'))], flags: ['Ephemeral'] });
 
     try {

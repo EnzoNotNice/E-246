@@ -7,3 +7,4 @@ database/*.db-shm
 *.log
 npm-debug.log*
 .DS_Store
+.env

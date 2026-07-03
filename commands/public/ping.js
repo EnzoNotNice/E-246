@@ -7,7 +7,8 @@ module.exports = {
     .setDescription("اختبار سرعة استجابة البوت"),
 
   async execute(interaction) {
-    const sent = await interaction.reply({ content: locale.get('general.pingMsg'), fetchReply: true });
+    await interaction.reply({ content: locale.get('general.pingMsg') });
+    const sent = await interaction.fetchReply();
     const roundtrip = sent.createdTimestamp - interaction.createdTimestamp;
     const ws = interaction.client.ws.ping;
 

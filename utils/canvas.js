@@ -3,8 +3,9 @@ const path = require('path');
 
 try {
     registerFont(path.join(__dirname, '../assets/font.ttf'), { family: 'CustomFont' });
+    registerFont(path.join(__dirname, '../assets/fonts/IBMPlexSansArabic-Bold.ttf'), { family: 'IBMPlexSansArabic' });
 } catch (e) {
-    console.error('Failed to load CustomFont:', e.message);
+    console.error('Failed to load fonts:', e.message);
 }
 
 async function fetchImage(url) {
@@ -103,7 +104,7 @@ async function createRankCard(user, textXp, textLevel, voiceTime, voiceLevel, me
     }
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 42px "CustomFont", sans-serif';
+    ctx.font = 'bold 42px "IBMPlexSansArabic", "CustomFont", sans-serif';
     ctx.fillText(user.username, 260, 100);
 
     const textCurrentLvlXp = 100 * Math.pow(textLevel, 2);
@@ -119,7 +120,7 @@ async function createRankCard(user, textXp, textLevel, voiceTime, voiceLevel, me
     const voiceNeeded = voiceNextLvlTime - voiceCurrentLvlTime;
     const voiceProgress = Math.max(0, Math.min(1, voiceTimeInLvl / voiceNeeded));
 
-    ctx.font = '22px "CustomFont", sans-serif';
+    ctx.font = '22px "IBMPlexSansArabic", "CustomFont", sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
 
     try {
@@ -127,20 +128,20 @@ async function createRankCard(user, textXp, textLevel, voiceTime, voiceLevel, me
         ctx.drawImage(textIcon, 260, 130, 24, 24);
     } catch (e) {}
     ctx.fillText(`مستوى الكتابة ${textLevel}`, 295, 150);
-    ctx.font = '18px "CustomFont", sans-serif';
+    ctx.font = '18px "IBMPlexSansArabic", "CustomFont", sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
     const textXpStr = `${Math.floor(textXpInLvl)} / ${Math.floor(textNeeded)} XP`;
     ctx.fillText(textXpStr, 740 - ctx.measureText(textXpStr).width, 150);
     drawProgressBar(ctx, 260, 160, 480, 20, textProgress, '#5865F2', '#4752C4');
 
-    ctx.font = '22px "CustomFont", sans-serif';
+    ctx.font = '22px "IBMPlexSansArabic", "CustomFont", sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     try {
         const voiceIcon = await loadImage(path.join(__dirname, '../assets/voice_icon.svg'));
         ctx.drawImage(voiceIcon, 260, 200, 24, 24);
     } catch (e) {}
     ctx.fillText(`مستوى الصوت ${voiceLevel}`, 295, 220);
-    ctx.font = '18px "CustomFont", sans-serif';
+    ctx.font = '18px "IBMPlexSansArabic", "CustomFont", sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
     const voiceXpStr = `${Math.floor(voiceTimeInLvl)} / ${Math.floor(voiceNeeded)} XP`;
     ctx.fillText(voiceXpStr, 740 - ctx.measureText(voiceXpStr).width, 220);
@@ -156,7 +157,7 @@ async function createLeaderboardCanvas(guild, topUsers, requestingUserRank = nul
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 50px "CustomFont", sans-serif';
+    ctx.font = 'bold 50px "IBMPlexSansArabic", "CustomFont", sans-serif';
     ctx.textAlign = 'center';
 
     ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
@@ -219,7 +220,7 @@ async function createLeaderboardCanvas(guild, topUsers, requestingUserRank = nul
                 }
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 30px "CustomFont", sans-serif';
+                ctx.font = 'bold 30px "IBMPlexSansArabic", "CustomFont", sans-serif';
                 ctx.textAlign = 'left';
                 let name = member.user.username;
                 if (name.length > 15) name = name.substring(0, 12) + '..';
@@ -227,7 +228,7 @@ async function createLeaderboardCanvas(guild, topUsers, requestingUserRank = nul
             }
         } catch (e) {
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 30px "CustomFont", sans-serif';
+            ctx.font = 'bold 30px "IBMPlexSansArabic", "CustomFont", sans-serif';
             ctx.textAlign = 'left';
             ctx.fillText('غير معروف', x + 115, y + 45);
         }
@@ -236,7 +237,7 @@ async function createLeaderboardCanvas(guild, topUsers, requestingUserRank = nul
 
         if (textIcon) ctx.drawImage(textIcon, x + 115, y + 58, 22, 22);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.font = '18px "CustomFont", sans-serif';
+        ctx.font = '18px "IBMPlexSansArabic", "CustomFont", sans-serif';
         ctx.fillText(`لفل ${userRecord.level || 0}`, x + 145, y + 75);
 
         if (voiceIcon) ctx.drawImage(voiceIcon, x + 230, y + 58, 22, 22);
@@ -263,7 +264,7 @@ async function createLeaderboardCanvas(guild, topUsers, requestingUserRank = nul
         ctx.stroke();
 
         ctx.fillStyle = badgeText;
-        ctx.font = 'bold 22px "CustomFont", sans-serif';
+        ctx.font = 'bold 22px "IBMPlexSansArabic", "CustomFont", sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(`#${rank}`, x + cardWidth - 55, y + 57);
     }
@@ -277,7 +278,7 @@ async function createLeaderboardCanvas(guild, topUsers, requestingUserRank = nul
     }
 
     if (requestingUserRank) {
-        ctx.font = 'bold 26px "CustomFont", sans-serif';
+        ctx.font = 'bold 26px "IBMPlexSansArabic", "CustomFont", sans-serif';
         ctx.fillStyle = '#AAAAAA';
         ctx.textAlign = 'center';
         ctx.fillText(`ترتيبك رقم #${requestingUserRank}`, canvas.width / 2, canvas.height - 20);

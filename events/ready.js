@@ -1,3 +1,5 @@
+const emojiSetup = require('../utils/emojiSetup');
+
 module.exports = {
   name: 'clientReady',
   once: true,
@@ -5,6 +7,9 @@ module.exports = {
     console.log(`Logged in as ${client.user.tag}`);
     console.log(`Serving ${client.guilds.cache.size} server(s)`);
     console.log(`Watching ${client.users.cache.size} user(s)`);
+
+    // Run automatic Application Emoji setup
+    await emojiSetup(client);
 
     client.user.setActivity('your server 👀', { type: 3 });
 
