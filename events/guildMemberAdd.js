@@ -12,6 +12,8 @@ module.exports = {
     const guildId = guild.id;
     const client = member.client;
 
+    db.incrementDailyJoins(guildId);
+
     
     try {
       const cachedInvites = client.inviteCache.get(guildId) || new Map();

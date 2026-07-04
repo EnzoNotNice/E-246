@@ -8,6 +8,11 @@ const healthCheckEndpoint = require('../utils/healthCheckEndpoint');
 const { generalLimiter, dashboardLimiter } = require('../utils/rateLimitMiddleware');
 
 module.exports = (client) => {
+    if (process.env.DISABLE_DASHBOARD === 'true') {
+        console.log('[Dashboard] Dashboard is disabled via DISABLE_DASHBOARD env variable.');
+        return;
+    }
+
     if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET) {
         console.log('[Dashboard] Skipping dashboard setup: Missing CLIENT_ID or CLIENT_SECRET in .env');
         return;
@@ -59,7 +64,12 @@ module.exports = (client) => {
     app.use('/auth', require('./routes/auth'));
     app.use('/dashboard', dashboardLimiter, require('./routes/dashboard')(client));
 
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`[Dashboard] Web interface running on port ${PORT} (Callback: ${callbackURL})`);
+    });
+
+    server.on('error', (err) => {
+        console.error('[Dashboard] Failed to start server:', err.message);
+        console.log('[Dashboard] Bot will continue running without the dashboard.');
     });
 };

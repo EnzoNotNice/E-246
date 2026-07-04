@@ -8,6 +8,8 @@ module.exports = {
     const guildId = member.guild.id;
     const client = member.client;
 
+    db.incrementDailyLeaves(guildId);
+
     try {
       const allInvites = db.db.prepare('SELECT * FROM invites WHERE guildId = ?').all(guildId);
     } catch (e) {}

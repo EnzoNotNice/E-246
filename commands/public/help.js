@@ -9,19 +9,28 @@ module.exports = {
     .setDescription('عرض جميع أوامر البوت'),
 
   async execute(interaction) {
+    const emojisJson = require('../../utils/emojis.json');
+    
+    function getEmojiId(emojiKey, fallbackId) {
+      const emojiStr = emojisJson[emojiKey];
+      if (!emojiStr) return fallbackId;
+      const match = emojiStr.match(/:(\d+)>/);
+      return match ? match[1] : fallbackId;
+    }
+
     const emojis = {
-      admin: '1519212241310715916',
-      public: '1519212235258335324',
-      giveaway: '1519212243026448394',
-      ticket: '1519212195945119814',
-      protection: '1519212231332593785',
-      levels: '1519212248479043634',
-      automation: '1519212254720167996',
-      invite: '1519212239876395138',
-      greet: '1519212238160924692',
-      economy: '1519212237317865553',
-      games: '1519212218867253258',
-      utils: '1519212254720167996'
+      admin: getEmojiId('crown', '1519212241310715916'),
+      public: getEmojiId('infocircle', '1519212235258335324'),
+      giveaway: getEmojiId('confetti', '1519212243026448394'),
+      ticket: getEmojiId('ticket', '1519212195945119814'),
+      protection: getEmojiId('shield', '1519212231332593785'),
+      levels: getEmojiId('chartpie', '1519212248479043634'),
+      automation: getEmojiId('settings', '1519212254720167996'),
+      invite: getEmojiId('mail', '1519212239876395138'),
+      greet: getEmojiId('folder', '1519212238160924692'),
+      economy: getEmojiId('gift', '1519212237317865553'),
+      games: getEmojiId('playerplay', '1519212218867253258'),
+      utils: getEmojiId('adjustments', '1519212254720167996')
     };
 
     const arNames = {
@@ -57,9 +66,11 @@ module.exports = {
 
     const row = new ActionRowBuilder().addComponents(menu);
 
+    const dashboardEmoji = emojisJson.layoutdashboard || '<:layoutdashboard:1519212233849180190>';
+
     const embed = new EmbedBuilder()
       .setColor(0x2B2D31)
-      .setTitle('<:layoutdashboard:1519212233849180190> قائمة المساعدة')
+      .setTitle(`${dashboardEmoji} قائمة المساعدة`)
       .setDescription('**أهلاً بك في قائمة المساعدة**\n\nيرجى استخدام القائمة المنسدلة بالأسفل لاختيار القسم الذي تود عرض أوامره جميع الأوامر مرتبة ومقسمة لتسهيل الوصول إليها')
       .setThumbnail(interaction.client.user.displayAvatarURL())
       .setFooter({ text: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })

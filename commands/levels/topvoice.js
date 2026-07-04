@@ -19,9 +19,10 @@ module.exports = {
 
         let desc = '';
         topUsers.forEach((user, index) => {
-            const hours = Math.floor(user.voiceTime / 3600);
-            const mins = Math.floor((user.voiceTime % 3600) / 60);
-            const secs = user.voiceTime % 60;
+            const voiceSecs = user.voice_xp || 0;
+            const hours = Math.floor(voiceSecs / 3600);
+            const mins = Math.floor((voiceSecs % 3600) / 60);
+            const secs = voiceSecs % 60;
             desc += `**${index + 1}.** <@${user.userId}> - ${hours}h ${mins}m ${secs}s\n`;
         });
         

@@ -27,7 +27,7 @@ module.exports = {
                 emojiKey = parts[parts.length - 1].replace('>', '');
             }
 
-            db.prepare('INSERT OR REPLACE INTO reactroles (messageId, guildId, emoji, roleId) VALUES (?, ?, ?, ?)')
+            db.db.prepare('INSERT OR REPLACE INTO reactroles (messageId, guildId, emoji, roleId) VALUES (?, ?, ?, ?)')
                 .run(messageId, interaction.guild.id, emojiKey, role.id);
 
             await interaction.reply({ content: `✅ تم إعداد الرتبة بنجاح! الإيموجي: ${emoji} | الرتبة: <@&${role.id}>`, flags: 64 });

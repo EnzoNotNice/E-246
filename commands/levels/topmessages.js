@@ -19,7 +19,7 @@ module.exports = {
 
         let desc = '';
         topUsers.forEach((user, index) => {
-            desc += `**${index + 1}.** <@${user.userId}> - ${user.messagesCount} messages\n`;
+            desc += `**${index + 1}.** <@${user.userId}> - ${user.messages || 0} messages\n`;
         });
         
         embed.setDescription(desc);

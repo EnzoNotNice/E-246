@@ -85,10 +85,68 @@ module.exports = (client) => {
         });
     });
 
+    router.get('/admin/botsettings', checkAuth, async (req, res) => {
+        let isOwner = false;
+        if (process.env.OWNER_ID && req.user.id === process.env.OWNER_ID) isOwner = true;
+        if (!isOwner && client.application) {
+            await client.application.fetch().catch(()=>null);
+            if (client.application.owner) {
+                if (client.application.owner.members) {
+                    if (client.application.owner.members.has(req.user.id)) isOwner = true;
+                } else if (client.application.owner.id === req.user.id) {
+                    isOwner = true;
+                }
+            }
+        }
+
+        if (!isOwner) {
+            return res.redirect('/dashboard?error=not_owner');
+        }
+        res.render('botsettings', {
+            bot: client.user,
+            settings: db.getBotSettings()
+        });
+    });
+
+    router.post('/admin/botsettings', checkAuth, async (req, res) => {
+        let isOwner = false;
+        if (process.env.OWNER_ID && req.user.id === process.env.OWNER_ID) isOwner = true;
+        if (!isOwner && client.application) {
+            await client.application.fetch().catch(()=>null);
+            if (client.application.owner) {
+                if (client.application.owner.members) {
+                    if (client.application.owner.members.has(req.user.id)) isOwner = true;
+                } else if (client.application.owner.id === req.user.id) {
+                    isOwner = true;
+                }
+            }
+        }
+
+        if (!isOwner) {
+            return res.redirect('/dashboard?error=not_owner');
+        }
+        const { status, activity_type, activity_name } = req.body;
+        db.updateBotSettings(status, activity_type, activity_name);
+        
+        const { ActivityType } = require('discord.js');
+        const actType = ActivityType[activity_type] || ActivityType.Playing;
+
+        client.user.setPresence({
+            activities: [{ name: activity_name, type: actType }],
+            status: status,
+        });
+
+        res.redirect('/dashboard/admin/botsettings?success=تم+تحديث+إعدادات+البوت');
+    });
+
     router.get('/:id', checkAuth, checkGuildAccess, (req, res) => {
+        const guildId = req.guild.id;
         res.render('server', {
             guild: req.guild,
-            settings: db.getGuildSettings(req.guild.id)
+            settings: db.getGuildSettings(guildId),
+            memberStats: db.getDailyMembersStats(guildId, 7),
+            messageStats: db.getHourlyMessagesStats(guildId),
+            voiceStats: db.getDailyVoiceStats(guildId, 7)
         });
     });
 
@@ -372,7 +430,7 @@ module.exports = (client) => {
         if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
         if (typeof settings.roles_data === 'string') settings.roles_data = settings.roles_data;
 
-        const nativeReactionRoles = db.prepare('SELECT * FROM reactroles WHERE guildId = ?').all(req.guild.id);
+        const nativeReactionRoles = db.db.prepare('SELECT * FROM reactroles WHERE guildId = ?').all(req.guild.id);
 
         res.render('reactionroles', {
             guild: req.guild,
@@ -604,9 +662,9 @@ module.exports = (client) => {
     });
 
     router.get('/:id/stats', checkAuth, checkGuildAccess, (req, res) => {
-        const topMessages = db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY messages DESC LIMIT 10').all(req.guild.id);
-        const topVoice = db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY voice_xp DESC LIMIT 10').all(req.guild.id);
-        const topReactions = db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY reactionsCount DESC LIMIT 10').all(req.guild.id);
+        const topMessages = db.db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY messages DESC LIMIT 10').all(req.guild.id);
+        const topVoice = db.db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY voice_xp DESC LIMIT 10').all(req.guild.id);
+        const topReactions = db.db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY reactionsCount DESC LIMIT 10').all(req.guild.id);
 
         res.render('stats', {
             guild: req.guild,
@@ -618,7 +676,7 @@ module.exports = (client) => {
 
     router.post('/:id/reactionroles/delete', checkAuth, checkGuildAccess, (req, res) => {
         const { messageId, emoji } = req.body;
-        db.prepare('DELETE FROM reactroles WHERE guildId = ? AND messageId = ? AND emoji = ?').run(req.guild.id, messageId, emoji);
+        db.db.prepare('DELETE FROM reactroles WHERE guildId = ? AND messageId = ? AND emoji = ?').run(req.guild.id, messageId, emoji);
         res.redirect(`/dashboard/${req.guild.id}/reactionroles?success=تم+حذف+الرتبة+التفاعلية+بنجاح`);
     });
 

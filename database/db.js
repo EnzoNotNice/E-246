@@ -265,6 +265,65 @@ db.exec(`
     shortcut TEXT NOT NULL,
     command TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS tempvoice_settings (
+    guildId TEXT PRIMARY KEY,
+    master_channel TEXT,
+    category_id TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS tempvoice_channels (
+    channelId TEXT PRIMARY KEY,
+    ownerId TEXT NOT NULL,
+    guildId TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS bot_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    status TEXT DEFAULT 'online',
+    activity_type TEXT DEFAULT 'PLAYING',
+    activity_name TEXT DEFAULT 'E-246 System'
+  );
+
+  CREATE TABLE IF NOT EXISTS tempvoice_user_settings (
+    userId TEXT PRIMARY KEY,
+    preferredName TEXT,
+    preferredLimit INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS tempvoice_bans (
+    channelId TEXT,
+    targetId TEXT,
+    PRIMARY KEY (channelId, targetId)
+  );
+
+  CREATE TABLE IF NOT EXISTS tempvoice_trusted (
+    channelId TEXT,
+    userId TEXT,
+    PRIMARY KEY (channelId, userId)
+  );
+
+  CREATE TABLE IF NOT EXISTS stats_daily_members (
+    guildId TEXT,
+    date TEXT,
+    joins INTEGER DEFAULT 0,
+    leaves INTEGER DEFAULT 0,
+    PRIMARY KEY (guildId, date)
+  );
+
+  CREATE TABLE IF NOT EXISTS stats_hourly_messages (
+    guildId TEXT,
+    date TEXT,
+    hour INTEGER,
+    message_count INTEGER DEFAULT 0,
+    PRIMARY KEY (guildId, date, hour)
+  );
+
+  CREATE TABLE IF NOT EXISTS stats_daily_voice (
+    guildId TEXT,
+    date TEXT,
+    seconds INTEGER DEFAULT 0,
+    PRIMARY KEY (guildId, date)
+  );
 `);
 
 try { db.exec("DELETE FROM whitelist WHERE id NOT IN (SELECT MIN(id) FROM whitelist GROUP BY guildId, targetId, type)"); } catch (e) {}
@@ -570,6 +629,145 @@ const helpers = {
       SET enabled = ?, unverified_role = ?, verified_role = ?, panel_channel = ?, panel_data = ?
       WHERE guildId = ?
     `).run(enabled, unverified_role, verified_role, panel_channel, panel_data, guildId);
+  },
+
+  getTempVoiceSettings(guildId) {
+    let row = db.prepare('SELECT * FROM tempvoice_settings WHERE guildId = ?').get(guildId);
+    if (!row) {
+      db.prepare('INSERT OR IGNORE INTO tempvoice_settings (guildId) VALUES (?)').run(guildId);
+      row = db.prepare('SELECT * FROM tempvoice_settings WHERE guildId = ?').get(guildId);
+    }
+    return row;
+  },
+  updateTempVoiceSettings(guildId, master_channel, category_id) {
+    return db.prepare('UPDATE tempvoice_settings SET master_channel = ?, category_id = ? WHERE guildId = ?').run(master_channel, category_id, guildId);
+  },
+  
+  addTempVoiceChannel(channelId, ownerId, guildId) {
+    return db.prepare('INSERT INTO tempvoice_channels (channelId, ownerId, guildId) VALUES (?, ?, ?)').run(channelId, ownerId, guildId);
+  },
+  getTempVoiceChannel(channelId) {
+    return db.prepare('SELECT * FROM tempvoice_channels WHERE channelId = ?').get(channelId);
+  },
+  removeTempVoiceChannel(channelId) {
+    return db.prepare('DELETE FROM tempvoice_channels WHERE channelId = ?').run(channelId);
+  },
+  getTempVoiceChannelsByGuild(guildId) {
+    return db.prepare('SELECT * FROM tempvoice_channels WHERE guildId = ?').all(guildId);
+  },
+
+  getBotSettings() {
+    let row = db.prepare('SELECT * FROM bot_settings WHERE id = 1').get();
+    if (!row) {
+      db.prepare("INSERT OR IGNORE INTO bot_settings (id, status, activity_type, activity_name) VALUES (1, 'online', 'PLAYING', 'E-246 System')").run();
+      row = db.prepare('SELECT * FROM bot_settings WHERE id = 1').get();
+    }
+    return row;
+  },
+  updateBotSettings(status, activity_type, activity_name) {
+    return db.prepare('UPDATE bot_settings SET status = ?, activity_type = ?, activity_name = ? WHERE id = 1').run(status, activity_type, activity_name);
+  },
+
+  // Temp Voice User Settings
+  getTempVoiceUserSettings(userId) {
+    return db.prepare('SELECT * FROM tempvoice_user_settings WHERE userId = ?').get(userId);
+  },
+  saveTempVoiceUserSettings(userId, name, limit) {
+    return db.prepare(`
+      INSERT INTO tempvoice_user_settings (userId, preferredName, preferredLimit)
+      VALUES (?, ?, ?)
+      ON CONFLICT(userId) DO UPDATE SET preferredName = ?, preferredLimit = ?
+    `).run(userId, name, limit, name, limit);
+  },
+
+  // Temp Voice Bans
+  addTempVoiceBan(channelId, targetId) {
+    return db.prepare('INSERT OR IGNORE INTO tempvoice_bans (channelId, targetId) VALUES (?, ?)').run(channelId, targetId);
+  },
+  removeTempVoiceBan(channelId, targetId) {
+    return db.prepare('DELETE FROM tempvoice_bans WHERE channelId = ? AND targetId = ?').run(channelId, targetId);
+  },
+  isTempVoiceBanned(channelId, targetId) {
+    const row = db.prepare('SELECT 1 FROM tempvoice_bans WHERE channelId = ? AND targetId = ?').get(channelId, targetId);
+    return !!row;
+  },
+  getTempVoiceBans(channelId) {
+    return db.prepare('SELECT targetId FROM tempvoice_bans WHERE channelId = ?').all(channelId);
+  },
+
+  // Temp Voice Trusted Users
+  addTempVoiceTrusted(channelId, userId) {
+    return db.prepare('INSERT OR IGNORE INTO tempvoice_trusted (channelId, userId) VALUES (?, ?)').run(channelId, userId);
+  },
+  removeTempVoiceTrusted(channelId, userId) {
+    return db.prepare('DELETE FROM tempvoice_trusted WHERE channelId = ? AND userId = ?').run(channelId, userId);
+  },
+  isTempVoiceTrusted(channelId, userId) {
+    const row = db.prepare('SELECT 1 FROM tempvoice_trusted WHERE channelId = ? AND userId = ?').get(channelId, userId);
+    return !!row;
+  },
+  getTempVoiceTrustedUsers(channelId) {
+    return db.prepare('SELECT userId FROM tempvoice_trusted WHERE channelId = ?').all(channelId);
+  },
+
+  // Statistics Logs
+  incrementDailyJoins(guildId) {
+    return db.prepare(`
+      INSERT INTO stats_daily_members (guildId, date, joins)
+      VALUES (?, strftime('%Y-%m-%d', 'now'), 1)
+      ON CONFLICT(guildId, date) DO UPDATE SET joins = joins + 1
+    `).run(guildId);
+  },
+  incrementDailyLeaves(guildId) {
+    return db.prepare(`
+      INSERT INTO stats_daily_members (guildId, date, leaves)
+      VALUES (?, strftime('%Y-%m-%d', 'now'), 1)
+      ON CONFLICT(guildId, date) DO UPDATE SET leaves = leaves + 1
+    `).run(guildId);
+  },
+  incrementHourlyMessages(guildId) {
+    return db.prepare(`
+      INSERT INTO stats_hourly_messages (guildId, date, hour, message_count)
+      VALUES (?, strftime('%Y-%m-%d', 'now'), CAST(strftime('%H', 'now') AS INTEGER), 1)
+      ON CONFLICT(guildId, date, hour) DO UPDATE SET message_count = message_count + 1
+    `).run(guildId);
+  },
+  addDailyVoiceSeconds(guildId, seconds) {
+    return db.prepare(`
+      INSERT INTO stats_daily_voice (guildId, date, seconds)
+      VALUES (?, strftime('%Y-%m-%d', 'now'), ?)
+      ON CONFLICT(guildId, date) DO UPDATE SET seconds = seconds + ?
+    `).run(guildId, seconds, seconds);
+  },
+
+  // Statistics Fetchers
+  getDailyMembersStats(guildId, daysCount = 7) {
+    return db.prepare(`
+      SELECT date, joins, leaves 
+      FROM stats_daily_members 
+      WHERE guildId = ? 
+      ORDER BY date DESC 
+      LIMIT ?
+    `).all(guildId, daysCount).reverse();
+  },
+  getHourlyMessagesStats(guildId) {
+    // Returns lifetime or overall aggregate message count per hour of day
+    return db.prepare(`
+      SELECT hour, SUM(message_count) as count 
+      FROM stats_hourly_messages 
+      WHERE guildId = ? 
+      GROUP BY hour 
+      ORDER BY hour ASC
+    `).all(guildId);
+  },
+  getDailyVoiceStats(guildId, daysCount = 7) {
+    return db.prepare(`
+      SELECT date, seconds 
+      FROM stats_daily_voice 
+      WHERE guildId = ? 
+      ORDER BY date DESC 
+      LIMIT ?
+    `).all(guildId, daysCount).reverse();
   },
 
   db,

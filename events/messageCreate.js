@@ -17,6 +17,8 @@ module.exports = {
     const channelId = message.channel.id;
     const prefix = db.getGuildSettings(guildId).prefix || '#';
 
+    db.incrementHourlyMessages(guildId);
+
     const replies = db.getAutoReplies(guildId);
     for (const r of replies) {
       if (message.content.toLowerCase().includes(r.trigger)) {

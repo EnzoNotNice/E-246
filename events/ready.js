@@ -11,7 +11,15 @@ module.exports = {
     // Run automatic Application Emoji setup
     await emojiSetup(client);
 
-    client.user.setActivity('your server 👀', { type: 3 });
+    const { getBotSettings } = require('../database/db');
+    const botSettings = getBotSettings();
+    const { ActivityType } = require('discord.js');
+    const actType = ActivityType[botSettings.activity_type] || ActivityType.Playing;
+
+    client.user.setPresence({
+        activities: [{ name: botSettings.activity_name, type: actType }],
+        status: botSettings.status,
+    });
 
     for (const [, guild] of client.guilds.cache) {
       try {

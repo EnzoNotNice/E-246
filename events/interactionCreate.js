@@ -477,6 +477,99 @@ module.exports = {
         setTimeout(() => interaction.channel.delete().catch(() => null), 3000);
         return;
       }
+
+      // Temp Voice Buttons
+      if (id.startsWith('tv_')) {
+        const tvChannel = db.getTempVoiceChannel(interaction.channelId);
+        if (!tvChannel) {
+          const emojis = require('../utils/emojis.json');
+          return interaction.reply({ content: `${emojis.circlex || '❌'} **هذه ليست غرفة مؤقتة صالحة**`, flags: ['Ephemeral'] });
+        }
+
+        const isOwner = tvChannel.ownerId === interaction.user.id;
+        const isTrusted = db.isTempVoiceTrusted(interaction.channelId, interaction.user.id);
+
+        const emojis = require('../utils/emojis.json');
+
+        if (!isOwner && !isTrusted) {
+          return interaction.reply({ content: `${emojis.circlex || '❌'} **لا تملك صلاحية التحكم بهذه الغرفة**`, flags: ['Ephemeral'] });
+        }
+
+        if ((id === 'tv_trust' || id === 'tv_ban') && !isOwner) {
+          return interaction.reply({ content: `${emojis.circlex || '❌'} **هذه الصلاحية لمالك الغرفة الأساسي فقط**`, flags: ['Ephemeral'] });
+        }
+
+        const channel = interaction.channel; // In this case, interaction.channel might be the text-in-voice channel or a text channel. But wait, `interaction.channel` is the voice channel!
+        if (channel.type !== ChannelType.GuildVoice) {
+           return interaction.reply({ content: `${emojis.circlex || '❌'} **يجب استخدام هذه الأزرار داخل الغرفة الصوتية نفسها**`, flags: ['Ephemeral'] });
+        }
+
+        if (id === 'tv_lock') {
+          await channel.permissionOverwrites.edit(interaction.guild.id, { Connect: false });
+          return interaction.reply({ content: `${emojis.tv_lock || '🔒'} **تم قفل الغرفة، لا يمكن للمجهولين الدخول**`, flags: ['Ephemeral'] });
+        }
+        
+        if (id === 'tv_unlock') {
+          await channel.permissionOverwrites.edit(interaction.guild.id, { Connect: null });
+          return interaction.reply({ content: `${emojis.tv_unlock || '🔓'} **تم فتح الغرفة للجميع**`, flags: ['Ephemeral'] });
+        }
+
+        if (id === 'tv_hide') {
+          await channel.permissionOverwrites.edit(interaction.guild.id, { ViewChannel: false });
+          return interaction.reply({ content: `${emojis.tv_hide || '👁️‍🗨️'} **تم إخفاء الغرفة**`, flags: ['Ephemeral'] });
+        }
+
+        if (id === 'tv_show') {
+          await channel.permissionOverwrites.edit(interaction.guild.id, { ViewChannel: null });
+          return interaction.reply({ content: `${emojis.tv_show || '👁️'} **تم إظهار الغرفة**`, flags: ['Ephemeral'] });
+        }
+
+        if (id === 'tv_limit') {
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+          const modal = new ModalBuilder().setCustomId('tv_modal_limit').setTitle('تحديد عدد الأشخاص');
+          const input = new TextInputBuilder().setCustomId('limit_input').setLabel('العدد (0 مفتوح، الحد الأقصى 99)').setStyle(TextInputStyle.Short).setRequired(true);
+          modal.addComponents(new ActionRowBuilder().addComponents(input));
+          return interaction.showModal(modal);
+        }
+
+        if (id === 'tv_rename') {
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+          const modal = new ModalBuilder().setCustomId('tv_modal_rename').setTitle('تغيير اسم الغرفة');
+          const input = new TextInputBuilder().setCustomId('rename_input').setLabel('الاسم الجديد').setStyle(TextInputStyle.Short).setRequired(true);
+          modal.addComponents(new ActionRowBuilder().addComponents(input));
+          return interaction.showModal(modal);
+        }
+
+        if (id === 'tv_kick') {
+          const { UserSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+          const select = new UserSelectMenuBuilder()
+            .setCustomId('tv_select_kick')
+            .setPlaceholder('اختر الشخص لطرده من الروم')
+            .setMaxValues(1);
+          
+          return interaction.reply({ content: `${emojis.tv_kick || '👢'} **اختر الشخص لطرده من الروم**`, components: [new ActionRowBuilder().addComponents(select)], flags: ['Ephemeral'] });
+        }
+
+        if (id === 'tv_trust') {
+          const { UserSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+          const select = new UserSelectMenuBuilder()
+            .setCustomId('tv_select_trust')
+            .setPlaceholder('اختر الشخص لإضافته أو إزالته كمسؤول مساعد')
+            .setMaxValues(1);
+          
+          return interaction.reply({ content: `${emojis.tv_trust || '👑'} **اختر شخصاً لإعطائه أو سحب صلاحيات المساعد منه في غرفتك الصوتية**`, components: [new ActionRowBuilder().addComponents(select)], flags: ['Ephemeral'] });
+        }
+
+        if (id === 'tv_ban') {
+          const { UserSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+          const select = new UserSelectMenuBuilder()
+            .setCustomId('tv_select_ban')
+            .setPlaceholder('اختر الشخص لحظره أو إلغاء حظره')
+            .setMaxValues(1);
+          
+          return interaction.reply({ content: `${emojis.tv_ban || '🚫'} **اختر شخصاً لحظر أو إلغاء حظر دخوله لغرفتك الصوتية**`, components: [new ActionRowBuilder().addComponents(select)], flags: ['Ephemeral'] });
+        }
+      }
     }
 
     if (interaction.isModalSubmit()) {
@@ -560,6 +653,107 @@ module.exports = {
                 components: [row],
                 flags: ['Ephemeral']
             }).catch(() => null);
+        }
+        if (interaction.customId === 'tv_modal_limit') {
+            const limit = parseInt(interaction.fields.getTextInputValue('limit_input'));
+            if (isNaN(limit) || limit < 0 || limit > 99) {
+                const emojis = require('../utils/emojis.json');
+                return interaction.reply({ content: `${emojis.circlex || '❌'} **يرجى كتابة رقم صحيح بين 0 و 99**`, flags: ['Ephemeral'] });
+            }
+            await interaction.channel.setUserLimit(limit);
+
+            const userSettings = db.getTempVoiceUserSettings(interaction.user.id);
+            const preferredName = userSettings?.preferredName || null;
+            db.saveTempVoiceUserSettings(interaction.user.id, preferredName, limit);
+
+            const emojis = require('../utils/emojis.json');
+            return interaction.reply({ content: `${emojis.tv_limit || '👥'} **تم تغيير حد الغرفة إلى ${limit === 0 ? 'مفتوح' : limit}**`, flags: ['Ephemeral'] });
+        }
+
+        if (interaction.customId === 'tv_modal_rename') {
+            const name = interaction.fields.getTextInputValue('rename_input');
+            await interaction.channel.setName(name);
+
+            const userSettings = db.getTempVoiceUserSettings(interaction.user.id);
+            const preferredLimit = userSettings?.preferredLimit !== undefined ? userSettings.preferredLimit : 0;
+            db.saveTempVoiceUserSettings(interaction.user.id, name, preferredLimit);
+
+            const emojis = require('../utils/emojis.json');
+            return interaction.reply({ content: `${emojis.tv_rename || '✏️'} **تم تغيير اسم الغرفة إلى: ${name}**`, flags: ['Ephemeral'] });
+        }
+    }
+
+    if (interaction.isUserSelectMenu()) {
+        if (interaction.customId === 'tv_select_kick') {
+            const targetId = interaction.values[0];
+            const member = await interaction.guild.members.fetch(targetId).catch(() => null);
+            const emojis = require('../utils/emojis.json');
+            if (!member || !member.voice.channel || member.voice.channelId !== interaction.channelId) {
+                return interaction.update({ content: `${emojis.circlex || '❌'} **العضو ليس موجوداً في غرفتك الصوتية**`, components: [] });
+            }
+            if (targetId === interaction.user.id) {
+                return interaction.update({ content: `${emojis.circlex || '❌'} **لا يمكنك طرد نفسك**`, components: [] });
+            }
+
+            try {
+                await member.voice.disconnect();
+                return interaction.update({ content: `${emojis.tv_kick || '👢'} **تم طرد ${member} من الغرفة**`, components: [] });
+            } catch (error) {
+                return interaction.update({ content: `${emojis.circlex || '❌'} **حدث خطأ أثناء طرد العضو**`, components: [] });
+            }
+        }
+
+        if (interaction.customId === 'tv_select_trust') {
+            const targetId = interaction.values[0];
+            const member = await interaction.guild.members.fetch(targetId).catch(() => null);
+            const emojis = require('../utils/emojis.json');
+            if (!member) {
+                return interaction.update({ content: `${emojis.circlex || '❌'} **العضو غير موجود**`, components: [] });
+            }
+            if (targetId === interaction.user.id) {
+                return interaction.update({ content: `${emojis.circlex || '❌'} **لا يمكنك تعيين نفسك كمساعد**`, components: [] });
+            }
+
+            const isAlreadyTrusted = db.isTempVoiceTrusted(interaction.channelId, targetId);
+            
+            if (isAlreadyTrusted) {
+                db.removeTempVoiceTrusted(interaction.channelId, targetId);
+                await interaction.channel.permissionOverwrites.delete(targetId).catch(() => null);
+                return interaction.update({ content: `${emojis.tv_trust || '👑'} **تم سحب صلاحيات المسؤول المساعد من ${member}**`, components: [] });
+            } else {
+                db.addTempVoiceTrusted(interaction.channelId, targetId);
+                await interaction.channel.permissionOverwrites.edit(targetId, { ViewChannel: true, Connect: true }).catch(() => null);
+                return interaction.update({ content: `${emojis.tv_trust || '👑'} **تم تعيين ${member} كمسؤول مساعد في الغرفة**`, components: [] });
+            }
+        }
+
+        if (interaction.customId === 'tv_select_ban') {
+            const targetId = interaction.values[0];
+            const member = await interaction.guild.members.fetch(targetId).catch(() => null);
+            const emojis = require('../utils/emojis.json');
+            if (!member) {
+                return interaction.update({ content: `${emojis.circlex || '❌'} **العضو غير موجود**`, components: [] });
+            }
+            if (targetId === interaction.user.id) {
+                return interaction.update({ content: `${emojis.circlex || '❌'} **لا يمكنك حظر نفسك**`, components: [] });
+            }
+
+            const isAlreadyBanned = db.isTempVoiceBanned(interaction.channelId, targetId);
+
+            if (isAlreadyBanned) {
+                db.removeTempVoiceBan(interaction.channelId, targetId);
+                await interaction.channel.permissionOverwrites.delete(targetId).catch(() => null);
+                return interaction.update({ content: `${emojis.tv_ban || '🚫'} **تم إلغاء حظر ${member} من دخول الغرفة**`, components: [] });
+            } else {
+                db.addTempVoiceBan(interaction.channelId, targetId);
+                await interaction.channel.permissionOverwrites.edit(targetId, { ViewChannel: false, Connect: false }).catch(() => null);
+                
+                if (member.voice.channelId === interaction.channelId) {
+                    await member.voice.disconnect().catch(() => null);
+                }
+
+                return interaction.update({ content: `${emojis.tv_ban || '🚫'} **تم حظر ${member} من دخول الغرفة**`, components: [] });
+            }
         }
     }
   }

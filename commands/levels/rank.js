@@ -33,12 +33,20 @@ module.exports = {
       });
     }
 
+    let liveVoiceLevel = voiceLevel;
     if (activeStart) {
       const liveSeconds = Math.floor((Date.now() - activeStart) / 1000);
-      if (liveSeconds > 0) voiceTime += liveSeconds;
+      if (liveSeconds > 0) {
+        voiceTime += liveSeconds;
+        
+        const { getVoiceNextLvlTime } = require('../../utils/levels');
+        while (voiceTime >= getVoiceNextLvlTime(liveVoiceLevel)) {
+          liveVoiceLevel++;
+        }
+      }
     }
 
-    const buffer = await createRankCard(user, textXp, textLevel, voiceTime, voiceLevel, messagesCount);
+    const buffer = await createRankCard(user, textXp, textLevel, voiceTime, liveVoiceLevel, messagesCount);
     const attachment = new AttachmentBuilder(buffer, { name: 'rank.png' });
 
     return interaction.editReply({ files: [attachment] });
