@@ -63,6 +63,7 @@
    CLIENT_ID=معرف_البوت
    GUILD_ID=معرف_السيرفر_للتجربة
    CLIENT_SECRET=سيكرت_البوت
+   PORT=3000
    CALLBACK_URL=http://localhost:3000/auth/callback
    DISABLE_DASHBOARD=false
    ```
