@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('./utils/emojiReplacer');
 const { Client, GatewayIntentBits, Collection, Partials } = require('discord.js');
 const fs = require('fs');
 const path = require('path');

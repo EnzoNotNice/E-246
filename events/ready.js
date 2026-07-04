@@ -1,7 +1,8 @@
+const { Events } = require('discord.js');
 const emojiSetup = require('../utils/emojiSetup');
 
 module.exports = {
-  name: 'clientReady',
+  name: Events.ClientReady,
   once: true,
   async execute(client) {
     console.log(`Logged in as ${client.user.tag}`);
@@ -16,10 +17,14 @@ module.exports = {
     const { ActivityType } = require('discord.js');
     const actType = ActivityType[botSettings.activity_type] || ActivityType.Playing;
 
-    client.user.setPresence({
-        activities: [{ name: botSettings.activity_name, type: actType }],
-        status: botSettings.status,
-    });
+    try {
+        client.user.setPresence({
+            activities: [{ name: botSettings.activity_name, type: actType }],
+            status: botSettings.status,
+        });
+    } catch (err) {
+        console.error('[Ready] Failed to set bot presence:', err.message || err);
+    }
 
     for (const [, guild] of client.guilds.cache) {
       try {

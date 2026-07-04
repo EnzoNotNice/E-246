@@ -32,9 +32,9 @@ module.exports = {
 
       return interaction.reply({
         embeds: [success(locale.get('moderation.banSuccess', { user: target.tag, reason }))]
-      });
+      }).catch(() => {});
     } catch (e) {
-      return interaction.reply({ embeds: [error(locale.get('general.errorOccurred'))], flags: ['Ephemeral'] });
+      return interaction.reply({ embeds: [error(locale.get('general.errorOccurred'))], flags: ['Ephemeral'] }).catch(() => {});
     }
   }
 };

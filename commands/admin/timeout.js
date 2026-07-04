@@ -20,9 +20,15 @@ module.exports = {
     if (!target) return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
     if (!target.moderatable) return interaction.reply({ embeds: [error(locale.get('moderation.cannotTimeout'))], flags: ['Ephemeral'] });
 
-    await target.timeout(duration * 60 * 1000, reason);
+    try {
+      await target.timeout(duration * 60 * 1000, reason);
+    } catch (e) {
+      return interaction.reply({ embeds: [error(locale.get('moderation.cannotTimeout'))], flags: ['Ephemeral'] });
+    }
 
-    const logEmbed = modlog('تم إسكات العضو', { tag: target.user.tag, id: target.id }, interaction.user, reason, { '<:clock:1519212244263632916> المدة': `${duration} دقيقة` });
+    const emojis = require('../../utils/emojis.json');
+    const eClock = emojis.clock || '<:clock:1519212244263632916>';
+    const logEmbed = modlog('تم إسكات العضو', { tag: target.user.tag, id: target.id }, interaction.user, reason, { [`${eClock} المدة`]: `${duration} دقيقة` });
     await sendLog(interaction.client, interaction.guildId, logEmbed, 'timeout');
 
     return interaction.reply({

@@ -29,9 +29,10 @@ module.exports = {
       .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() })
       .setTimestamp();
 
+    const emojis = require('../../utils/emojis.json');
     const button = new ButtonBuilder()
       .setCustomId('ticket_create')
-      .setLabel('افتح تذكرة').setEmoji('1519212229445029971')
+      .setLabel('افتح تذكرة').setEmoji(emojis.mail || '1519212229445029971')
       .setStyle(ButtonStyle.Primary);
 
     const row = new ActionRowBuilder().addComponents(button);

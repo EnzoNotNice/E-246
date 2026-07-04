@@ -20,9 +20,10 @@ module.exports = {
       .setDescription(`**${interaction.user.tag}** أرسل صندوق الغموض\nالجائزة: **${prize}**\n\nأول من يضغط الزر يفوز`)
       .setTimestamp();
 
+    const emojis = require('../../utils/emojis.json');
     const button = new ButtonBuilder()
       .setCustomId(`box_${interaction.user.id}_${Date.now()}_${encodeURIComponent(prize)}`)
-      .setLabel('اضغط للفوز').setEmoji('1519212237317865553')
+      .setLabel('اضغط للفوز').setEmoji(emojis.gift || '1519212237317865553')
       .setStyle(ButtonStyle.Success);
 
     const row = new ActionRowBuilder().addComponents(button);

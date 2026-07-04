@@ -84,10 +84,17 @@ module.exports = {
           .replace(/{server}/g, guild.name)
           .replace(/{count}/g, guild.memberCount.toString());
 
+        let imagePathOrUrl = greet.image_url;
+        if (imagePathOrUrl.startsWith('/uploads/')) {
+            const cleanPath = imagePathOrUrl.split('?')[0];
+            const fileName = cleanPath.substring('/uploads/'.length);
+            imagePathOrUrl = path.join(__dirname, '..', 'database', 'uploads', fileName);
+        }
+
         let attachment;
         if (greet.image_url) {
             try {
-                const bg = await Canvas.loadImage(greet.image_url);
+                const bg = await Canvas.loadImage(imagePathOrUrl);
                 const canvas = Canvas.createCanvas(bg.width, bg.height);
                 const ctx = canvas.getContext('2d');
 

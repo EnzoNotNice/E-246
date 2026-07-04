@@ -46,11 +46,12 @@ async function emojiSetup(client) {
 
     try {
         const botId = client.user.id;
-        const token = client.token;
+        const token = client.token || process.env.DISCORD_TOKEN;
 
         console.log('[EmojiSetup] Checking Application Emojis...');
         const existing = await request('GET', `/applications/${botId}/emojis`, token);
-        const existingMap = new Map(existing.items.map(item => [item.name, item]));
+        const emojiList = Array.isArray(existing) ? existing : (existing.items || []);
+        const existingMap = new Map(emojiList.map(item => [item.name, item]));
 
         const files = fs.readdirSync(emojisDir);
         let emojisJson = {};
@@ -105,7 +106,7 @@ async function emojiSetup(client) {
         }
 
     } catch (error) {
-        console.error('[EmojiSetup] Error configuring application emojis:', error.message);
+        console.error('[EmojiSetup] Error configuring application emojis:', error.message || error);
     }
 }
 

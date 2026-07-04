@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const emojis = require('./emojis.json');
 
 const colors = {
   success: 0x57F287,
@@ -18,35 +19,44 @@ function embed(type = 'info') {
 
 function success(title, description) {
   const e = embed('success');
-  if (description) return e.setTitle(`<:circlecheck:1519212246876557413> ${title}`).setDescription(description);
+  const icon = emojis.circlecheck || '<:circlecheck:1519212246876557413>';
+  if (description) return e.setTitle(`${icon} ${title}`).setDescription(description);
   return e.setDescription(title);
 }
 
 function error(title, description) {
   const e = embed('error');
-  if (description) return e.setTitle(`<:circlex:1519212245559672914> ${title}`).setDescription(description);
+  const icon = emojis.circlex || '<:circlex:1519212245559672914>';
+  if (description) return e.setTitle(`${icon} ${title}`).setDescription(description);
   return e.setDescription(title);
 }
 
 function warn(title, description) {
   const e = embed('warning');
-  if (description) return e.setTitle(`<:alerttriangle:1519212253054767205> ${title}`).setDescription(description);
+  const icon = emojis.alerttriangle || '<:alerttriangle:1519212253054767205>';
+  if (description) return e.setTitle(`${icon} ${title}`).setDescription(description);
   return e.setDescription(title);
 }
 
 function info(title, description) {
   const e = embed('info');
-  if (description) return e.setTitle(`<:infocircle:1519212235258335324> ${title}`).setDescription(description);
+  const icon = emojis.infocircle || '<:infocircle:1519212235258335324>';
+  if (description) return e.setTitle(`${icon} ${title}`).setDescription(description);
   return e.setDescription(title);
 }
 
 function modlog(action, target, moderator, reason, extra = {}) {
+  const eInfo = emojis.user || '<:user:1519212186633764995>';
+  const eShield = emojis.shield || '<:shield:1519212202676977788>';
+  const eList = emojis.list || '<:list:1519212232670580868>';
+  const eLock = emojis.shieldlock || '<:shieldlock:1519212205638287522>';
+  
   const e = embed('moderation')
-    .setTitle(`<:shieldlock:1519212205638287522> ${action}`)
+    .setTitle(`${eLock} ${action}`)
     .addFields(
-      { name: '<:user:1519212186633764995> العضو', value: `${target.tag || target} (${target.id || 'غير متاح'})`, inline: true },
-      { name: '<:shield:1519212202676977788> المشرف', value: `${moderator.tag || moderator} (${moderator.id || 'غير متاح'})`, inline: true },
-      { name: '<:list:1519212232670580868> السبب', value: reason || 'لا يوجد سبب' }
+      { name: `${eInfo} العضو`, value: `${target.tag || target} (${target.id || 'غير متاح'})`, inline: true },
+      { name: `${eShield} المشرف`, value: `${moderator.tag || moderator} (${moderator.id || 'غير متاح'})`, inline: true },
+      { name: `${eList} السبب`, value: reason || 'لا يوجد سبب' }
     );
   for (const [k, v] of Object.entries(extra)) {
     e.addFields({ name: k, value: String(v), inline: true });

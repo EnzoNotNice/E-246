@@ -37,9 +37,13 @@
                 <h3>إعدادات صورة الترحيب</h3>
 
                 <div class="form-group">
-                    <label for="image_url">رابط صورة الخلفية (اختياري)</label>
-                    <input type="text" id="image_url" name="image_url" class="glass-input" value="<%= settings.image_url || '' %>" placeholder="https://example.com/bg.png">
-                    <small>اتركه فارغاً لاستخدام الترحيب النصي فقط.</small>
+                    <label for="image_url">رابط صورة الخلفية (أو قم برفع صورة من جهازك)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="image_url" name="image_url" class="glass-input" value="<%= settings.image_url || '' %>" placeholder="https://example.com/bg.png" style="flex: 1;">
+                        <input type="file" id="bg_upload" accept="image/*" style="display: none;">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('bg_upload').click()"><i class="fa-solid fa-upload"></i> رفع صورة</button>
+                    </div>
+                    <small id="upload_status">اتركه فارغاً لاستخدام الترحيب النصي فقط.</small>
                 </div>
 
                 <div style="display: flex; gap: 10px;">
@@ -223,6 +227,45 @@
 
         makeDraggable(avatarEl, axInput, ayInput);
         makeDraggable(usernameEl, uxInput, uyInput, true);
+
+        const bgUpload = document.getElementById('bg_upload');
+        const uploadStatus = document.getElementById('upload_status');
+
+        if (bgUpload) {
+            bgUpload.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                uploadStatus.textContent = 'جاري الرفع...';
+                uploadStatus.style.color = '#FEE75C';
+                
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    const base64 = ev.target.result;
+                    try {
+                        const res = await fetch('/dashboard/<%= guild.id %>/welcome/upload', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ image: base64 })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            bgInput.value = data.url;
+                            updateBackground();
+                            uploadStatus.textContent = 'تم رفع الصورة بنجاح! لا تنس حفظ التغييرات.';
+                            uploadStatus.style.color = '#57F287';
+                        } else {
+                            uploadStatus.textContent = 'فشل الرفع: ' + data.error;
+                            uploadStatus.style.color = '#ED4245';
+                        }
+                    } catch (err) {
+                        uploadStatus.textContent = 'حدث خطأ أثناء الرفع.';
+                        uploadStatus.style.color = '#ED4245';
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
 
         updateBackground();
         setTimeout(updateBackground, 100);

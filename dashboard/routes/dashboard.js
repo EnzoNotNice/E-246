@@ -3,7 +3,8 @@ const router = express.Router();
 const { PermissionsBitField, EmbedBuilder } = require('discord.js');
 const db = require('../../database/db');
 const os = require('os');
-
+const fs = require('fs');
+const path = require('path');
 function isHexColor(value) {
     return typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value);
 }
@@ -197,6 +198,53 @@ module.exports = (client) => {
             parseInt(enabled), channel || null, message, image_url || null, parseInt(avatar_x) || 100, parseInt(avatar_y) || 100, parseInt(avatar_size) || 150, parseInt(username_x) || 100, parseInt(username_y) || 300, username_color || '#ffffff', parseInt(username_size) || 40
         );
         res.redirect(`/dashboard/${req.guild.id}/welcome?success=تم+تحديث+إعدادات+الترحيب`);
+    });
+
+    router.post('/:id/welcome/upload', checkAuth, checkGuildAccess, (req, res) => {
+        try {
+            const { image } = req.body;
+            if (!image || !image.startsWith('data:image/')) {
+                return res.json({ success: false, error: 'Invalid image data' });
+            }
+
+            const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+            const buffer = Buffer.from(base64Data, 'base64');
+            const ext = image.split(';')[0].split('/')[1] || 'png';
+            
+            const uploadDir = path.join(__dirname, '../../database/uploads');
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
+            const fileName = `welcome_${req.guild.id}.${ext}`;
+            const filePath = path.join(uploadDir, fileName);
+            fs.writeFileSync(filePath, buffer);
+
+            const imageUrl = `/uploads/${fileName}?t=${Date.now()}`;
+            
+            // Optionally, we could save the image_url to the DB directly here, 
+            // but the user clicks "Save Changes" on the form which posts to /:id/welcome 
+            // and saves it there using the hidden input. We just return the URL.
+            res.json({ success: true, url: imageUrl });
+        } catch (e) {
+            console.error('Upload Error:', e);
+            res.json({ success: false, error: 'Failed to upload image' });
+        }
+    });
+
+    router.get('/:id/tempvoice', checkAuth, checkGuildAccess, (req, res) => {
+        res.render('tempvoice', {
+            guild: req.guild,
+            settings: db.getTempVoiceSettings(req.guild.id),
+            channels: req.guild.channels.cache.filter(c => c.type === 2), // Voice channels
+            categories: req.guild.channels.cache.filter(c => c.type === 4) // Categories
+        });
+    });
+
+    router.post('/:id/tempvoice', checkAuth, checkGuildAccess, (req, res) => {
+        const { master_channel, category_id } = req.body;
+        db.updateTempVoiceSettings(req.guild.id, master_channel || null, category_id || null);
+        res.redirect(`/dashboard/${req.guild.id}/tempvoice?success=تم+تحديث+إعدادات+الرومات+المؤقتة`);
     });
 
     router.get('/:id/protection', checkAuth, checkGuildAccess, (req, res) => {

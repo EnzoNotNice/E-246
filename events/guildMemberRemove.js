@@ -22,8 +22,8 @@ module.exports = {
           const leaveEmbed = new EmbedBuilder()
             .setColor(0xED4245)
             .setTitle('<:mail:1519212229445029971> مغادرة عضو')
-            .setThumbnail(member.user.displayAvatarURL())
-            .setDescription(`${member.user.tag} غادر السيرفر\n**عدد الأعضاء** ${member.guild.memberCount}`)
+            .setThumbnail(member.user ? member.user.displayAvatarURL() : member.displayAvatarURL())
+            .setDescription(`${member.user ? member.user.tag : 'عضو غير معروف'} غادر السيرفر\n**عدد الأعضاء** ${member.guild.memberCount}`)
             .setTimestamp();
           logCh.send({ embeds: [leaveEmbed] }).catch(() => null);
         }
@@ -33,8 +33,8 @@ module.exports = {
     const logEmbed = new EmbedBuilder()
       .setColor(0xED4245)
       .setTitle('<:mail:1519212229445029971> مغادرة عضو')
-      .setDescription(`**${member.user.tag}** غادر السيرفر\n**عدد الأعضاء** ${member.guild.memberCount}`)
-      .setThumbnail(member.user.displayAvatarURL())
+      .setDescription(`**${member.user ? member.user.tag : 'عضو غير معروف'}** غادر السيرفر\n**عدد الأعضاء** ${member.guild.memberCount}`)
+      .setThumbnail(member.user ? member.user.displayAvatarURL() : member.displayAvatarURL())
       .setTimestamp();
 
     await sendLog(client, guildId, logEmbed, 'member_leave');

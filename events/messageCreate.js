@@ -79,7 +79,7 @@ module.exports = {
     if (protection && protection.antilink) {
       const bypassRole = protection.bypass_role;
       const member = message.member;
-      if (!bypassRole || !member.roles.cache.has(bypassRole)) {
+      if (!member || !bypassRole || !member.roles.cache.has(bypassRole)) {
         const linkRegex = /https?:\/\/[^\s]+/i;
         if (linkRegex.test(message.content)) {
           await message.delete().catch(() => null);

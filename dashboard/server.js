@@ -40,8 +40,9 @@ module.exports = (client) => {
 
     app.use(generalLimiter);
     app.use(express.static(path.join(__dirname, 'public')));
-    app.use(express.json({ limit: '1mb' }));
-    app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+    app.use('/uploads', express.static(path.join(__dirname, '..', 'database', 'uploads')));
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
     app.use(session({
         secret: process.env.SESSION_SECRET || process.env.CLIENT_SECRET,

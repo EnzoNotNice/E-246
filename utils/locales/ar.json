@@ -133,12 +133,12 @@
     "rewardRemoved": "<:circlecheck:1519212246876557413> **تم حذف جائزة المستوى {level}**"
   },
   "greet": {
-    "greetEnabled": "<:user:1519212186633764995> **سيتم إرسال رسائل الترحيب في {channel}**",
-    "autoDeleteSet": "<:circlecheck:1519212246876557413> **سيتم حذف رسائل الترحيب بعد {secs} ثانية**",
-    "autoDeleteDisabled": "<:circlecheck:1519212246876557413> **لن يتم حذف رسائل الترحيب تلقائياً**",
-    "messageSet": "<:circlecheck:1519212246876557413> **تم تحديث رسالة الترحيب بنجاح**",
-    "dmMessageSet": "<:circlecheck:1519212246876557413> **تم تحديث رسالة الترحيب في الخاص بنجاح**",
-    "dmMessageDisabled": "<:circlex:1519212245559672914> **تم تعطيل رسائل الترحيب في الخاص**"
+    "greetEnabled": "{emoji:user} **سيتم إرسال رسائل الترحيب في {channel}**",
+    "autoDeleteSet": "{emoji:circlecheck} **سيتم حذف رسائل الترحيب بعد {secs} ثانية**",
+    "autoDeleteDisabled": "{emoji:circlecheck} **لن يتم حذف رسائل الترحيب تلقائياً**",
+    "messageSet": "{emoji:circlecheck} **تم تحديث رسالة الترحيب بنجاح**",
+    "dmMessageSet": "{emoji:circlecheck} **تم تحديث رسالة الترحيب في الخاص بنجاح**",
+    "dmMessageDisabled": "{emoji:circlex} **تم تعطيل رسائل الترحيب في الخاص**"
   },
   "automation": {
     "noAutomation": "**لا يوجد إعدادات تلقائية** <:infocircle:1519212235258335324>",
@@ -198,7 +198,7 @@
     "sessionExpired": "<:circlex:1519212245559672914> **انتهت صلاحية الجلسة  الرجاء استخدام الأمر مرة أخرى**",
     "starting": "<:clock:1519212244263632916> **جاري الإرسال قد تستغرق العملية بعض الوقت**",
     "fetchFailed": "<:circlex:1519212245559672914> **حدث خطأ أثناء جلب قائمة الأعضاء**",
-    "completed": "<:circlecheck:1519212246876557413> **تم الانتهاء من إرسال الرسائل**\n> <:user:1519212186633764995> **الناجحة ** `{sent}`\n> <:circlex:1519212245559672914> **الفاشلة ** `{failed}`",
+    "completed": "{emoji:circlecheck} **تم الانتهاء من إرسال الرسائل**\n> {emoji:user} **الناجحة ** `{sent}`\n> {emoji:circlex} **الفاشلة ** `{failed}`",
     "selectTarget": "**حدد من تريد إرسال هذه الرسالة إليه **\n\n```text\n{message}\n```",
     "btnOnline": "متصل",
     "btnOffline": "غير متصل",

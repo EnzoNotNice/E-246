@@ -23,12 +23,12 @@ module.exports = {
     try {
       await target.kick(reason);
     } catch (e) {
-      return interaction.reply({ embeds: [error(locale.get('moderation.cannotKick'))], flags: ['Ephemeral'] });
+      return interaction.reply({ embeds: [error(locale.get('moderation.cannotKick'))], flags: ['Ephemeral'] }).catch(() => {});
     }
 
     const logEmbed = modlog('Member Kicked', { tag: target.user.tag, id: target.id }, interaction.user, reason);
     await sendLog(interaction.client, interaction.guildId, logEmbed, 'kick');
 
-    return interaction.reply({ embeds: [success(locale.get('moderation.kickSuccess', { user: target.user.tag, reason }))] });
+    return interaction.reply({ embeds: [success(locale.get('moderation.kickSuccess', { user: target.user.tag, reason }))] }).catch(() => {});
   }
 };
