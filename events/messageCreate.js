@@ -67,7 +67,7 @@ module.exports = {
         const amount = parseFloat(amountStr.replace(/[^\d.]/g, '')) * multiplier;
         if (!isNaN(amount) && amount > 0) {
             const tax = Math.floor(amount * (20 / 19) + 1);
-            message.reply({ content: `**${tax}**` }).catch(() => null);
+            message.reply({ content: `<a:ProBot:1499848798711840788> **${tax}**` }).catch(() => null);
         }
       }
       if (a.type === 'react' && a.value) {
