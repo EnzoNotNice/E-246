@@ -17,7 +17,7 @@ module.exports = {
     let amount = parseFloat(amountStr.replace(/[^\d.]/g, '')) * multiplier;
 
     if (isNaN(amount) || amount <= 0) {
-      return interaction.reply({ content: '<:circlex:1519212245559672914> مبلغ غير صالح', flags: ['Ephemeral'] });
+      return interaction.reply({ content: '{emoji:circlex} مبلغ غير صالح', flags: ['Ephemeral'] });
     }
 
     const priceWithTax = Math.floor(amount * (20 / 19) + 1);

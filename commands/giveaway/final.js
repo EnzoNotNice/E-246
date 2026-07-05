@@ -19,7 +19,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0xFF73FA)
-      .setTitle('<:flag:1519212176999452916> مسابقة آخر رسالة')
+      .setTitle('{emoji:flag} مسابقة آخر رسالة')
       .setDescription(`أرسل رسالة في هذا الروم\n\n**الجائزة:** ${prize}\n**آخر شخص يرسل رسالة قبل انتهاء الوقت يفوز**\n\nينتهي الوقت: <t:${Math.floor(endTime / 1000)}:R>`)
       .setTimestamp();
 
@@ -34,11 +34,11 @@ module.exports = {
 
     collector.on('end', async () => {
       if (!lastMessage) {
-        return channel.send({ embeds: [new EmbedBuilder().setColor(0xED4245).setTitle('<:flag:1519212176999452916> انتهت المسابقة').setDescription('لم يشارك أحد')] });
+        return channel.send({ embeds: [new EmbedBuilder().setColor(0xED4245).setTitle('{emoji:flag} انتهت المسابقة').setDescription('لم يشارك أحد')] });
       }
       const winEmbed = new EmbedBuilder()
         .setColor(0x57F287)
-        .setTitle('<:confetti:1519212243026448394> فائز مسابقة آخر رسالة')
+        .setTitle('{emoji:confetti} فائز مسابقة آخر رسالة')
         .setDescription(`مبروك ${lastMessage.author}\n\nلقد أرسلت آخر رسالة وفزت بـ **${prize}**`)
         .setThumbnail(lastMessage.author.displayAvatarURL())
         .setTimestamp();

@@ -14,10 +14,10 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
-      .setTitle('<:bolt:1519212174529134754> بينق')
+      .setTitle('{emoji:bolt} بينق')
       .addFields(
-        { name: '<:clock:1519212244263632916> زمن الاستجابة', value: `\`${roundtrip}ms\``, inline: true },
-        { name: '<:heart:1519212171324821624> نبضة الـ WebSocket', value: `\`${ws}ms\``, inline: true }
+        { name: '{emoji:clock} زمن الاستجابة', value: `\`${roundtrip}ms\``, inline: true },
+        { name: '{emoji:heart} نبضة الـ WebSocket', value: `\`${ws}ms\``, inline: true }
       )
       .setTimestamp();
 

@@ -13,7 +13,7 @@ module.exports = {
 
     if (!leaderboard || leaderboard.length === 0) {
       return interaction.editReply({
-        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('<:circlex:1519212245559672914> **لم يكسب أحد نقاط خبرة بعد**')]
+        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('{emoji:circlex} **لم يكسب أحد نقاط خبرة بعد**')]
       });
     }
 

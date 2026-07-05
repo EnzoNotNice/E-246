@@ -16,7 +16,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0xFF73FA)
-      .setTitle('<:gift:1519212237317865553> صندوق الغموض')
+      .setTitle('{emoji:gift} صندوق الغموض')
       .setDescription(`**${interaction.user.tag}** أرسل صندوق الغموض\nالجائزة: **${prize}**\n\nأول من يضغط الزر يفوز`)
       .setTimestamp();
 

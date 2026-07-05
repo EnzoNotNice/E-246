@@ -19,7 +19,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0xED4245)
-      .setTitle('<:trash:1519212192912637962> رسالة محذوفة')
+      .setTitle('{emoji:trash} رسالة محذوفة')
       .setDescription(`**المرسل** ${message.author ? message.author.tag : 'غير معروف'} (${message.author?.id || 'غير معروف'})\n**الروم** ${message.channel}\n**المحتوى**\n${message.content || '*[بدون محتوى]*'}`)
       .setTimestamp();
 

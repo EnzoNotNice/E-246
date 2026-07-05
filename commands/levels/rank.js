@@ -29,7 +29,7 @@ module.exports = {
 
     if (textXp === 0 && voiceTime === 0 && !activeStart) {
       return interaction.editReply({
-        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`<:circlex:1519212245559672914> **${user.tag}** لا يملك نقاط خبرة بعد`)]
+        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`{emoji:circlex} **${user.tag}** لا يملك نقاط خبرة بعد`)]
       });
     }
 

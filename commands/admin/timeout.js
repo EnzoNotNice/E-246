@@ -27,7 +27,7 @@ module.exports = {
     }
 
     const emojis = require('../../utils/emojis.json');
-    const eClock = emojis.clock || '<:clock:1519212244263632916>';
+    const eClock = emojis.clock || '{emoji:clock}';
     const logEmbed = modlog('تم إسكات العضو', { tag: target.user.tag, id: target.id }, interaction.user, reason, { [`${eClock} المدة`]: `${duration} دقيقة` });
     await sendLog(interaction.client, interaction.guildId, logEmbed, 'timeout');
 

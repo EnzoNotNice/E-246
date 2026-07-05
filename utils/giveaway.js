@@ -42,7 +42,7 @@ async function endGiveawayTimer(client, giveaway) {
     const reaction = message.reactions.cache.get(giveaway.emoji) || message.reactions.cache.first();
     if (!reaction) {
       db.endGiveaway(giveaway.messageId);
-      return channel.send({ embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`<:confetti:1519212243026448394> الجيف أواي على **${giveaway.prize}** انتهى بدون مشاركين`)] });
+      return channel.send({ embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`{emoji:confetti} الجيف أواي على **${giveaway.prize}** انتهى بدون مشاركين`)] });
     }
 
     const users = await reaction.users.fetch();
@@ -50,7 +50,7 @@ async function endGiveawayTimer(client, giveaway) {
 
     if (!eligible.size) {
       db.endGiveaway(giveaway.messageId);
-      return channel.send({ embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`<:confetti:1519212243026448394> الجيف أواي على **${giveaway.prize}** انتهى بدون مشاركين مؤهلين`)] });
+      return channel.send({ embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`{emoji:confetti} الجيف أواي على **${giveaway.prize}** انتهى بدون مشاركين مؤهلين`)] });
     }
 
     const winnersCount = Math.min(giveaway.winners, eligible.size);
@@ -59,12 +59,12 @@ async function endGiveawayTimer(client, giveaway) {
 
     const endEmbed = new EmbedBuilder()
       .setColor(0xFFD700)
-      .setTitle('<:confetti:1519212243026448394> انتهى الجيف أواي')
+      .setTitle('{emoji:confetti} انتهى الجيف أواي')
       .setDescription(`**الجائزة** ${giveaway.prize}\n**الفائز** ${winnerMentions}`)
       .setTimestamp();
 
     await message.edit({ embeds: [endEmbed], components: [] }).catch(() => null);
-    await channel.send({ content: `<:confetti:1519212243026448394> مبروك ${winnerMentions} ربحت **${giveaway.prize}**`, embeds: [endEmbed] }).catch(() => null);
+    await channel.send({ content: `{emoji:confetti} مبروك ${winnerMentions} ربحت **${giveaway.prize}**`, embeds: [endEmbed] }).catch(() => null);
     db.endGiveaway(giveaway.messageId);
   } catch (e) {
     console.error('Giveaway end error:', e);

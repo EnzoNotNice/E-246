@@ -66,7 +66,7 @@ module.exports = {
 
     const row = new ActionRowBuilder().addComponents(menu);
 
-    const dashboardEmoji = emojisJson.layoutdashboard || '<:layoutdashboard:1519212233849180190>';
+    const dashboardEmoji = emojisJson.layoutdashboard || '{emoji:layoutdashboard}';
 
     const embed = new EmbedBuilder()
       .setColor(0x2B2D31)

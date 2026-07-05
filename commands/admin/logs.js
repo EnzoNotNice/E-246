@@ -43,10 +43,10 @@ module.exports = {
     if (sub === 'show') {
       const guildSettings = db.getGuildSettings(interaction.guildId);
       const ch = guildSettings.log_channel ? `<#${guildSettings.log_channel}>` : 'غير محدد';
-      const rows = logTypes.map(t => `${settings[logColumns[t]] ? '<:circlecheck:1519212246876557413>' : '<:circlex:1519212245559672914>'} \`${t.replace(/_/g, ' ')}\`${settings[logColumns[t]] ? ` → <#${settings[logColumns[t]]}>` : ''}`).join('\n');
+      const rows = logTypes.map(t => `${settings[logColumns[t]] ? '{emoji:circlecheck}' : '{emoji:circlex}'} \`${t.replace(/_/g, ' ')}\`${settings[logColumns[t]] ? ` → <#${settings[logColumns[t]]}>` : ''}`).join('\n');
       const embed = new EmbedBuilder()
         .setColor(0x5865F2)
-        .setTitle('<:list:1519212232670580868> إعدادات السجلات')
+        .setTitle('{emoji:list} إعدادات السجلات')
         .addFields({ name: 'الروم المخصص', value: ch }, { name: 'أنواع السجلات', value: rows })
         .setTimestamp();
       return interaction.reply({ embeds: [embed] });

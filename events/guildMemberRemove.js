@@ -21,7 +21,7 @@ module.exports = {
         if (logCh) {
           const leaveEmbed = new EmbedBuilder()
             .setColor(0xED4245)
-            .setTitle('<:mail:1519212229445029971> مغادرة عضو')
+            .setTitle('{emoji:mail} مغادرة عضو')
             .setThumbnail(member.user ? member.user.displayAvatarURL() : member.displayAvatarURL())
             .setDescription(`${member.user ? member.user.tag : 'عضو غير معروف'} غادر السيرفر\n**عدد الأعضاء** ${member.guild.memberCount}`)
             .setTimestamp();
@@ -32,7 +32,7 @@ module.exports = {
 
     const logEmbed = new EmbedBuilder()
       .setColor(0xED4245)
-      .setTitle('<:mail:1519212229445029971> مغادرة عضو')
+      .setTitle('{emoji:mail} مغادرة عضو')
       .setDescription(`**${member.user ? member.user.tag : 'عضو غير معروف'}** غادر السيرفر\n**عدد الأعضاء** ${member.guild.memberCount}`)
       .setThumbnail(member.user ? member.user.displayAvatarURL() : member.displayAvatarURL())
       .setTimestamp();

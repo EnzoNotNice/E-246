@@ -11,13 +11,13 @@ module.exports = {
   async execute(interaction) {
     const s = db.getGreetSettings(interaction.guildId);
     
-    const eInfo = emojis.infocircle || '<:infocircle:1519212235258335324>';
-    const eChart = emojis.chartpie || '<:chartpie:1519212248479043634>';
-    const eCheck = emojis.circlecheck || '<:circlecheck:1519212246876557413>';
-    const eX = emojis.circlex || '<:circlex:1519212245559672914>';
-    const eClock = emojis.clock || '<:clock:1519212244263632916>';
-    const eMessage = emojis.message || '<:message:1519212228132208701>';
-    const eMail = emojis.mail || '<:mail:1519212229445029971>';
+    const eInfo = emojis.infocircle || '{emoji:infocircle}';
+    const eChart = emojis.chartpie || '{emoji:chartpie}';
+    const eCheck = emojis.circlecheck || '{emoji:circlecheck}';
+    const eX = emojis.circlex || '{emoji:circlex}';
+    const eClock = emojis.clock || '{emoji:clock}';
+    const eMessage = emojis.message || '{emoji:message}';
+    const eMail = emojis.mail || '{emoji:mail}';
 
     const embed = new EmbedBuilder()
       .setColor(0x57F287)

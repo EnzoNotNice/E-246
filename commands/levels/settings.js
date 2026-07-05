@@ -32,13 +32,13 @@ module.exports = {
       const rewardStr = rewards.length ? rewards.map(r => `المستوى **${r.level}** → <@&${r.roleId}>`).join('\n') : 'لا يوجد';
       const embed = new EmbedBuilder()
         .setColor(0xFFD700)
-        .setTitle('<:settings:1519212212227407953> إعدادات نظام المستويات')
+        .setTitle('{emoji:settings} إعدادات نظام المستويات')
         .addFields(
-          { name: '<:chartpie:1519212248479043634> الحالة', value: settings.enabled ? '<:circlecheck:1519212246876557413> مفعّل' : '<:circlex:1519212245559672914> معطّل', inline: true },
-          { name: '<:mail:1519212229445029971> الروم', value: settings.channel ? `<#${settings.channel}>` : 'غير محدد', inline: true },
-          { name: '<:star:1519212199309082705> نطاق XP', value: `${settings.xp_min} – ${settings.xp_max}`, inline: true },
-          { name: '<:clock:1519212244263632916> وقت التهدئة', value: `${settings.xp_cooldown} ثانية`, inline: true },
-          { name: '<:user:1519212186633764995> مكافآت الرتب', value: rewardStr }
+          { name: '{emoji:chartpie} الحالة', value: settings.enabled ? '{emoji:circlecheck} مفعّل' : '{emoji:circlex} معطّل', inline: true },
+          { name: '{emoji:mail} الروم', value: settings.channel ? `<#${settings.channel}>` : 'غير محدد', inline: true },
+          { name: '{emoji:star} نطاق XP', value: `${settings.xp_min} – ${settings.xp_max}`, inline: true },
+          { name: '{emoji:clock} وقت التهدئة', value: `${settings.xp_cooldown} ثانية`, inline: true },
+          { name: '{emoji:user} مكافآت الرتب', value: rewardStr }
         )
         .setTimestamp();
       return interaction.reply({ embeds: [embed] });

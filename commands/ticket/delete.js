@@ -15,7 +15,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0xED4245)
-      .setTitle('<:trash:1519212192912637962> جارٍ حذف التذكرة')
+      .setTitle('{emoji:trash} جارٍ حذف التذكرة')
       .setDescription(`ستُحذف هذه التذكرة خلال **5 ثوانٍ** بواسطة ${interaction.user}`)
       .setTimestamp();
 

@@ -28,7 +28,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0xED4245)
-      .setTitle('<:lock:1519212231332593785> تم إغلاق التذكرة')
+      .setTitle('{emoji:lock} تم إغلاق التذكرة')
       .setDescription(`أُغلقت بواسطة ${interaction.user}\n**السبب:** ${reason}`)
       .setTimestamp();
 

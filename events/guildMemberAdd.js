@@ -62,7 +62,7 @@ module.exports = {
           if (logCh) {
             const invEmbed = new EmbedBuilder()
               .setColor(0x57F287)
-              .setTitle('<:mail:1519212229445029971> انضمام عضو')
+              .setTitle('{emoji:mail} انضمام عضو')
               .setThumbnail(member.user.displayAvatarURL())
               .setDescription(`${member} انضم\n**تمت دعوته بواسطة** <@${inviterId}> (${real} دعوات حقيقية)\n**كود الدعوة** \`${usedInvite.code}\``)
               .setTimestamp();
@@ -165,7 +165,7 @@ module.exports = {
     
     const logEmbed = new EmbedBuilder()
       .setColor(0x57F287)
-      .setTitle('<:mail:1519212229445029971> انضمام عضو')
+      .setTitle('{emoji:mail} انضمام عضو')
       .setDescription(`${member} انضم للسيرفر\n**تاريخ إنشاء الحساب** <t:${Math.floor(member.user.createdTimestamp / 1000)}:F>\n**عدد الأعضاء** ${guild.memberCount}`)
       .setThumbnail(member.user.displayAvatarURL())
       .setTimestamp();

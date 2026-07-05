@@ -15,7 +15,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
-      .setTitle(`<:photo:1519212224239898745> ${user.tag}'s Avatar`)
+      .setTitle(`{emoji:photo} ${user.tag}'s Avatar`)
       .setImage(serverAvatar || globalAvatar)
       .setTimestamp();
 

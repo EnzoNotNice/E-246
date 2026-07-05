@@ -24,19 +24,19 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
-      .setTitle(`<:chartpie:1519212248479043634> ${guild.name}`)
+      .setTitle(`{emoji:chartpie} ${guild.name}`)
       .setThumbnail(guild.iconURL({ size: 256 }))
       .addFields(
-        { name: '<:crown:1519212241310715916> المالك', value: `${owner.user.tag}`, inline: true },
-        { name: '<:infocircle:1519212235258335324> معرّف السيرفر', value: guild.id, inline: true },
-        { name: '<:clock:1519212244263632916> تاريخ الإنشاء', value: created, inline: false },
-        { name: '<:user:1519212186633764995> الأعضاء', value: `\`${members.toLocaleString()}\``, inline: true },
-        { name: '<:message:1519212228132208701> الروومات', value: `\`${channels}\``, inline: true },
-        { name: '<:user:1519212186633764995> الرتب', value: `\`${roles}\``, inline: true },
-        { name: '<:moodsmile:1519212226723188907> الإيموجيات', value: `\`${emojis}\``, inline: true },
+        { name: '{emoji:crown} المالك', value: `${owner.user.tag}`, inline: true },
+        { name: '{emoji:infocircle} معرّف السيرفر', value: guild.id, inline: true },
+        { name: '{emoji:clock} تاريخ الإنشاء', value: created, inline: false },
+        { name: '{emoji:user} الأعضاء', value: `\`${members.toLocaleString()}\``, inline: true },
+        { name: '{emoji:message} الروومات', value: `\`${channels}\``, inline: true },
+        { name: '{emoji:user} الرتب', value: `\`${roles}\``, inline: true },
+        { name: '{emoji:moodsmile} الإيموجيات', value: `\`${emojis}\``, inline: true },
         { name: '&#127912; الستيكرز', value: `\`${stickers}\``, inline: true },
-        { name: '<:bolt:1519212174529134754> البوستات', value: `\`${boosts}\` (${boostTier})`, inline: true },
-        { name: '<:shield:1519212202676977788> مستوى التحقق', value: verificationLevels[guild.verificationLevel], inline: true },
+        { name: '{emoji:bolt} البوستات', value: `\`${boosts}\` (${boostTier})`, inline: true },
+        { name: '{emoji:shield} مستوى التحقق', value: verificationLevels[guild.verificationLevel], inline: true },
       )
       .setImage(guild.bannerURL({ size: 1024 }))
       .setTimestamp();

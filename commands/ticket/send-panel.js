@@ -19,7 +19,7 @@ module.exports = {
     }
 
     const channel = interaction.options.getChannel('channel') || interaction.channel;
-    const title = interaction.options.getString('title') || '<:ticket:1519212195945119814> نظام التذاكر';
+    const title = interaction.options.getString('title') || '{emoji:ticket} نظام التذاكر';
     const description = interaction.options.getString('description') || settings.support_message || 'اضغط على الزر أدناه لفتح تذكرة دعم وسيتواصل معك فريقنا قريبا';
 
     const panelEmbed = new EmbedBuilder()

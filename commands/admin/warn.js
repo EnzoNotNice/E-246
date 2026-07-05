@@ -27,7 +27,7 @@ module.exports = {
       ]
     }).catch(() => null);
 
-    const logEmbed = modlog('تم تحذير العضو', { tag: target.user.tag, id: target.id }, interaction.user, reason, { '<:alerttriangle:1519212253054767205> إجمالي التحذيرات': String(warnings.length) });
+    const logEmbed = modlog('تم تحذير العضو', { tag: target.user.tag, id: target.id }, interaction.user, reason, { '{emoji:alerttriangle} إجمالي التحذيرات': String(warnings.length) });
     await sendLog(interaction.client, interaction.guildId, logEmbed, 'warn');
 
     return interaction.reply({

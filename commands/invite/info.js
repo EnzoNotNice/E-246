@@ -23,18 +23,18 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
-      .setTitle(`<:list:1519212232670580868> معلومات الدعوات - ${user.tag}`)
+      .setTitle(`{emoji:list} معلومات الدعوات - ${user.tag}`)
       .setThumbnail(user.displayAvatarURL())
       .addFields(
-        { name: '<:clock:1519212244263632916> تاريخ إنشاء الحساب', value: createdAt, inline: false },
-        { name: '<:clock:1519212244263632916> عمر الحساب', value: `${accountAge} يوم`, inline: true },
-        { name: '<:mail:1519212229445029971> انضم للسيرفر', value: joinedAt, inline: false },
-        { name: '<:circlecheck:1519212246876557413> الدعوات الصحيحة', value: String(real), inline: true },
-        { name: '<:chartpie:1519212248479043634> إجمالي الدعوات', value: String(inviteData.total), inline: true },
-        { name: '<:gift:1519212237317865553> الدعوات الإضافية', value: String(inviteData.bonus), inline: true },
-        { name: '<:circlex:1519212245559672914> الدعوات المزيفة', value: String(inviteData.fake), inline: true },
-        { name: '<:folderopen:1519212239876395138> غادروا السيرفر', value: String(inviteData.left), inline: true },
-        { name: '<:trophy:1519212189171454003> الرتبة التالية', value: nextRankStr }
+        { name: '{emoji:clock} تاريخ إنشاء الحساب', value: createdAt, inline: false },
+        { name: '{emoji:clock} عمر الحساب', value: `${accountAge} يوم`, inline: true },
+        { name: '{emoji:mail} انضم للسيرفر', value: joinedAt, inline: false },
+        { name: '{emoji:circlecheck} الدعوات الصحيحة', value: String(real), inline: true },
+        { name: '{emoji:chartpie} إجمالي الدعوات', value: String(inviteData.total), inline: true },
+        { name: '{emoji:gift} الدعوات الإضافية', value: String(inviteData.bonus), inline: true },
+        { name: '{emoji:circlex} الدعوات المزيفة', value: String(inviteData.fake), inline: true },
+        { name: '{emoji:folderopen} غادروا السيرفر', value: String(inviteData.left), inline: true },
+        { name: '{emoji:trophy} الرتبة التالية', value: nextRankStr }
       )
       .setTimestamp();
 

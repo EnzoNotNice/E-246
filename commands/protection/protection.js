@@ -20,7 +20,7 @@ module.exports = {
     const enabled = interaction.options.getBoolean('enabled');
     const bypass = interaction.options.getRole('bypass');
 
-    const icons = { antilink: '<:settings:1519212212227407953>', antispam: '<:shield:1519212202676977788>', antiraid: '<:shieldlock:1519212205638287522>' };
+    const icons = { antilink: '{emoji:settings}', antispam: '{emoji:shield}', antiraid: '{emoji:shieldlock}' };
     const names = { antilink: 'حماية الروابط', antispam: 'حماية السبام', antiraid: 'حماية الريد' };
 
     db.db.prepare('INSERT INTO protection_settings (guildId) VALUES (?) ON CONFLICT(guildId) DO NOTHING').run(interaction.guildId);

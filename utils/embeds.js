@@ -19,37 +19,37 @@ function embed(type = 'info') {
 
 function success(title, description) {
   const e = embed('success');
-  const icon = emojis.circlecheck || '<:circlecheck:1519212246876557413>';
+  const icon = emojis.circlecheck || '{emoji:circlecheck}';
   if (description) return e.setTitle(`${icon} ${title}`).setDescription(description);
   return e.setDescription(title);
 }
 
 function error(title, description) {
   const e = embed('error');
-  const icon = emojis.circlex || '<:circlex:1519212245559672914>';
+  const icon = emojis.circlex || '{emoji:circlex}';
   if (description) return e.setTitle(`${icon} ${title}`).setDescription(description);
   return e.setDescription(title);
 }
 
 function warn(title, description) {
   const e = embed('warning');
-  const icon = emojis.alerttriangle || '<:alerttriangle:1519212253054767205>';
+  const icon = emojis.alerttriangle || '{emoji:alerttriangle}';
   if (description) return e.setTitle(`${icon} ${title}`).setDescription(description);
   return e.setDescription(title);
 }
 
 function info(title, description) {
   const e = embed('info');
-  const icon = emojis.infocircle || '<:infocircle:1519212235258335324>';
+  const icon = emojis.infocircle || '{emoji:infocircle}';
   if (description) return e.setTitle(`${icon} ${title}`).setDescription(description);
   return e.setDescription(title);
 }
 
 function modlog(action, target, moderator, reason, extra = {}) {
-  const eInfo = emojis.user || '<:user:1519212186633764995>';
-  const eShield = emojis.shield || '<:shield:1519212202676977788>';
-  const eList = emojis.list || '<:list:1519212232670580868>';
-  const eLock = emojis.shieldlock || '<:shieldlock:1519212205638287522>';
+  const eInfo = emojis.user || '{emoji:user}';
+  const eShield = emojis.shield || '{emoji:shield}';
+  const eList = emojis.list || '{emoji:list}';
+  const eLock = emojis.shieldlock || '{emoji:shieldlock}';
   
   const e = embed('moderation')
     .setTitle(`${eLock} ${action}`)

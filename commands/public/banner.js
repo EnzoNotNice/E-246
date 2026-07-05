@@ -11,7 +11,7 @@ module.exports = {
 
     if (!user.banner) {
       return interaction.reply({
-        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`<:circlex:1519212245559672914> **${user.tag}** ليس لديه بانر`)],
+        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`{emoji:circlex} **${user.tag}** ليس لديه بانر`)],
         flags: ['Ephemeral']
       });
     }
@@ -20,7 +20,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(user.accentColor || 0x5865F2)
-      .setTitle(`<:photo:1519212224239898745> بانر ${user.tag}`)
+      .setTitle(`{emoji:photo} بانر ${user.tag}`)
       .setImage(bannerURL)
       .setDescription(`[تحميل](${bannerURL})`)
       .setTimestamp();

@@ -36,13 +36,13 @@ module.exports = {
       if (!all.length) return interaction.reply({ embeds: [error(locale.get('automation.noAutomation'))], flags: ['Ephemeral'] });
 
       const lines = all.map(a => {
-        const types = { images: '<:photo:1519212224239898745> Images Only', youtube: '<:playerplay:1519212218867253258> YouTube Only', line: '<:adjustments:1519212254720167996> Auto-Line', react: '<:moodsmile:1519212226723188907> Auto-React' };
+        const types = { images: '{emoji:photo} Images Only', youtube: '{emoji:playerplay} YouTube Only', line: '{emoji:adjustments} Auto-Line', react: '{emoji:moodsmile} Auto-React' };
         return `${types[a.type] || a.type} — <#${a.channelId}>${a.value ? ` (\`${a.value}\`)` : ''}`;
       });
 
       const embed = new EmbedBuilder()
         .setColor(0x5865F2)
-        .setTitle('<:settings:1519212212227407953> Automation Settings')
+        .setTitle('{emoji:settings} Automation Settings')
         .setDescription(lines.join('\n'))
         .setTimestamp();
       return interaction.reply({ embeds: [embed] });

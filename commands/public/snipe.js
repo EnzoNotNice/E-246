@@ -11,7 +11,7 @@ module.exports = {
 
     if (!data) {
       return interaction.reply({
-        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('<:circlex:1519212245559672914> لا توجد رسائل محذوفة حديثاً في هذا الروم')],
+        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('{emoji:circlex} لا توجد رسائل محذوفة حديثاً في هذا الروم')],
         flags: ['Ephemeral']
       });
     }

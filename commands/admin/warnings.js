@@ -18,7 +18,7 @@ module.exports = {
     if (clear) {
       db.clearWarnings(target.id, interaction.guildId);
       return interaction.reply({
-        embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`<:circlecheck:1519212246876557413> **تم مسح جميع تحذيرات العضو ${target.tag}**`)]
+        embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`{emoji:circlecheck} **تم مسح جميع تحذيرات العضو ${target.tag}**`)]
       });
     }
 
@@ -32,7 +32,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0xFEE75C)
-      .setTitle(`<:alerttriangle:1519212253054767205> تحذيرات ${target.tag}`)
+      .setTitle(`{emoji:alerttriangle} تحذيرات ${target.tag}`)
       .setThumbnail(target.displayAvatarURL())
       .setDescription(desc)
       .setFooter({ text: `الإجمالي: ${warnings.length} تحذير` })

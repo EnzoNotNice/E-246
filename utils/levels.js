@@ -54,18 +54,14 @@ async function checkLevelUp(client, userId, guildId, channelId = null) {
     }
 
     if (announceCh) {
-      const emojis = require('./emojis.json');
-      const confettiEmoji = emojis.confetti || '<:confetti:1519212243026448394>';
-      const messageEmoji = emojis.message || '<:message:1519212228132208701>';
-
       if (leveledUpText) {
         announceCh.send({
-          content: `${confettiEmoji} مبروك <@${userId}> لقد وصلت لـ **المستوى ${textLevel}**! ${messageEmoji}`
+          content: `{emoji:confetti} مبروك <@${userId}> لقد وصلت لـ **المستوى ${textLevel}**! {emoji:message}`
         }).catch(() => null);
       }
       if (leveledUpVoice) {
         announceCh.send({
-          content: `${confettiEmoji} مبروك <@${userId}> لقد وصلت لـ **المستوى الصوتي ${voiceLevel}**! 🎙️`
+          content: `{emoji:confetti} مبروك <@${userId}> لقد وصلت لـ **المستوى الصوتي ${voiceLevel}**! {emoji:mic}`
         }).catch(() => null);
       }
     }

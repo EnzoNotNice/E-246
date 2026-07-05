@@ -17,7 +17,7 @@ module.exports = {
 
     if (!leaderboard.length) {
       return interaction.reply({
-        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('<:circlex:1519212245559672914> لا يوجد أعضاء لديهم نقاط خبرة بعد')],
+        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('{emoji:circlex} لا يوجد أعضاء لديهم نقاط خبرة بعد')],
         flags: ['Ephemeral']
       });
     }
@@ -35,7 +35,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0xFFD700)
-      .setTitle(`<:trophy:1519212189171454003> ${interaction.guild.name} لوحة الصدارة`)
+      .setTitle(`{emoji:trophy} ${interaction.guild.name} لوحة الصدارة`)
       .setDescription(rows.join('\n'))
       .setFooter({ text: `صفحة ${page} من ${totalPages}` })
       .setTimestamp();

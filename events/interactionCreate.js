@@ -55,9 +55,9 @@ module.exports = {
 
       const ticketEmbed = new EmbedBuilder()
         .setColor(0x00B0F4)
-        .setTitle(`<:ticket:1519212195945119814> ${locale.get('tickets.openedTitle')}`)
+        .setTitle(`{emoji:ticket} ${locale.get('tickets.openedTitle')}`)
         .setDescription(settings.ticket_message || locale.get('tickets.openedDesc'))
-        .addFields({ name: `<:user:1519212186633764995> ${locale.get('tickets.userField')}`, value: `${interaction.user}`, inline: true })
+        .addFields({ name: `{emoji:user} ${locale.get('tickets.userField')}`, value: `${interaction.user}`, inline: true })
         .setTimestamp();
 
       const { ActionRowBuilder: ARB, ButtonBuilder: BB, ButtonStyle: BS } = require('discord.js');
@@ -73,14 +73,14 @@ module.exports = {
         if (logCh) {
           const logEmbed = new EmbedBuilder()
             .setColor(0x57F287)
-            .setTitle('<:ticket:1519212195945119814> إنشاء تذكرة')
+            .setTitle('{emoji:ticket} إنشاء تذكرة')
             .setDescription(`**العضو** ${interaction.user.tag}\n**الروم** ${ticketChannel}`)
             .setTimestamp();
           logCh.send({ embeds: [logEmbed] }).catch(() => null);
         }
       }
 
-      await interaction.editReply({ embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`<:circlecheck:1519212246876557413> ${locale.get('tickets.successCreated', { channel: ticketChannel.toString() })}`)] });
+      await interaction.editReply({ embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`{emoji:circlecheck} ${locale.get('tickets.successCreated', { channel: ticketChannel.toString() })}`)] });
     };
 
     if (interaction.isStringSelectMenu()) {
@@ -131,16 +131,16 @@ module.exports = {
             }
 
             const emojis = {
-                admin: '<:crown:1519212241310715916>',
-                public: '<:infocircle:1519212235258335324>',
-                giveaway: '<:confetti:1519212243026448394>',
-                ticket: '<:ticket:1519212195945119814>',
-                protection: '<:lock:1519212231332593785>',
-                levels: '<:chartpie:1519212248479043634>',
-                automation: '<:adjustments:1519212254720167996>',
-                invite: '<:folderopen:1519212239876395138>',
-                greet: '<:folder:1519212238160924692>',
-                economy: '<:gift:1519212237317865553>'
+                admin: '{emoji:crown}',
+                public: '{emoji:infocircle}',
+                giveaway: '{emoji:confetti}',
+                ticket: '{emoji:ticket}',
+                protection: '{emoji:lock}',
+                levels: '{emoji:chartpie}',
+                automation: '{emoji:adjustments}',
+                invite: '{emoji:folderopen}',
+                greet: '{emoji:folder}',
+                economy: '{emoji:gift}'
             };
 
             const arNames = {
@@ -158,7 +158,7 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor(0x2B2D31)
-                .setTitle(`${emojis[category] || '<:folder:1519212238160924692>'} أوامر ${arNames[category] || category}`)
+                .setTitle(`${emojis[category] || '{emoji:folder}'} أوامر ${arNames[category] || category}`)
                 .setDescription(commandList.length > 0 ? commandList.join('\n') : 'لا توجد أوامر في هذا القسم حالياً')
                 .setThumbnail(interaction.client.user.displayAvatarURL())
                 .setFooter({ text: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
@@ -185,7 +185,7 @@ module.exports = {
 
         const winEmbed = new EmbedBuilder()
           .setColor(0x57F287)
-          .setTitle('<:gift:1519212237317865553> تم الاستلام')
+          .setTitle('{emoji:gift} تم الاستلام')
           .setDescription(`${interaction.user} استلم صندوق الغموض\n**الجائزة** ${prize}`)
           .setTimestamp();
 
@@ -424,7 +424,7 @@ module.exports = {
 
         const embed = new EmbedBuilder()
           .setColor(0xED4245)
-          .setTitle(`<:lock:1519212231332593785> ${locale.get('tickets.closedTitle')}`)
+          .setTitle(`{emoji:lock} ${locale.get('tickets.closedTitle')}`)
           .setDescription(locale.get('tickets.closedDesc', { user: interaction.user.toString() }))
           .setTimestamp();
 
@@ -437,7 +437,7 @@ module.exports = {
         await interaction.channel.permissionOverwrites.edit(ticket.userId, { ViewChannel: true, SendMessages: true });
         db.updateTicketStatus(interaction.channelId, 'open');
         return interaction.reply({
-          embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`<:lock:1519212231332593785> ${locale.get('tickets.reopenedDesc', { user: interaction.user.toString() })}`)]
+          embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`{emoji:lock} ${locale.get('tickets.reopenedDesc', { user: interaction.user.toString() })}`)]
         });
       }
 
@@ -445,7 +445,7 @@ module.exports = {
         const ticketSettings = db.getTicketSettings(interaction.guildId);
 
         await interaction.reply({
-          embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`<:trash:1519212192912637962> ${locale.get('tickets.deletingDesc')}`)]
+          embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`{emoji:trash} ${locale.get('tickets.deletingDesc')}`)]
         });
 
         try {
@@ -464,7 +464,7 @@ module.exports = {
               if (logCh) {
                   const logEmbed = new EmbedBuilder()
                       .setColor(0xED4245)
-                      .setTitle(`<:trash:1519212192912637962> ${locale.get('tickets.deletedLogTitle')}`)
+                      .setTitle(`{emoji:trash} ${locale.get('tickets.deletedLogTitle')}`)
                       .setDescription(locale.get('tickets.deletedLogDesc', { channel: interaction.channel.name, user: interaction.user.toString() }))
                       .setTimestamp();
                   await logCh.send({ embeds: [logEmbed], files: [attachment] }).catch(console.error);
