@@ -343,6 +343,16 @@ db.exec(`
     seconds INTEGER DEFAULT 0,
     PRIMARY KEY (guildId, date)
   );
+
+  CREATE TABLE IF NOT EXISTS social_alerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guildId TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    channelId TEXT NOT NULL,
+    socialId TEXT NOT NULL,
+    lastVideoId TEXT,
+    message TEXT
+  );
 `);
 
 try { db.exec("DELETE FROM whitelist WHERE id NOT IN (SELECT MIN(id) FROM whitelist GROUP BY guildId, targetId, type)"); } catch (e) {}
@@ -817,6 +827,23 @@ const helpers = {
       ORDER BY date DESC 
       LIMIT ?
     `).all(guildId, daysCount).reverse();
+  },
+
+  // Social Alerts
+  getSocialAlerts(guildId) {
+    return db.prepare('SELECT * FROM social_alerts WHERE guildId = ?').all(guildId);
+  },
+  getAllSocialAlerts() {
+    return db.prepare('SELECT * FROM social_alerts').all();
+  },
+  addSocialAlert(guildId, platform, channelId, socialId, message) {
+    return db.prepare('INSERT INTO social_alerts (guildId, platform, channelId, socialId, message) VALUES (?, ?, ?, ?, ?)').run(guildId, platform, channelId, socialId, message);
+  },
+  removeSocialAlert(id, guildId) {
+    return db.prepare('DELETE FROM social_alerts WHERE id = ? AND guildId = ?').run(id, guildId);
+  },
+  updateSocialAlertLastVideo(id, lastVideoId) {
+    return db.prepare('UPDATE social_alerts SET lastVideoId = ? WHERE id = ?').run(lastVideoId, id);
   },
 
   db,

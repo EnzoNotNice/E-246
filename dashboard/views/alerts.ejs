@@ -1,0 +1,97 @@
+<%- include('partials/header') %>
+
+<%- include('partials/sidebar', { activeTab: 'alerts' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-brands fa-youtube"></i> تنبيهات المحتوى</h1>
+        <p>تلقى تنبيهات فورية في سيرفرك عند نشر مقطع يوتيوب جديد</p>
+    </div>
+
+    <div class="glass-panel">
+        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+            <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= req.query.success %></div>
+        <% } %>
+        <% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
+            <div class="alert alert-danger"><i class="fa-solid fa-exclamation-circle"></i> <%= req.query.error %></div>
+        <% } %>
+
+        <% if (alerts && alerts.length > 0) { %>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px;">
+                <% alerts.forEach(alert => { %>
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 18px 22px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="margin-bottom: 6px;">
+                                <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">المنصة</span>
+                                <span style="margin-right: 8px; font-weight: 700; color: var(--primary);">
+                                    <% if (alert.platform === 'youtube') { %>
+                                        <i class="fa-brands fa-youtube" style="color: #ff0000;"></i> يوتيوب
+                                    <% } else { %>
+                                        <i class="fa-brands fa-twitch" style="color: #9146FF;"></i> تويتش
+                                    <% } %>
+                                </span>
+                            </div>
+                            <div style="margin-bottom: 6px;">
+                                <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">القناة المرتبطة</span>
+                                <span style="margin-right: 8px; color: #d0d0d0;"><%= alert.socialId %></span>
+                            </div>
+                            <div>
+                                <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">روم التنبيهات</span>
+                                <span style="margin-right: 8px; color: #d0d0d0;">
+                                    <% const ch = guild.channels.cache.get(alert.channelId); %>
+                                    <%= ch ? '#' + ch.name : 'روم محذوف' %>
+                                </span>
+                            </div>
+                        </div>
+                        <form action="/dashboard/<%= guild.id %>/alerts/delete" method="POST" style="margin:0;">
+                            <input type="hidden" name="id" value="<%= alert.id %>">
+                            <button type="submit" class="btn btn-danger" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </div>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <div style="text-align: center; padding: 40px; color: var(--text-muted); margin-bottom: 20px;">
+                <i class="fa-brands fa-youtube" style="font-size: 2.5rem; margin-bottom: 15px; display: block; opacity: 0.4;"></i>
+                لا توجد تنبيهات مضافة حتى الآن
+            </div>
+        <% } %>
+
+        <hr style="border-color: var(--glass-border); margin: 25px 0;">
+
+        <h3 style="margin-bottom: 20px; color: var(--primary);">إضافة تنبيه جديد</h3>
+        <form action="/dashboard/<%= guild.id %>/alerts/add" method="POST" class="settings-form">
+            <div class="form-group">
+                <label>المنصة</label>
+                <select name="platform" class="glass-input">
+                    <option value="youtube">يوتيوب (YouTube)</option>
+                    <!-- <option value="twitch">تويتش (Twitch)</option> -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>رابط قناة اليوتيوب أو معرف القناة (ID)</label>
+                <input type="text" name="socialId" class="glass-input" required placeholder="مثال UC_x5XG1OV2P6uZZ5FSM9Ttw أو https://youtube.com/channel/...">
+            </div>
+
+            <div class="form-group">
+                <label>روم التنبيهات</label>
+                <select name="channelId" class="glass-input" required>
+                    <% textChannels.forEach(c => { %>
+                        <option value="<%= c.id %>">#<%= c.name %></option>
+                    <% }) %>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>رسالة التنبيه المخصصة</label>
+                <input type="text" name="message" class="glass-input" placeholder="مثال مقطع جديد! {url}">
+                <small>المتغيرات المتاحة <code>{url}</code> <code>{title}</code> <code>{author}</code></small>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> إضافة التنبيه</button>
+        </form>
+    </div>
+</main>
+
+<%- include('partials/footer') %>

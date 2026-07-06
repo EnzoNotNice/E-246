@@ -63,6 +63,11 @@
                     </a>
                 </li>
                 <li>
+                    <a href="/dashboard/<%= guild.id %>/alerts" class="<%= activeTab === 'alerts' ? 'active' : '' %>">
+                        <i class="fa-brands fa-youtube"></i> تنبيهات المحتوى
+                    </a>
+                </li>
+                <li>
                     <a href="/dashboard/<%= guild.id %>/autoreplies" class="<%= activeTab === 'autoreplies' ? 'active' : '' %>">
                         <i class="fa-solid fa-reply-all"></i> الردود التلقائية
                     </a>
@@ -128,3 +133,23 @@
         <% } %>
     </div>
 </aside>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sidebarContent = document.querySelector('.sidebar-content') || document.querySelector('.app-sidebar');
+        if (sidebarContent) {
+            const savedScroll = sessionStorage.getItem('sidebarScrollPos');
+            if (savedScroll !== null) {
+                sidebarContent.scrollTop = parseInt(savedScroll, 10);
+            }
+
+            window.addEventListener('beforeunload', () => {
+                sessionStorage.setItem('sidebarScrollPos', sidebarContent.scrollTop);
+            });
+            
+            sidebarContent.addEventListener('scroll', () => {
+                sessionStorage.setItem('sidebarScrollPos', sidebarContent.scrollTop);
+            });
+        }
+    });
+</script>

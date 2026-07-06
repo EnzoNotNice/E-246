@@ -728,5 +728,48 @@ module.exports = (client) => {
         res.redirect(`/dashboard/${req.guild.id}/reactionroles?success=تم+حذف+الرتبة+التفاعلية+بنجاح`);
     });
 
+    router.get('/:id/alerts', checkAuth, checkGuildAccess, (req, res) => {
+        const alerts = db.getSocialAlerts(req.guild.id);
+        res.render('alerts', {
+            guild: req.guild,
+            alerts,
+            textChannels: req.guild.channels.cache.filter(c => c.type === 0)
+        });
+    });
+
+    router.post('/:id/alerts/add', checkAuth, checkGuildAccess, async (req, res) => {
+        const { platform, channelId, socialId, message } = req.body;
+        
+        if (!channelExists(req.guild, channelId)) {
+            return res.redirect(`/dashboard/${req.guild.id}/alerts?error=Invalid+channel`);
+        }
+        if (!socialId) {
+            return res.redirect(`/dashboard/${req.guild.id}/alerts?error=Missing+ID`);
+        }
+
+        let actualSocialId = socialId.trim();
+        
+        // Basic validation for YouTube channel ID
+        if (platform === 'youtube') {
+            if (actualSocialId.includes('youtube.com/channel/')) {
+                actualSocialId = actualSocialId.split('youtube.com/channel/')[1].split('/')[0];
+            } else if (actualSocialId.includes('youtube.com/@')) {
+                 // For handles, we really need the channel ID, but for now we will just store it.
+                 // Ideally the user provides the UC... ID.
+            }
+        }
+
+        db.addSocialAlert(req.guild.id, platform, channelId, actualSocialId, message || 'مقطع جديد! {url}');
+        res.redirect(`/dashboard/${req.guild.id}/alerts?success=تمت+إضافة+التنبيه+بنجاح`);
+    });
+
+    router.post('/:id/alerts/delete', checkAuth, checkGuildAccess, (req, res) => {
+        const { id } = req.body;
+        if (id) {
+            db.removeSocialAlert(id, req.guild.id);
+        }
+        res.redirect(`/dashboard/${req.guild.id}/alerts?success=تم+حذف+التنبيه`);
+    });
+
     return router;
 };
