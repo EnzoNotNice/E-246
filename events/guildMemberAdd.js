@@ -1,4 +1,4 @@
-const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { EmbedBuilder, AttachmentBuilder, AuditLogEvent } = require('discord.js');
 const Canvas = require('canvas');
 const path = require('path');
 Canvas.registerFont(path.join(__dirname, '..', 'assets', 'font.ttf'), { family: 'CustomFont' });
@@ -11,6 +11,32 @@ module.exports = {
     const guild = member.guild;
     const guildId = guild.id;
     const client = member.client;
+
+    if (member.user.bot) {
+      const auditLogs = await guild.fetchAuditLogs({ type: AuditLogEvent.BotAdd, limit: 1 }).catch(() => null);
+      const entry = auditLogs ? auditLogs.entries.first() : null;
+      if (entry && entry.targetId === member.id && entry.executor) {
+        const executor = entry.executor;
+        if (executor.id !== guild.ownerId && !db.isWhitelisted(guildId, executor.id) && executor.id !== client.user.id) {
+          await member.kick('إضافة بوت غير مصرح به').catch(() => null);
+          const executorMember = await guild.members.fetch(executor.id).catch(() => null);
+          if (executorMember) {
+            await executorMember.roles.set([]).catch(() => null);
+          }
+          const embed = new EmbedBuilder()
+            .setTitle('{emoji:shield} إضافة بوت غير مصرح به')
+            .setColor(0xFF0000)
+            .addFields(
+              { name: 'البوت المضاف', value: `<@${member.id}>`, inline: true },
+              { name: 'الفاعل (المشرف)', value: `<@${executor.id}>`, inline: true },
+              { name: 'الإجراء المتخذ', value: 'تم طرد البوت المضاف، وتجريد المشرف من كافة رتبه', inline: false }
+            )
+            .setTimestamp();
+          await sendLog(client, guildId, embed, 'protection');
+          return;
+        }
+      }
+    }
 
     db.incrementDailyJoins(guildId);
 
@@ -79,7 +105,7 @@ module.exports = {
     if (greet.enabled && greet.channel) {
       const greetChannel = await client.channels.fetch(greet.channel).catch(() => null);
       if (greetChannel) {
-        const message = (greet.message || 'Welcome {user} to **{server}**!')
+        const message = (greet.message || 'Welcome {user} to **{server}**')
           .replace(/{user}/g, member.toString())
           .replace(/{server}/g, guild.name)
           .replace(/{count}/g, guild.memberCount.toString());

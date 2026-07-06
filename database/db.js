@@ -31,6 +31,9 @@ try { db.exec("ALTER TABLE protection_settings ADD COLUMN antiraid INTEGER DEFAU
 try { db.exec("ALTER TABLE levels ADD COLUMN reactionsCount INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE reactroles ADD COLUMN guildId TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE protection_settings ADD COLUMN bypass_role TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN autoboost_channel TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN autoboost_message TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE tempvoice_settings ADD COLUMN panel_channel TEXT"); } catch (e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS guild_settings (
@@ -268,7 +271,23 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS tempvoice_settings (
     guildId TEXT PRIMARY KEY,
     master_channel TEXT,
-    category_id TEXT
+    category_id TEXT,
+    panel_channel TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS jailed_users (
+    userId TEXT,
+    guildId TEXT,
+    oldRoles TEXT,
+    jailedAt INTEGER,
+    PRIMARY KEY (userId, guildId)
+  );
+
+  CREATE TABLE IF NOT EXISTS jail_settings (
+    guildId TEXT PRIMARY KEY,
+    jailRoleId TEXT,
+    jailChannelId TEXT,
+    staffVoiceId TEXT
   );
 
   CREATE TABLE IF NOT EXISTS tempvoice_channels (
@@ -343,7 +362,7 @@ const helpers = {
     return row;
   },
   setGuildSetting(guildId, key, value) {
-    const allowed = ['prefix', 'giveaway_emoji', 'log_channel', 'setlog_channel', 'line_image'];
+    const allowed = ['prefix', 'giveaway_emoji', 'log_channel', 'setlog_channel', 'line_image', 'autoboost_channel', 'autoboost_message'];
     if (!allowed.includes(key)) throw new Error(`Invalid setting key: ${key}`);
     db.prepare(`INSERT INTO guild_settings (guildId) VALUES (?) ON CONFLICT(guildId) DO NOTHING`).run(guildId);
     db.prepare(`UPDATE guild_settings SET ${key} = ? WHERE guildId = ?`).run(value, guildId);
@@ -641,6 +660,36 @@ const helpers = {
   },
   updateTempVoiceSettings(guildId, master_channel, category_id) {
     return db.prepare('UPDATE tempvoice_settings SET master_channel = ?, category_id = ? WHERE guildId = ?').run(master_channel, category_id, guildId);
+  },
+  updateTempVoicePanel(guildId, panel_channel) {
+    return db.prepare('UPDATE tempvoice_settings SET panel_channel = ? WHERE guildId = ?').run(panel_channel, guildId);
+  },
+  getJailSettings(guildId) {
+    let row = db.prepare('SELECT * FROM jail_settings WHERE guildId = ?').get(guildId);
+    if (!row) {
+      db.prepare('INSERT OR IGNORE INTO jail_settings (guildId) VALUES (?)').run(guildId);
+      row = db.prepare('SELECT * FROM jail_settings WHERE guildId = ?').get(guildId);
+    }
+    return row;
+  },
+  setJailSettings(guildId, roleId, channelId, staffVoiceId) {
+    return db.prepare(`
+      INSERT INTO jail_settings (guildId, jailRoleId, jailChannelId, staffVoiceId)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(guildId) DO UPDATE SET
+        jailRoleId = excluded.jailRoleId,
+        jailChannelId = excluded.jailChannelId,
+        staffVoiceId = excluded.staffVoiceId
+    `).run(guildId, roleId, channelId, staffVoiceId);
+  },
+  getJailedUser(userId, guildId) {
+    return db.prepare('SELECT * FROM jailed_users WHERE userId = ? AND guildId = ?').get(userId, guildId);
+  },
+  addJailedUser(userId, guildId, oldRoles) {
+    return db.prepare('INSERT OR REPLACE INTO jailed_users (userId, guildId, oldRoles, jailedAt) VALUES (?, ?, ?, strftime(\'%s\', \'now\'))').run(userId, guildId, oldRoles);
+  },
+  removeJailedUser(userId, guildId) {
+    return db.prepare('DELETE FROM jailed_users WHERE userId = ? AND guildId = ?').run(userId, guildId);
   },
   
   addTempVoiceChannel(channelId, ownerId, guildId) {

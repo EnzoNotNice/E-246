@@ -17,6 +17,17 @@ module.exports = {
     const channelId = message.channel.id;
     const prefix = db.getGuildSettings(guildId).prefix || '#';
 
+    if ([8, 9, 10, 11].includes(message.type)) {
+      const settings = db.getGuildSettings(guildId);
+      if (settings.autoboost_channel && settings.autoboost_message) {
+        const boostChannel = message.guild.channels.cache.get(settings.autoboost_channel);
+        if (boostChannel) {
+          const msg = settings.autoboost_message.replace(/{user}/g, `<@${message.author.id}>`);
+          boostChannel.send(msg).catch(() => null);
+        }
+      }
+    }
+
     db.incrementHourlyMessages(guildId);
 
     const replies = db.getAutoReplies(guildId);

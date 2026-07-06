@@ -480,14 +480,27 @@ module.exports = {
 
       // Temp Voice Buttons
       if (id.startsWith('tv_')) {
-        const tvChannel = db.getTempVoiceChannel(interaction.channelId);
+        let channel = interaction.channel;
+        let channelId = interaction.channelId;
+
+        if (channel.type !== ChannelType.GuildVoice) {
+          const voiceChannel = interaction.member.voice.channel;
+          if (!voiceChannel) {
+            const emojis = require('../utils/emojis.json');
+            return interaction.reply({ content: `${emojis.circlex || '❌'} **يجب أن تكون في غرفتك الصوتية لتتمكن من التحكم بها**`, flags: ['Ephemeral'] });
+          }
+          channel = voiceChannel;
+          channelId = voiceChannel.id;
+        }
+
+        const tvChannel = db.getTempVoiceChannel(channelId);
         if (!tvChannel) {
           const emojis = require('../utils/emojis.json');
           return interaction.reply({ content: `${emojis.circlex || '❌'} **هذه ليست غرفة مؤقتة صالحة**`, flags: ['Ephemeral'] });
         }
 
         const isOwner = tvChannel.ownerId === interaction.user.id;
-        const isTrusted = db.isTempVoiceTrusted(interaction.channelId, interaction.user.id);
+        const isTrusted = db.isTempVoiceTrusted(channelId, interaction.user.id);
 
         const emojis = require('../utils/emojis.json');
 
@@ -497,11 +510,6 @@ module.exports = {
 
         if ((id === 'tv_trust' || id === 'tv_ban') && !isOwner) {
           return interaction.reply({ content: `${emojis.circlex || '❌'} **هذه الصلاحية لمالك الغرفة الأساسي فقط**`, flags: ['Ephemeral'] });
-        }
-
-        const channel = interaction.channel; // In this case, interaction.channel might be the text-in-voice channel or a text channel. But wait, `interaction.channel` is the voice channel!
-        if (channel.type !== ChannelType.GuildVoice) {
-           return interaction.reply({ content: `${emojis.circlex || '❌'} **يجب استخدام هذه الأزرار داخل الغرفة الصوتية نفسها**`, flags: ['Ephemeral'] });
         }
 
         if (id === 'tv_lock') {
@@ -526,7 +534,7 @@ module.exports = {
 
         if (id === 'tv_limit') {
           const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
-          const modal = new ModalBuilder().setCustomId('tv_modal_limit').setTitle('تحديد عدد الأشخاص');
+          const modal = new ModalBuilder().setCustomId(`tv_modal_limit_${channelId}`).setTitle('تحديد عدد الأشخاص');
           const input = new TextInputBuilder().setCustomId('limit_input').setLabel('العدد (0 مفتوح، الحد الأقصى 99)').setStyle(TextInputStyle.Short).setRequired(true);
           modal.addComponents(new ActionRowBuilder().addComponents(input));
           return interaction.showModal(modal);
@@ -534,7 +542,7 @@ module.exports = {
 
         if (id === 'tv_rename') {
           const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
-          const modal = new ModalBuilder().setCustomId('tv_modal_rename').setTitle('تغيير اسم الغرفة');
+          const modal = new ModalBuilder().setCustomId(`tv_modal_rename_${channelId}`).setTitle('تغيير اسم الغرفة');
           const input = new TextInputBuilder().setCustomId('rename_input').setLabel('الاسم الجديد').setStyle(TextInputStyle.Short).setRequired(true);
           modal.addComponents(new ActionRowBuilder().addComponents(input));
           return interaction.showModal(modal);
@@ -543,7 +551,7 @@ module.exports = {
         if (id === 'tv_kick') {
           const { UserSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
           const select = new UserSelectMenuBuilder()
-            .setCustomId('tv_select_kick')
+            .setCustomId(`tv_select_kick_${channelId}`)
             .setPlaceholder('اختر الشخص لطرده من الروم')
             .setMaxValues(1);
           
@@ -553,7 +561,7 @@ module.exports = {
         if (id === 'tv_trust') {
           const { UserSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
           const select = new UserSelectMenuBuilder()
-            .setCustomId('tv_select_trust')
+            .setCustomId(`tv_select_trust_${channelId}`)
             .setPlaceholder('اختر الشخص لإضافته أو إزالته كمسؤول مساعد')
             .setMaxValues(1);
           
@@ -563,7 +571,7 @@ module.exports = {
         if (id === 'tv_ban') {
           const { UserSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
           const select = new UserSelectMenuBuilder()
-            .setCustomId('tv_select_ban')
+            .setCustomId(`tv_select_ban_${channelId}`)
             .setPlaceholder('اختر الشخص لحظره أو إلغاء حظره')
             .setMaxValues(1);
           
@@ -654,13 +662,17 @@ module.exports = {
                 flags: ['Ephemeral']
             }).catch(() => null);
         }
-        if (interaction.customId === 'tv_modal_limit') {
+        if (interaction.customId.startsWith('tv_modal_limit_')) {
+            const channelId = interaction.customId.split('_').pop();
+            const targetChannel = interaction.guild.channels.cache.get(channelId);
+            if (!targetChannel) return interaction.reply({ content: 'الغرفة الصوتية غير موجودة', flags: ['Ephemeral'] });
+
             const limit = parseInt(interaction.fields.getTextInputValue('limit_input'));
             if (isNaN(limit) || limit < 0 || limit > 99) {
                 const emojis = require('../utils/emojis.json');
                 return interaction.reply({ content: `${emojis.circlex || '❌'} **يرجى كتابة رقم صحيح بين 0 و 99**`, flags: ['Ephemeral'] });
             }
-            await interaction.channel.setUserLimit(limit);
+            await targetChannel.setUserLimit(limit);
 
             const userSettings = db.getTempVoiceUserSettings(interaction.user.id);
             const preferredName = userSettings?.preferredName || null;
@@ -670,9 +682,13 @@ module.exports = {
             return interaction.reply({ content: `${emojis.tv_limit || '👥'} **تم تغيير حد الغرفة إلى ${limit === 0 ? 'مفتوح' : limit}**`, flags: ['Ephemeral'] });
         }
 
-        if (interaction.customId === 'tv_modal_rename') {
+        if (interaction.customId.startsWith('tv_modal_rename_')) {
+            const channelId = interaction.customId.split('_').pop();
+            const targetChannel = interaction.guild.channels.cache.get(channelId);
+            if (!targetChannel) return interaction.reply({ content: 'الغرفة الصوتية غير موجودة', flags: ['Ephemeral'] });
+
             const name = interaction.fields.getTextInputValue('rename_input');
-            await interaction.channel.setName(name);
+            await targetChannel.setName(name);
 
             const userSettings = db.getTempVoiceUserSettings(interaction.user.id);
             const preferredLimit = userSettings?.preferredLimit !== undefined ? userSettings.preferredLimit : 0;
@@ -683,12 +699,13 @@ module.exports = {
         }
     }
 
-    if (interaction.isUserSelectMenu()) {
-        if (interaction.customId === 'tv_select_kick') {
+    if (interaction.isStringSelectMenu() || interaction.isUserSelectMenu()) {
+        if (interaction.customId.startsWith('tv_select_kick_')) {
+            const channelId = interaction.customId.split('_').pop();
             const targetId = interaction.values[0];
             const member = await interaction.guild.members.fetch(targetId).catch(() => null);
             const emojis = require('../utils/emojis.json');
-            if (!member || !member.voice.channel || member.voice.channelId !== interaction.channelId) {
+            if (!member || !member.voice.channel || member.voice.channelId !== channelId) {
                 return interaction.update({ content: `${emojis.circlex || '❌'} **العضو ليس موجوداً في غرفتك الصوتية**`, components: [] });
             }
             if (targetId === interaction.user.id) {
@@ -703,7 +720,11 @@ module.exports = {
             }
         }
 
-        if (interaction.customId === 'tv_select_trust') {
+        if (interaction.customId.startsWith('tv_select_trust_')) {
+            const channelId = interaction.customId.split('_').pop();
+            const targetChannel = interaction.guild.channels.cache.get(channelId);
+            if (!targetChannel) return interaction.update({ content: 'الغرفة الصوتية غير موجودة', components: [] });
+
             const targetId = interaction.values[0];
             const member = await interaction.guild.members.fetch(targetId).catch(() => null);
             const emojis = require('../utils/emojis.json');
@@ -714,20 +735,24 @@ module.exports = {
                 return interaction.update({ content: `${emojis.circlex || '❌'} **لا يمكنك تعيين نفسك كمساعد**`, components: [] });
             }
 
-            const isAlreadyTrusted = db.isTempVoiceTrusted(interaction.channelId, targetId);
+            const isAlreadyTrusted = db.isTempVoiceTrusted(channelId, targetId);
             
             if (isAlreadyTrusted) {
-                db.removeTempVoiceTrusted(interaction.channelId, targetId);
-                await interaction.channel.permissionOverwrites.delete(targetId).catch(() => null);
+                db.removeTempVoiceTrusted(channelId, targetId);
+                await targetChannel.permissionOverwrites.delete(targetId).catch(() => null);
                 return interaction.update({ content: `${emojis.tv_trust || '👑'} **تم سحب صلاحيات المسؤول المساعد من ${member}**`, components: [] });
             } else {
-                db.addTempVoiceTrusted(interaction.channelId, targetId);
-                await interaction.channel.permissionOverwrites.edit(targetId, { ViewChannel: true, Connect: true }).catch(() => null);
+                db.addTempVoiceTrusted(channelId, targetId);
+                await targetChannel.permissionOverwrites.edit(targetId, { ViewChannel: true, Connect: true }).catch(() => null);
                 return interaction.update({ content: `${emojis.tv_trust || '👑'} **تم تعيين ${member} كمسؤول مساعد في الغرفة**`, components: [] });
             }
         }
 
-        if (interaction.customId === 'tv_select_ban') {
+        if (interaction.customId.startsWith('tv_select_ban_')) {
+            const channelId = interaction.customId.split('_').pop();
+            const targetChannel = interaction.guild.channels.cache.get(channelId);
+            if (!targetChannel) return interaction.update({ content: 'الغرفة الصوتية غير موجودة', components: [] });
+
             const targetId = interaction.values[0];
             const member = await interaction.guild.members.fetch(targetId).catch(() => null);
             const emojis = require('../utils/emojis.json');
@@ -738,17 +763,17 @@ module.exports = {
                 return interaction.update({ content: `${emojis.circlex || '❌'} **لا يمكنك حظر نفسك**`, components: [] });
             }
 
-            const isAlreadyBanned = db.isTempVoiceBanned(interaction.channelId, targetId);
+            const isAlreadyBanned = db.isTempVoiceBanned(channelId, targetId);
 
             if (isAlreadyBanned) {
-                db.removeTempVoiceBan(interaction.channelId, targetId);
-                await interaction.channel.permissionOverwrites.delete(targetId).catch(() => null);
+                db.removeTempVoiceBan(channelId, targetId);
+                await targetChannel.permissionOverwrites.delete(targetId).catch(() => null);
                 return interaction.update({ content: `${emojis.tv_ban || '🚫'} **تم إلغاء حظر ${member} من دخول الغرفة**`, components: [] });
             } else {
-                db.addTempVoiceBan(interaction.channelId, targetId);
-                await interaction.channel.permissionOverwrites.edit(targetId, { ViewChannel: false, Connect: false }).catch(() => null);
+                db.addTempVoiceBan(channelId, targetId);
+                await targetChannel.permissionOverwrites.edit(targetId, { ViewChannel: false, Connect: false }).catch(() => null);
                 
-                if (member.voice.channelId === interaction.channelId) {
+                if (member.voice.channelId === channelId) {
                     await member.voice.disconnect().catch(() => null);
                 }
 

@@ -33,7 +33,7 @@ module.exports = {
       if (tvSettings && tvSettings.master_channel === newState.channelId) {
         try {
           const userSavedSettings = db.getTempVoiceUserSettings(userId);
-          const channelName = userSavedSettings?.preferredName || `🔊・${newState.member.user.username}`;
+          const channelName = userSavedSettings?.preferredName || `🔊・${newState.member.displayName}`;
           const channelLimit = userSavedSettings?.preferredLimit !== undefined ? userSavedSettings.preferredLimit : 0;
 
           const newChannel = await newState.guild.channels.create({
@@ -56,29 +56,33 @@ module.exports = {
           await newState.member.voice.setChannel(newChannel);
           db.addTempVoiceChannel(newChannel.id, userId, guildId);
 
-          const { AttachmentBuilder } = require('discord.js');
-          const { generateTVControlPanel } = require('../utils/tvCanvas');
-          const emojis = require('../utils/emojis.json');
-          
-          const buffer = await generateTVControlPanel();
-          const attachment = new AttachmentBuilder(buffer, { name: 'control_panel.png' });
+          if (tvSettings.panel_channel) {
+            await newChannel.send({ content: `<@${userId}> مبروك غرفتك الصوتية الجديدة يمكنك التحكم بالروم الخاصة بك من خلال روم التحكم <#${tvSettings.panel_channel}>` }).catch(() => null);
+          } else {
+            const { AttachmentBuilder } = require('discord.js');
+            const { generateTVControlPanel } = require('../utils/tvCanvas');
+            const emojis = require('../utils/emojis.json');
+            
+            const buffer = await generateTVControlPanel();
+            const attachment = new AttachmentBuilder(buffer, { name: 'control_panel.png' });
 
-          const row1 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('tv_lock').setEmoji(emojis.tv_lock || '🔒').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('tv_unlock').setEmoji(emojis.tv_unlock || '🔓').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('tv_hide').setEmoji(emojis.tv_hide || '👁️‍🗨️').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('tv_show').setEmoji(emojis.tv_show || '👁️').setStyle(ButtonStyle.Secondary)
-          );
+            const row1 = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('tv_lock').setEmoji(emojis.tv_lock || '🔒').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('tv_unlock').setEmoji(emojis.tv_unlock || '🔓').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('tv_hide').setEmoji(emojis.tv_hide || '👁️‍🗨️').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('tv_show').setEmoji(emojis.tv_show || '👁️').setStyle(ButtonStyle.Secondary)
+            );
 
-           const row2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('tv_limit').setEmoji(emojis.tv_limit || '👥').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('tv_rename').setEmoji(emojis.tv_rename || '✏️').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('tv_kick').setEmoji(emojis.tv_kick || '👢').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('tv_trust').setEmoji(emojis.tv_trust || '👑').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('tv_ban').setEmoji(emojis.tv_ban || '🚫').setStyle(ButtonStyle.Secondary)
-          );
+             const row2 = new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('tv_limit').setEmoji(emojis.tv_limit || '👥').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('tv_rename').setEmoji(emojis.tv_rename || '✏️').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('tv_kick').setEmoji(emojis.tv_kick || '👢').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('tv_trust').setEmoji(emojis.tv_trust || '👑').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId('tv_ban').setEmoji(emojis.tv_ban || '🚫').setStyle(ButtonStyle.Secondary)
+            );
 
-          await newChannel.send({ content: `<@${userId}>`, files: [attachment], components: [row1, row2] });
+            await newChannel.send({ content: `<@${userId}>`, files: [attachment], components: [row1, row2] }).catch(() => null);
+          }
 
         } catch (error) {
           console.error('[TempVoice] Error creating channel:', error);

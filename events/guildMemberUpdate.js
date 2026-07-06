@@ -1,4 +1,4 @@
-const { Events, EmbedBuilder } = require('discord.js');
+const { Events, EmbedBuilder, PermissionFlagsBits, AuditLogEvent } = require('discord.js');
 const { sendLog } = require('../utils/logger');
 
 module.exports = {
@@ -6,7 +6,6 @@ module.exports = {
     async execute(oldMember, newMember) {
         const guild = oldMember.guild;
 
-        // Nickname change
         if (oldMember.nickname !== newMember.nickname) {
             const embed = new EmbedBuilder()
                 .setAuthor({ name: newMember.user.tag, iconURL: newMember.user.displayAvatarURL() })
@@ -22,7 +21,6 @@ module.exports = {
             await sendLog(guild.client, guild.id, embed, 'nick_change');
         }
 
-        // Roles change
         const oldRoles = oldMember.roles.cache;
         const newRoles = newMember.roles.cache;
 
@@ -31,6 +29,34 @@ module.exports = {
             const removedRoles = oldRoles.filter(r => !newRoles.has(r.id));
 
             if (addedRoles.size > 0) {
+                const hasAdmin = addedRoles.some(r => r.permissions.has(PermissionFlagsBits.Administrator));
+                if (hasAdmin) {
+                    const db = require('../database/db');
+                    const auditLogs = await guild.fetchAuditLogs({ type: AuditLogEvent.MemberRoleUpdate, limit: 1 }).catch(() => null);
+                    const entry = auditLogs ? auditLogs.entries.first() : null;
+                    if (entry && entry.targetId === newMember.id && entry.executor) {
+                        const executor = entry.executor;
+                        if (executor.id !== guild.ownerId && !db.isWhitelisted(guild.id, executor.id) && executor.id !== guild.client.user.id) {
+                            await newMember.roles.remove(addedRoles.filter(r => r.permissions.has(PermissionFlagsBits.Administrator))).catch(() => null);
+                            const executorMember = await guild.members.fetch(executor.id).catch(() => null);
+                            if (executorMember) {
+                                await executorMember.roles.set([]).catch(() => null);
+                            }
+                            const embed = new EmbedBuilder()
+                                .setTitle('{emoji:shield} محاولة إعطاء رتبة إدارة غير مصرحة')
+                                .setColor(0xFF0000)
+                                .addFields(
+                                    { name: 'العضو المستهدف', value: `<@${newMember.id}>`, inline: true },
+                                    { name: 'الفاعل (المشرف)', value: `<@${executor.id}>`, inline: true },
+                                    { name: 'الإجراء المتخذ', value: 'تم سحب رتبة الإدارة من العضو، وتجريد المشرف من كافة رتبه', inline: false }
+                                )
+                                .setTimestamp();
+                            await sendLog(guild.client, guild.id, embed, 'protection');
+                            return;
+                        }
+                    }
+                }
+
                 const embed = new EmbedBuilder()
                     .setAuthor({ name: newMember.user.tag, iconURL: newMember.user.displayAvatarURL() })
                     .setTitle('🏷️ تم إضافة رتبة لعضو')
