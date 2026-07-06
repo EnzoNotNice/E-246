@@ -6,8 +6,8 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('greetdm')
-    .setDescription('تحديد رسالة الخاص المرسلة للعضو عند دخوله')
-    .addStringOption(o => o.setName('message').setDescription('رسالة الخاص يمكن استخدام {user} و{server} اتركه فارغاً لتعطيله'))
+    .setDescription('رسالة ترحيب الخاص')
+    .addStringOption(o => o.setName('message').setDescription('رسالة الخاص'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

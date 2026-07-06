@@ -8,7 +8,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('warn')
     .setDescription('تحذير عضو')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد تحذيره').setRequired(true))
+    .addUserOption(o => o.setName('user').setDescription('العضو للتحذير').setRequired(true))
     .addStringOption(o => o.setName('reason').setDescription('سبب التحذير').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 

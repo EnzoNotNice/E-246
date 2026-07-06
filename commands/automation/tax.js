@@ -3,8 +3,8 @@ const { SlashCommandBuilder } = require('discord.js');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('tax')
-    .setDescription('حساب ضريبة بروبوت لمبلغ معين')
-    .addStringOption(o => o.setName('amount').setDescription('المبلغ المراد حساب ضريبته').setRequired(true)),
+    .setDescription('حساب ضريبة بروبوت')
+    .addStringOption(o => o.setName('amount').setDescription('المبلغ للحساب').setRequired(true)),
 
   async execute(interaction) {
     let amountStr = interaction.options.getString('amount').toLowerCase();

@@ -4,10 +4,10 @@ const { db } = require('../../database/db');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('reactrole')
-        .setDescription('Setup a reaction role.')
-        .addStringOption(option => option.setName('message_id').setDescription('The message ID').setRequired(true))
-        .addStringOption(option => option.setName('emoji').setDescription('The emoji').setRequired(true))
-        .addRoleOption(option => option.setName('role').setDescription('The role to give').setRequired(true))
+        .setDescription('إعداد رتبة تفاعلية')
+        .addStringOption(option => option.setName('message_id').setDescription('ايدي الرسالة').setRequired(true))
+        .addStringOption(option => option.setName('emoji').setDescription('الإيموجي').setRequired(true))
+        .addRoleOption(option => option.setName('role').setDescription('الرتبة المعطاة').setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
         const messageId = interaction.options.getString('message_id');

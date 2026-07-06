@@ -3,8 +3,8 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('banner')
-    .setDescription("عرض بانرك أو بانر عضو آخر")
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد عرض البانر الخاص به')),
+    .setDescription('عرض بانر العضو')
+    .addUserOption(o => o.setName('user').setDescription('العضو لعرض بانره')),
 
   async execute(interaction) {
     const user = await (interaction.options.getUser('user') || interaction.user).fetch();

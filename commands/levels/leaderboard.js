@@ -5,7 +5,7 @@ const { createLeaderboardCanvas } = require('../../utils/canvas');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('leaderboard')
-    .setDescription('عرض لوحة ترتيب نقاط الخبرة في السيرفر بتصميم صورة مخصص'),
+    .setDescription('لوحة ترتيب الخبرة'),
 
   async execute(interaction) {
     await interaction.deferReply();
@@ -13,7 +13,7 @@ module.exports = {
 
     if (!leaderboard || leaderboard.length === 0) {
       return interaction.editReply({
-        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('{emoji:circlex} **لم يكسب أحد نقاط خبرة بعد**')]
+        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('لا نقاط خبرة')]
       });
     }
 

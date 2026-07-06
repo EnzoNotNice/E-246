@@ -6,9 +6,9 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('unblacklist')
-    .setDescription('إزالة عضو أو رتبة من القائمة السوداء للحماية')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد إزالته'))
-    .addRoleOption(o => o.setName('role').setDescription('الرتبة المراد إزالتها'))
+    .setDescription('إزالة قائمة سوداء')
+    .addUserOption(o => o.setName('user').setDescription('العضو للإزالة'))
+    .addRoleOption(o => o.setName('role').setDescription('الرتبة للإزالة'))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {

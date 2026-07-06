@@ -9,10 +9,10 @@ const logColumns = Object.fromEntries(logTypes.map(t => [t, `${t}_channel`]));
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('logs')
-    .setDescription('إعداد نظام سجلات السيرفر')
+    .setDescription('إعداد سجلات السيرفر')
     .addSubcommand(s => s.setName('channel').setDescription('تحديد روم السجلات').addChannelOption(o => o.setName('channel').setDescription('روم السجلات').setRequired(true).addChannelTypes(ChannelType.GuildText)))
-    .addSubcommand(s => s.setName('toggle').setDescription('تفعيل أو تعطيل نوع سجل محدد').addStringOption(o => o.setName('type').setDescription('نوع السجل').setRequired(true).addChoices(...logTypes.map(t => ({ name: t.replace(/_/g, ' '), value: t })))))
-    .addSubcommand(s => s.setName('show').setDescription('عرض إعدادات السجلات الحالية'))
+    .addSubcommand(s => s.setName('toggle').setDescription('تبديل نوع السجل').addStringOption(o => o.setName('type').setDescription('نوع السجل').setRequired(true).addChoices(...logTypes.map(t => ({ name: t.replace(/_/g, ' '), value: t })))))
+    .addSubcommand(s => s.setName('show').setDescription('عرض إعدادات السجلات'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

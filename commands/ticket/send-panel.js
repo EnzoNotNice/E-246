@@ -6,8 +6,8 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('send-panel')
-    .setDescription('إرسال قائمة إعداد بانل التذاكر')
-    .addChannelOption(o => o.setName('channel').setDescription('الروم المراد إرسال البانل فيه').addChannelTypes(ChannelType.GuildText))
+    .setDescription('إرسال بانل التذاكر')
+    .addChannelOption(o => o.setName('channel').setDescription('روم إرسال البانل').addChannelTypes(ChannelType.GuildText))
     .addStringOption(o => o.setName('title').setDescription('عنوان البانل'))
     .addStringOption(o => o.setName('description').setDescription('وصف البانل'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),

@@ -5,8 +5,8 @@ const { success } = require('../../utils/embeds');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('unlock')
-    .setDescription('السماح لـ @everyone بإرسال الرسائل في الروم')
-    .addChannelOption(o => o.setName('channel').setDescription('الروم المراد فتحه الافتراضي الروم الحالي').addChannelTypes(ChannelType.GuildText))
+    .setDescription('فتح الروم')
+    .addChannelOption(o => o.setName('channel').setDescription('الروم للفتح').addChannelTypes(ChannelType.GuildText))
     .addStringOption(o => o.setName('reason').setDescription('سبب الفتح'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 

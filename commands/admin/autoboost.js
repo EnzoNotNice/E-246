@@ -5,18 +5,18 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('autoboost')
-    .setDescription('إعداد رسالة الشكر التلقائية للبوست')
+    .setDescription('إعداد رسالة الشكر للبوست')
     .addSubcommand(sub =>
       sub
         .setName('setup')
-        .setDescription('تفعيل وتحديد روم ورسالة البوست')
+        .setDescription('تفعيل رسالة البوست')
         .addChannelOption(o => o.setName('channel').setDescription('روم البوست').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement).setRequired(true))
-        .addStringOption(o => o.setName('message').setDescription('رسالة الشكر (استخدم {user} لمنشن العضو)').setRequired(true))
+        .addStringOption(o => o.setName('message').setDescription('رسالة الشكر').setRequired(true))
     )
     .addSubcommand(sub =>
       sub
         .setName('disable')
-        .setDescription('تعطيل رسالة البوست التلقائية')
+        .setDescription('تعطيل رسالة البوست')
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 

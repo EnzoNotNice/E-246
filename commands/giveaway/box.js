@@ -5,9 +5,9 @@ const { success, error } = require('../../utils/embeds');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('box')
-    .setDescription('إرسال صندوق؛ أول شخص يضغط يفوز بالجائزة')
+    .setDescription('إرسال صندوق الجائزة')
     .addStringOption(o => o.setName('prize').setDescription('الجائزة').setRequired(true))
-    .addChannelOption(o => o.setName('channel').setDescription('الروم الذي سيُرسل فيه الصندوق'))
+    .addChannelOption(o => o.setName('channel').setDescription('روم صندوق الجائزة'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

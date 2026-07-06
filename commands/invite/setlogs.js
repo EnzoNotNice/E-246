@@ -6,8 +6,8 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setlogs')
-    .setDescription('تحديد روم سجلات الدخول والخروج')
-    .addChannelOption(o => o.setName('channel').setDescription('الروم المخصص لسجل الدخول والخروج').setRequired(true).addChannelTypes(ChannelType.GuildText))
+    .setDescription('سجلات دخول وخروج')
+    .addChannelOption(o => o.setName('channel').setDescription('روم الدخول والخروج').setRequired(true).addChannelTypes(ChannelType.GuildText))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

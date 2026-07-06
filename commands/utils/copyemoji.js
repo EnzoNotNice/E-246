@@ -4,10 +4,10 @@ const emojis = require('../../utils/emojis.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('copyemoji')
-        .setDescription('استخراج وتحميل الإيموجيات من النص كملف مضغوط')
+        .setDescription('استخراج وتحميل الايموجيات')
         .addStringOption(option => 
             option.setName('emojis')
-                .setDescription('ضع الإيموجيات هنا لاستخراجها')
+                .setDescription('الايموجيات للاستخراج')
                 .setRequired(true)
         ),
 

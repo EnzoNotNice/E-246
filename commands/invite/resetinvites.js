@@ -6,8 +6,8 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('resetinvites')
-    .setDescription("تصفير دعوات عضو أو الكل")
-    .addUserOption(o => o.setName('user').setDescription("العضو المراد تصفير دعواته اتركه فارغاً لتصفير الكل"))
+    .setDescription('تصفير دعوات الأعضاء')
+    .addUserOption(o => o.setName('user').setDescription('العضو لتصفير الدعوات'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

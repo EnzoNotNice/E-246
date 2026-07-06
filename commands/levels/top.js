@@ -4,7 +4,7 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('top')
-    .setDescription('عرض أعلى الأعضاء نشاطاً في السيرفر')
+    .setDescription('أعلى الأعضاء نشاطاً')
     .addIntegerOption(o => o.setName('page').setDescription('رقم الصفحة').setMinValue(1)),
 
   async execute(interaction) {
@@ -17,7 +17,7 @@ module.exports = {
 
     if (!leaderboard.length) {
       return interaction.reply({
-        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('{emoji:circlex} لا يوجد أعضاء لديهم نقاط خبرة بعد')],
+        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('لا نقاط خبرة')],
         flags: ['Ephemeral']
       });
     }

@@ -6,8 +6,8 @@ const { sendLog } = require('../../utils/logger');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('timeout')
-    .setDescription('إسكات عضو ومنعه من إرسال الرسائل والتفاعل ودخول الرومات الصوتية')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد إسكاته').setRequired(true))
+    .setDescription('إسكات العضو')
+    .addUserOption(o => o.setName('user').setDescription('العضو للإسكات').setRequired(true))
     .addIntegerOption(o => o.setName('duration').setDescription('المدة بالدقائق').setRequired(true).setMinValue(1).setMaxValue(40320))
     .addStringOption(o => o.setName('reason').setDescription('سبب الإسكات'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),

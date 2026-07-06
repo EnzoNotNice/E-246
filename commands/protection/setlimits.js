@@ -5,12 +5,12 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setlimits')
-    .setDescription('تحديد حدود نظام الحماية')
-    .addIntegerOption(o => o.setName('ban').setDescription('الحد الأقصى للباندات في 10 ثوانٍ').setMinValue(1).setMaxValue(20))
-    .addIntegerOption(o => o.setName('kick').setDescription('الحد الأقصى للكيكات في 10 ثوانٍ').setMinValue(1).setMaxValue(20))
-    .addIntegerOption(o => o.setName('channel').setDescription('الحد الأقصى لعمليات الروومات في 10 ثوانٍ').setMinValue(1).setMaxValue(20))
-    .addIntegerOption(o => o.setName('role').setDescription('الحد الأقصى لعمليات الرتب في 10 ثوانٍ').setMinValue(1).setMaxValue(20))
-    .addIntegerOption(o => o.setName('webhook').setDescription('الحد الأقصى لعمليات الويب هوك في 10 ثوانٍ').setMinValue(1).setMaxValue(20))
+    .setDescription('حدود نظام الحماية')
+    .addIntegerOption(o => o.setName('ban').setDescription('الحد الأقصى للباند').setMinValue(1).setMaxValue(20))
+    .addIntegerOption(o => o.setName('kick').setDescription('الحد الأقصى للكيك').setMinValue(1).setMaxValue(20))
+    .addIntegerOption(o => o.setName('channel').setDescription('أقصى عمليات الرومات').setMinValue(1).setMaxValue(20))
+    .addIntegerOption(o => o.setName('role').setDescription('أقصى عمليات الرتب').setMinValue(1).setMaxValue(20))
+    .addIntegerOption(o => o.setName('webhook').setDescription('أقصى الويب هوكات').setMinValue(1).setMaxValue(20))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {

@@ -3,7 +3,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, ModalBuilder, TextInputBuilder
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('bc')
-    .setDescription('إرسال رسالة جماعية لأعضاء السيرفر')
+    .setDescription('رسالة جماعية للأعضاء')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {

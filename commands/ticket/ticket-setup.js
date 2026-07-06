@@ -7,10 +7,10 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('ticket-setup')
     .setDescription('إعداد بيانات التذاكر')
-    .addChannelOption(o => o.setName('category').setDescription('التصنيف الذي ستُنشأ فيه التذاكر').setRequired(true).addChannelTypes(ChannelType.GuildCategory))
-    .addRoleOption(o => o.setName('staff_role').setDescription('الرتبة التي تدير التذاكر').setRequired(true))
-    .addChannelOption(o => o.setName('log_channel').setDescription('روم تسجيل أحداث التذاكر').addChannelTypes(ChannelType.GuildText))
-    .addStringOption(o => o.setName('ticket_message').setDescription('الرسالة التي تُرسل عند فتح تذكرة'))
+    .addChannelOption(o => o.setName('category').setDescription('تصنيف فتح التذاكر').setRequired(true).addChannelTypes(ChannelType.GuildCategory))
+    .addRoleOption(o => o.setName('staff_role').setDescription('رتبة إدارة التذاكر').setRequired(true))
+    .addChannelOption(o => o.setName('log_channel').setDescription('روم سجل التذاكر').addChannelTypes(ChannelType.GuildText))
+    .addStringOption(o => o.setName('ticket_message').setDescription('رسالة فتح تذكرة'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

@@ -10,28 +10,28 @@ module.exports = {
       sub
         .setName('setup')
         .setDescription('إعداد نظام السجن')
-        .addRoleOption(o => o.setName('role').setDescription('رتبة السجن (Jailed Role)').setRequired(true))
-        .addChannelOption(o => o.setName('channel').setDescription('روم السجن الكتابي').addChannelTypes(ChannelType.GuildText).setRequired(true))
-        .addChannelOption(o => o.setName('staff_voice').setDescription('روم الاستدعاء الصوتي للإدارة').addChannelTypes(ChannelType.GuildVoice).setRequired(false))
+        .addRoleOption(o => o.setName('role').setDescription('رتبة السجن').setRequired(true))
+        .addChannelOption(o => o.setName('channel').setDescription('روم السجن').addChannelTypes(ChannelType.GuildText).setRequired(true))
+        .addChannelOption(o => o.setName('staff_voice').setDescription('روم الاستدعاء الصوتي').addChannelTypes(ChannelType.GuildVoice).setRequired(false))
     )
     .addSubcommand(sub =>
       sub
         .setName('add')
         .setDescription('سجن عضو')
-        .addUserOption(o => o.setName('user').setDescription('العضو المراد سجنه').setRequired(true))
+        .addUserOption(o => o.setName('user').setDescription('العضو للسجن').setRequired(true))
         .addStringOption(o => o.setName('reason').setDescription('السبب').setRequired(false))
     )
     .addSubcommand(sub =>
       sub
         .setName('remove')
         .setDescription('فك سجن عضو')
-        .addUserOption(o => o.setName('user').setDescription('العضو المراد فك سجنه').setRequired(true))
+        .addUserOption(o => o.setName('user').setDescription('عضو فك السجن').setRequired(true))
     )
     .addSubcommand(sub =>
       sub
         .setName('summon')
-        .setDescription('استدعاء عضو مسجون')
-        .addUserOption(o => o.setName('user').setDescription('العضو المراد استدعاؤه').setRequired(true))
+        .setDescription('استدعاء مسجون')
+        .addUserOption(o => o.setName('user').setDescription('العضو للاستدعاء').setRequired(true))
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 

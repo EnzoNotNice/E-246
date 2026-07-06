@@ -6,27 +6,27 @@ const { success, error } = require('../../utils/embeds');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('tempvoice')
-    .setDescription('إعدادات الغرف الصوتية المؤقتة (Join to Create)')
+    .setDescription('إعداد الرومات المؤقتة')
     .addSubcommand(sub => 
         sub.setName('setup')
-        .setDescription('إعداد الغرفة الأساسية لصناعة الرومات')
+        .setDescription('إعداد روم الصناعة')
         .addChannelOption(opt => 
             opt.setName('master_channel')
-            .setDescription('الروم الصوتي الأساسي (انضم لتصنع روم)')
+            .setDescription('الروم الصوتي الأساسي')
             .setRequired(true)
         )
         .addChannelOption(opt => 
             opt.setName('category')
-            .setDescription('القسم الذي ستصنع فيه الرومات الجديدة')
+            .setDescription('قسم الرومات الجديدة')
             .setRequired(true)
         )
     )
     .addSubcommand(sub =>
         sub.setName('panel')
-        .setDescription('إرسال لوحة التحكم برومات الفويس في روم محددة')
+        .setDescription('إرسال بانل الرومات')
         .addChannelOption(opt =>
             opt.setName('channel')
-            .setDescription('الروم التي سيتم إرسال البانل فيها')
+            .setDescription('روم إرسال البانل')
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(true)
         )

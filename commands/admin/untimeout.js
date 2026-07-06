@@ -6,8 +6,8 @@ const { sendLog } = require('../../utils/logger');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('untimeout')
-    .setDescription('رفع الإسكات عن عضو')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد رفع الإسكات عنه').setRequired(true))
+    .setDescription('رفع الإسكات')
+    .addUserOption(o => o.setName('user').setDescription('عضو رفع الإسكات').setRequired(true))
     .addStringOption(o => o.setName('reason').setDescription('السبب'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 

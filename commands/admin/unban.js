@@ -6,8 +6,8 @@ const { sendLog } = require('../../utils/logger');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('unban')
-    .setDescription('رفع الحظر عن عضو أو عن جميع المحظورين')
-    .addStringOption(o => o.setName('user_id').setDescription('معرّف العضو المراد رفع حظره اتركه فارغاً لرفع الحظر عن الكل'))
+    .setDescription('رفع الحظر')
+    .addStringOption(o => o.setName('user_id').setDescription('معرف العضو'))
     .addStringOption(o => o.setName('reason').setDescription('سبب رفع الحظر'))
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
 

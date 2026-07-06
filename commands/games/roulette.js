@@ -8,7 +8,7 @@ const activeGames = new Set();
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('roulette')
-        .setDescription('ابدأ لعبة الروليت المثيرة عجلة الحظ'),
+        .setDescription('بدء لعبة الروليت'),
         
     async execute(interaction) {
         if (activeGames.has(interaction.channelId)) {

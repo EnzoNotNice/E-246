@@ -4,7 +4,7 @@ const { db } = require('../../database/db');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('topvoice')
-        .setDescription('أكثر الأعضاء تواجداً بالرومات الصوتية'),
+        .setDescription('أكثر الأعضاء صوتاً'),
     async execute(interaction) {
         const topUsers = db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY voice_xp DESC LIMIT 10').all(interaction.guild.id);
 

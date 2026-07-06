@@ -6,8 +6,8 @@ const { sendLog } = require('../../utils/logger');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('kick')
-    .setDescription('طرد عضو من السيرفر')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد طرده').setRequired(true))
+    .setDescription('طرد عضو')
+    .addUserOption(o => o.setName('user').setDescription('العضو للطرد').setRequired(true))
     .addStringOption(o => o.setName('reason').setDescription('سبب الطرد'))
     .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
 

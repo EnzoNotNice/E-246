@@ -4,7 +4,7 @@ const locale = require('../../utils/locale');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ping')
-    .setDescription("اختبار سرعة استجابة البوت"),
+    .setDescription('سرعة استجابة البوت'),
 
   async execute(interaction) {
     await interaction.reply({ content: locale.get('general.pingMsg') });

@@ -4,7 +4,7 @@ const { db } = require('../../database/db');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('topreactions')
-        .setDescription('أكثر الأعضاء استخداماً للريأكشن'),
+        .setDescription('أكثر الأعضاء تفاعلاً'),
     async execute(interaction) {
         await interaction.deferReply();
         const topUsers = db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY reactionsCount DESC LIMIT 10').all(interaction.guild.id);

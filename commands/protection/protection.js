@@ -5,13 +5,13 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('protection')
-    .setDescription('إعداد قواعد حماية المود التلقائي')
-    .addSubcommand(s => s.setName('antilink').setDescription('تفعيل أو تعطيل حماية منع الروابط')
+    .setDescription('إعداد الحماية التلقائية')
+    .addSubcommand(s => s.setName('antilink').setDescription('إعداد منع الروابط')
       .addBooleanOption(o => o.setName('enabled').setDescription('تفعيل أو تعطيل').setRequired(true))
-      .addRoleOption(o => o.setName('bypass').setDescription('الرتبة المستثناة من هذه القاعدة')))
-    .addSubcommand(s => s.setName('antispam').setDescription('تفعيل أو تعطيل حماية منع السبام')
+      .addRoleOption(o => o.setName('bypass').setDescription('الرتبة المستثناة')))
+    .addSubcommand(s => s.setName('antispam').setDescription('إعداد منع السبام')
       .addBooleanOption(o => o.setName('enabled').setDescription('تفعيل أو تعطيل').setRequired(true)))
-    .addSubcommand(s => s.setName('antiraid').setDescription('تفعيل أو تعطيل حماية منع الرايد')
+    .addSubcommand(s => s.setName('antiraid').setDescription('إعداد منع الرايد')
       .addBooleanOption(o => o.setName('enabled').setDescription('تفعيل أو تعطيل').setRequired(true)))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 

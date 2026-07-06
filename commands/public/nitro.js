@@ -6,10 +6,10 @@ const path = require('path');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('nitro')
-        .setDescription('Displays Nitro information about a specific user.')
+        .setDescription('معلومات نيترو لعضو')
         .addUserOption(option => 
             option.setName('target')
-                .setDescription('The user to get Nitro information about')),
+                .setDescription('العضو لمعلومات النيترو')),
     async getNitroPayload(target, userToken) {
         try {
             const nitroRes = await getUserNitroInfo(userToken, target.id);
@@ -122,7 +122,7 @@ module.exports = {
             files.push(new AttachmentBuilder(buffer, { name: 'nitro_canvas.png' }));
 
             const canvasMediaGallery = new MediaGalleryBuilder().addItems(
-                item => item.setDescription('Nitro Canvas Progression').setURL('attachment://nitro_canvas.png')
+                item => item.setDescription('معلومات النيترو').setURL('attachment://nitro_canvas.png')
             );
             
             container.addMediaGalleryComponents(canvasMediaGallery);

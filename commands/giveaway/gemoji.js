@@ -6,8 +6,8 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('gemoji')
-    .setDescription('تحديد إيموجي مخصص لتفاعلات الجيف أواي')
-    .addStringOption(o => o.setName('emoji').setDescription('الإيموجي المستخدم في تفاعل الجيف أواي').setRequired(true))
+    .setDescription('إيموجي القيف اواي')
+    .addStringOption(o => o.setName('emoji').setDescription('إيموجي القيف اواي').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

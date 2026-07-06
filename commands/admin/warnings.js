@@ -6,9 +6,9 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('warnings')
-    .setDescription('عرض قائمة تحذيرات عضو في هذا السيرفر')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد فحصه').setRequired(true))
-    .addBooleanOption(o => o.setName('clear').setDescription('حذف جميع تحذيرات هذا العضو للمشرفين فقط'))
+    .setDescription('عرض تحذيرات العضو')
+    .addUserOption(o => o.setName('user').setDescription('العضو للفحص').setRequired(true))
+    .addBooleanOption(o => o.setName('clear').setDescription('حذف تحذيرات العضو'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 
   async execute(interaction) {

@@ -6,7 +6,7 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('open')
-    .setDescription('فتح التذكرة المغلقة الحالية')
+    .setDescription('فتح التذكرة الحالية')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
   async execute(interaction) {

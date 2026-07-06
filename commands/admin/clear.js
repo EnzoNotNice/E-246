@@ -5,9 +5,9 @@ const { success, error } = require('../../utils/embeds');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('clear')
-    .setDescription('حذف رسائل من الروم')
-    .addIntegerOption(o => o.setName('amount').setDescription('عدد الرسائل المراد حذفها من 1 إلى 100').setRequired(true).setMinValue(1).setMaxValue(100))
-    .addUserOption(o => o.setName('user').setDescription('حذف رسائل عضو معين فقط'))
+    .setDescription('حذف رسائل الروم')
+    .addIntegerOption(o => o.setName('amount').setDescription('عدد رسائل الحذف').setRequired(true).setMinValue(1).setMaxValue(100))
+    .addUserOption(o => o.setName('user').setDescription('حذف رسائل عضو'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {

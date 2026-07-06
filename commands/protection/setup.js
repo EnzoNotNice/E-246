@@ -6,11 +6,11 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setup')
-    .setDescription('إعداد خيارات حماية السيرفر')
+    .setDescription('خيارات حماية السيرفر')
     .addSubcommand(s => s.setName('enable').setDescription('تفعيل نظام الحماية'))
     .addSubcommand(s => s.setName('disable').setDescription('تعطيل نظام الحماية'))
-    .addSubcommand(s => s.setName('show').setDescription('عرض حالة نظام الحماية'))
-    .addSubcommand(s => s.setName('action').setDescription('تحديد الإجراء عند تجاوز الحد')
+    .addSubcommand(s => s.setName('show').setDescription('حالة نظام الحماية'))
+    .addSubcommand(s => s.setName('action').setDescription('إجراء تجاوز الحد')
       .addStringOption(o => o.setName('action').setDescription('الإجراء').setRequired(true).addChoices(
         { name: 'Ban', value: 'ban' },
         { name: 'Kick', value: 'kick' },

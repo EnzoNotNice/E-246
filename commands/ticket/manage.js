@@ -10,13 +10,13 @@ module.exports = {
       sub
         .setName('add')
         .setDescription('إضافة عضو للتذكرة')
-        .addUserOption(o => o.setName('member').setDescription('العضو المراد إضافته').setRequired(true))
+        .addUserOption(o => o.setName('member').setDescription('العضو للإضافة').setRequired(true))
     )
     .addSubcommand(sub =>
       sub
         .setName('remove')
-        .setDescription('إزالة عضو من التذكرة')
-        .addUserOption(o => o.setName('member').setDescription('العضو المراد إزالته').setRequired(true))
+        .setDescription('إزالة عضو للتذكرة')
+        .addUserOption(o => o.setName('member').setDescription('العضو للإزالة').setRequired(true))
     )
     .addSubcommand(sub =>
       sub

@@ -6,8 +6,8 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('greet')
-    .setDescription('تفعيل رسائل الترحيب في روم')
-    .addChannelOption(o => o.setName('channel').setDescription('الروم الذي سترسل فيه رسائل الترحيب').setRequired(true).addChannelTypes(ChannelType.GuildText))
+    .setDescription('إعداد رسائل الترحيب')
+    .addChannelOption(o => o.setName('channel').setDescription('روم الترحيب').setRequired(true).addChannelTypes(ChannelType.GuildText))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

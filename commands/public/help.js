@@ -6,7 +6,7 @@ const path = require('path');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('help')
-    .setDescription('عرض جميع أوامر البوت'),
+    .setDescription('عرض أوامر البوت'),
 
   async execute(interaction) {
     const emojisJson = require('../../utils/emojis.json');
@@ -71,7 +71,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0x2B2D31)
       .setTitle(`${dashboardEmoji} قائمة المساعدة`)
-      .setDescription('**أهلاً بك في قائمة المساعدة**\n\nيرجى استخدام القائمة المنسدلة بالأسفل لاختيار القسم الذي تود عرض أوامره جميع الأوامر مرتبة ومقسمة لتسهيل الوصول إليها')
+      .setDescription('قائمة مساعدة البوت')
       .setThumbnail(interaction.client.user.displayAvatarURL())
       .setFooter({ text: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
       .setTimestamp();

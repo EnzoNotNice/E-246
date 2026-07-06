@@ -5,8 +5,8 @@ const { success, error } = require('../../utils/embeds');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('autoline')
-    .setDescription('تفعيل أو تعطيل الخط التلقائي لروم محدد')
-    .addChannelOption(o => o.setName('channel').setDescription('الروم المراد إعداده').setRequired(true))
+    .setDescription('إعداد الخط التلقائي')
+    .addChannelOption(o => o.setName('channel').setDescription('الروم للإعداد').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

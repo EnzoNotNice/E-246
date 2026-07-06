@@ -7,7 +7,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('removeautoreply')
     .setDescription('حذف رد تلقائي')
-    .addStringOption(o => o.setName('trigger').setDescription('عبارة التشغيل المراد حذفها').setRequired(true))
+    .addStringOption(o => o.setName('trigger').setDescription('عبارة التشغيل للحذف').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {

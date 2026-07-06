@@ -6,21 +6,21 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('automation')
-    .setDescription('إدارة إعدادات الأوتوميشن في السيرفر')
-    .addSubcommand(s => s.setName('show').setDescription('عرض جميع إعدادات الأوتوميشن في السيرفر'))
-    .addSubcommand(s => s.setName('images').setDescription('تفعيل أو تعطيل وضع الصور فقط في روم')
+    .setDescription('إدارة إعدادات الأوتوميشن')
+    .addSubcommand(s => s.setName('show').setDescription('عرض إعدادات الأوتوميشن'))
+    .addSubcommand(s => s.setName('images').setDescription('إعداد صور فقط')
       .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText)))
-    .addSubcommand(s => s.setName('youtube').setDescription('تفعيل أو تعطيل وضع روابط يوتيوب فقط في روم')
+    .addSubcommand(s => s.setName('youtube').setDescription('إعداد روابط يوتيوب')
       .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText)))
-    .addSubcommand(s => s.setName('lineadd').setDescription('إضافة خط أو فاصل تلقائي إلى روم')
+    .addSubcommand(s => s.setName('lineadd').setDescription('إضافة فاصل تلقائي')
       .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText))
       .addStringOption(o => o.setName('separator').setDescription('نص الفاصل').setRequired(true)))
-    .addSubcommand(s => s.setName('reactadd').setDescription('إضافة تفاعل تلقائي إلى روم')
+    .addSubcommand(s => s.setName('reactadd').setDescription('إضافة تفاعل تلقائي')
       .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText))
-      .addStringOption(o => o.setName('emoji').setDescription('الإيموجي المستخدم للتفاعل').setRequired(true)))
-    .addSubcommand(s => s.setName('remove').setDescription('حذف أتمتة من روم')
+      .addStringOption(o => o.setName('emoji').setDescription('الإيموجي للتفاعل').setRequired(true)))
+    .addSubcommand(s => s.setName('remove').setDescription('حذف أتمتة الروم')
       .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText))
-      .addStringOption(o => o.setName('type').setDescription('النوع المراد حذفه').setRequired(true).addChoices(
+      .addStringOption(o => o.setName('type').setDescription('النوع للحذف').setRequired(true).addChoices(
         { name: 'Images Only', value: 'images' },
         { name: 'YouTube Only', value: 'youtube' },
         { name: 'Auto Line', value: 'line' },

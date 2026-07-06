@@ -6,8 +6,8 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('greetmsg')
-    .setDescription('تحديد رسالة الترحيب عند دخول عضو')
-    .addStringOption(o => o.setName('message').setDescription('الرسالة يمكن استخدام {user} و{server} و{count}').setRequired(true))
+    .setDescription('تحديد رسالة الترحيب')
+    .addStringOption(o => o.setName('message').setDescription('نص رسالة الترحيب').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

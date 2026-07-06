@@ -6,7 +6,7 @@ const locale = require('../../utils/locale');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setline')
-    .setDescription('تحديد رابط صورة نظام الخط التلقائي')
+    .setDescription('إعداد صورة الخط')
     .addStringOption(o => o.setName('linkimg').setDescription('رابط الصورة').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 

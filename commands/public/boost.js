@@ -7,10 +7,10 @@ const path = require('path');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('boost')
-        .setDescription('Displays boost information about a specific user.')
+        .setDescription('معلومات البوست لعضو')
         .addUserOption(option => 
             option.setName('target')
-                .setDescription('The user to get boost information about')),
+                .setDescription('العضو لمعلومات البوست')),
     async getBoostPayload(target, userToken) {
         try {
             const boostRes = await getUserBoostInfo(userToken, target.id);
@@ -112,7 +112,7 @@ module.exports = {
             files.push(new AttachmentBuilder(buffer, { name: 'boost_canvas.png' }));
 
             const canvasMediaGallery = new MediaGalleryBuilder().addItems(
-                item => item.setDescription('Boost Canvas Progression').setURL('attachment://boost_canvas.png')
+                item => item.setDescription('معلومات البوست').setURL('attachment://boost_canvas.png')
             );
             
             container.addMediaGalleryComponents(canvasMediaGallery);

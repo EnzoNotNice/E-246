@@ -5,7 +5,7 @@ const emojis = require('../../utils/emojis.json');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('greetshow')
-    .setDescription('عرض إعدادات ميزة الترحيب الحالية')
+    .setDescription('إعدادات ميزة الترحيب')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

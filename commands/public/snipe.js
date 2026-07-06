@@ -4,14 +4,14 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('snipe')
-    .setDescription('عرض آخر رسالة محذوفة في الروم الحالي'),
+    .setDescription('آخر رسالة محذوفة'),
 
   async execute(interaction) {
     const data = db.getSnipe(interaction.channelId);
 
     if (!data) {
       return interaction.reply({
-        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('{emoji:circlex} لا توجد رسائل محذوفة حديثاً في هذا الروم')],
+        embeds: [new EmbedBuilder().setColor(0xED4245).setDescription('لا رسائل محذوفة')],
         flags: ['Ephemeral']
       });
     }

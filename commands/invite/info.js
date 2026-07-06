@@ -4,8 +4,8 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('info')
-    .setDescription('عرض معلومات مفيدة عن تتبع دعوات عضو')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد عرض معلوماته').setRequired(true)),
+    .setDescription('عرض معلومات الدعوات')
+    .addUserOption(o => o.setName('user').setDescription('عضو معلومات الدعوات').setRequired(true)),
 
   async execute(interaction) {
     const user = interaction.options.getUser('user');

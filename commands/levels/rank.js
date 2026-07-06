@@ -5,8 +5,8 @@ const { createRankCard } = require('../../utils/canvas');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('rank')
-    .setDescription('عرض تقدم مستواك وترتيبك في السيرفر ببطاقة رتبة حديثة')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد عرض رتبته')),
+    .setDescription('عرض بطاقة الرتبة')
+    .addUserOption(o => o.setName('user').setDescription('العضو لعرض رتبته')),
 
   async execute(interaction) {
     await interaction.deferReply();

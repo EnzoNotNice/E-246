@@ -6,7 +6,7 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setlog')
-    .setDescription('تحديد روم السجلات الرئيسي للسيرفر')
+    .setDescription('روم السجلات الرئيسي')
     .addChannelOption(o => o.setName('channel').setDescription('روم السجلات').setRequired(true).addChannelTypes(ChannelType.GuildText))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 

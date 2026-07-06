@@ -3,8 +3,8 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('user')
-    .setDescription('عرض معلومات عن عضو')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد فحصه')),
+    .setDescription('معلومات عن عضو')
+    .addUserOption(o => o.setName('user').setDescription('العضو للفحص')),
 
   async execute(interaction) {
     const user = await (interaction.options.getUser('user') || interaction.user).fetch();

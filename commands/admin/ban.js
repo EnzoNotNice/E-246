@@ -6,10 +6,10 @@ const { sendLog } = require('../../utils/logger');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ban')
-    .setDescription('حظر عضو من السيرفر')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد حظره').setRequired(true))
+    .setDescription('حظر عضو')
+    .addUserOption(o => o.setName('user').setDescription('العضو للحظر').setRequired(true))
     .addStringOption(o => o.setName('reason').setDescription('سبب الحظر'))
-    .addIntegerOption(o => o.setName('delete_messages').setDescription('عدد أيام الرسائل المراد حذفها من 0 إلى 7').setMinValue(0).setMaxValue(7))
+    .addIntegerOption(o => o.setName('delete_messages').setDescription('أيام حذف الرسائل').setMinValue(0).setMaxValue(7))
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
 
   async execute(interaction) {

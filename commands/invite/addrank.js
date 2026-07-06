@@ -6,9 +6,9 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('addrank')
-    .setDescription('تحديد عدد الدعوات والرتبة لمنح رتب الدعوات')
+    .setDescription('إعداد رتب الدعوات')
     .addIntegerOption(o => o.setName('count').setDescription('عدد الدعوات المطلوبة').setRequired(true).setMinValue(1))
-    .addRoleOption(o => o.setName('role').setDescription('الرتبة التي ستُعطى').setRequired(true))
+    .addRoleOption(o => o.setName('role').setDescription('الرتبة الممنوحة').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
   async execute(interaction) {

@@ -3,8 +3,8 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('avatar')
-    .setDescription("عرض صورتك الشخصية أو صورة عضو آخر")
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد عرض صورته الشخصية')),
+    .setDescription('عرض صورة شخصية')
+    .addUserOption(o => o.setName('user').setDescription('العضو لعرض صورته')),
 
   async execute(interaction) {
     const user = interaction.options.getUser('user') || interaction.user;

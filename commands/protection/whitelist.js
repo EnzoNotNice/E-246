@@ -6,9 +6,9 @@ const db = require('../../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('whitelist')
-    .setDescription('إضافة عضو أو رتبة إلى القائمة البيضاء للحماية')
-    .addUserOption(o => o.setName('user').setDescription('العضو المراد إضافته للقائمة البيضاء'))
-    .addRoleOption(o => o.setName('role').setDescription('الرتبة المراد إضافتها للقائمة البيضاء'))
+    .setDescription('إضافة قائمة بيضاء')
+    .addUserOption(o => o.setName('user').setDescription('العضو للقائمة البيضاء'))
+    .addRoleOption(o => o.setName('role').setDescription('الرتبة للقائمة البيضاء'))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {

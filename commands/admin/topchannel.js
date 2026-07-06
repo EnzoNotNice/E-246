@@ -5,8 +5,8 @@ const { success, error } = require('../../utils/embeds');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('topchannel')
-    .setDescription('نقل روم إلى أعلى ترتيب السيرفر')
-    .addChannelOption(o => o.setName('channel').setDescription('الروم المراد رفعه الافتراضي الروم الحالي'))
+    .setDescription('رفع الروم للأعلى')
+    .addChannelOption(o => o.setName('channel').setDescription('الروم للرفع'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
   async execute(interaction) {

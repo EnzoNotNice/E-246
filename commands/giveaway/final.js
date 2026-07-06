@@ -4,10 +4,10 @@ const locale = require('../../utils/locale');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('final')
-    .setDescription('بدء مسابقة آخر رسالة؛ آخر رسالة قبل انتهاء الوقت تفوز')
+    .setDescription('مسابقة آخر رسالة')
     .addStringOption(o => o.setName('prize').setDescription('الجائزة').setRequired(true))
     .addIntegerOption(o => o.setName('duration').setDescription('المدة بالثواني').setRequired(true).setMinValue(10).setMaxValue(300))
-    .addChannelOption(o => o.setName('channel').setDescription('الروم الذي ستجري فيه المسابقة'))
+    .addChannelOption(o => o.setName('channel').setDescription('روم المسابقة'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
