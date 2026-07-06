@@ -70,7 +70,7 @@ try { pData = JSON.parse(settings.panel_data); } catch(e) {}
 <main class="app-content">
     <div class="content-header">
         <h1><i class="fa-solid fa-ticket"></i> منشئ نظام التذاكر</h1>
-        <p>خصّص نظام التذاكر بالكامل من تصميم الإمبيد وحتى شكل الزر.</p>
+        <p>خصّص نظام التذاكر بالكامل من تصميم الإمبيد وحتى شكل الزر</p>
     </div>
     <div class="glass-panel">
         <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
@@ -83,7 +83,7 @@ try { pData = JSON.parse(settings.panel_data); } catch(e) {}
                 <div>
                     <form action="/dashboard/<%= guild.id %>/tickets" method="POST" class="settings-form">
 
-                        <h3 style="margin-bottom: 15px; color: var(--primary);">١. الإعدادات الأساسية</h3>
+                        <h3 style="margin-bottom: 15px; color: var(--primary);">١ الإعدادات الأساسية</h3>
                         <div class="guild-grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
                             <div class="form-group">
                                 <label>تصنيف التذاكر</label>
@@ -117,12 +117,12 @@ try { pData = JSON.parse(settings.panel_data); } catch(e) {}
 
                         <div class="form-group" style="margin-top: 15px;">
                             <label>رسالة الترحيب (داخل التذكرة)</label>
-                            <textarea name="ticket_message" class="glass-input" rows="2" placeholder="مرحباً بك في تذكرتك..."><%= settings.ticket_message %></textarea>
+                            <textarea name="ticket_message" class="glass-input" rows="2" placeholder="مرحباً بك في تذكرتك"><%= settings.ticket_message %></textarea>
                         </div>
 
                         <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
 
-                        <h3 style="margin-bottom: 15px; color: var(--primary);">٢. نوع المكوّن التفاعلي</h3>
+                        <h3 style="margin-bottom: 15px; color: var(--primary);">٢ نوع المكوّن التفاعلي</h3>
                         <div class="guild-grid" style="grid-template-columns: 1fr 2fr; gap: 15px;">
                             <div class="form-group">
                                 <label>نوع المكوّن</label>
@@ -143,7 +143,7 @@ try { pData = JSON.parse(settings.panel_data); } catch(e) {}
 
                         <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
 
-                        <h3 style="margin-bottom: 15px; color: var(--primary);">٣. تصميم إمبيد اللوحة</h3>
+                        <h3 style="margin-bottom: 15px; color: var(--primary);">٣ تصميم إمبيد اللوحة</h3>
                         <div class="guild-grid" style="grid-template-columns: 2fr 1fr; gap: 15px;">
                             <div class="form-group">
                                 <label>عنوان الإمبيد</label>
@@ -171,7 +171,7 @@ try { pData = JSON.parse(settings.panel_data); } catch(e) {}
 
                         <div class="form-group" style="margin-top: 25px; display: flex; align-items: center; gap: 10px;">
                             <input type="checkbox" id="send_panel" name="send_panel" value="yes" style="width: 20px; height: 20px;">
-                            <label for="send_panel" style="margin: 0; font-weight: bold; color: #57F287;">إرسال / تحديث لوحة التذاكر الآن؟</label>
+                            <label for="send_panel" style="margin: 0; font-weight: bold; color: #57F287;">إرسال / تحديث لوحة التذاكر الآن</label>
                         </div>
 
                         <button type="submit" class="btn btn-primary" style="margin-top: 15px; width: 100%;"><i class="fa-solid fa-save"></i> حفظ ونشر لوحة التذاكر</button>

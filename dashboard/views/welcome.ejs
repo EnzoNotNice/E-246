@@ -5,7 +5,7 @@
     <main class="app-content">
         <div class="glass-panel">
             <h2><i class="fa-solid fa-handshake"></i> الترحيب والمغادرة</h2>
-            <p>الترحيب بالأعضاء الجدد عند انضمامهم للسيرفر.</p>
+            <p>الترحيب بالأعضاء الجدد عند انضمامهم للسيرفر</p>
 
             <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
                 <div class="alert alert-success">
@@ -30,7 +30,7 @@
                 <div class="form-group">
                     <label for="message">رسالة الترحيب النصية</label>
                     <textarea id="message" name="message" class="glass-input" rows="4"><%= settings.message %></textarea>
-                    <small>المتغيرات المتاحة: <code>{user}</code> <code>{server}</code> <code>{membercount}</code></small>
+                    <small>المتغيرات المتاحة <code>{user}</code> <code>{server}</code> <code>{membercount}</code></small>
                 </div>
 
                 <hr style="border: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
@@ -43,7 +43,7 @@
                         <input type="file" id="bg_upload" accept="image/*" style="display: none;">
                         <button type="button" class="btn btn-secondary" onclick="document.getElementById('bg_upload').click()"><i class="fa-solid fa-upload"></i> رفع صورة</button>
                     </div>
-                    <small id="upload_status">اتركه فارغاً لاستخدام الترحيب النصي فقط.</small>
+                    <small id="upload_status">اتركه فارغاً لاستخدام الترحيب النصي فقط</small>
                 </div>
 
                 <div style="display: flex; gap: 10px;">
@@ -85,7 +85,7 @@
 
                 <hr style="border: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
                 <h3>المعاينة المباشرة (Live Preview)</h3>
-                <p>قم بسحب الأفتار واسم العضو بالفأرة لتحريكهم بحرية، أو استخدم الأرقام بالأعلى.</p>
+                <p>قم بسحب الأفتار واسم العضو بالفأرة لتحريكهم بحرية أو استخدم الأرقام بالأعلى</p>
 
                 <style>
                     @font-face {

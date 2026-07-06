@@ -5,7 +5,7 @@
 <main class="app-content">
     <div class="content-header">
         <h1><i class="fa-solid fa-clipboard-question"></i> نظام التقديمات</h1>
-        <p>أنشئ استمارات تقديم مخصصة ليتقدم الأعضاء من خلالها.</p>
+        <p>أنشئ استمارات تقديم مخصصة ليتقدم الأعضاء من خلالها</p>
     </div>
 
     <% if (typeof success !== 'undefined') { %>
@@ -19,7 +19,7 @@
         <!-- نموذج الإنشاء -->
         <div class="glass-panel">
             <form action="/dashboard/<%= guild.id %>/forms" method="POST" id="formsForm">
-                <h3 style="margin-bottom: 20px; color: var(--primary);">١. تصميم الإمبيد</h3>
+                <h3 style="margin-bottom: 20px; color: var(--primary);">١ تصميم الإمبيد</h3>
                 <div class="form-group">
                     <label>عنوان الإمبيد</label>
                     <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'التقديم للطاقم' %>" required>
@@ -47,8 +47,8 @@
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <div>
-                        <h3 style="color: var(--primary);">٢. أسئلة الاستمارة</h3>
-                        <small style="color: var(--text-muted);">الحد الأقصى 5 أسئلة بسبب قيود ديسكورد.</small>
+                        <h3 style="color: var(--primary);">٢ أسئلة الاستمارة</h3>
+                        <small style="color: var(--text-muted);">الحد الأقصى 5 أسئلة بسبب قيود ديسكورد</small>
                     </div>
                     <button type="button" class="btn btn-secondary" onclick="addQuestionRow()"><i class="fa-solid fa-plus"></i> إضافة سؤال</button>
                 </div>
@@ -57,7 +57,7 @@
 
                 <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
 
-                <h3 style="margin-bottom: 15px; color: var(--primary);">٣. القنوات والنشر</h3>
+                <h3 style="margin-bottom: 15px; color: var(--primary);">٣ القنوات والنشر</h3>
                 <div class="form-group" style="margin-top:15px;">
                     <label>قناة استقبال التقديمات</label>
                     <select name="log_channel" class="glass-input" required>
@@ -81,7 +81,7 @@
                         <input type="checkbox" name="send_panel" value="yes">
                         إرسال / تحديث اللوحة الآن
                     </label>
-                    <small>فعّل هذا لإرسال لوحة التقديم إلى القناة المختارة.</small>
+                    <small>فعّل هذا لإرسال لوحة التقديم إلى القناة المختارة</small>
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="width: 100%;" onclick="prepareSubmit(event)">

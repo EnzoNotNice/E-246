@@ -5,7 +5,7 @@
 <main class="app-content">
     <div class="content-header">
         <h1><i class="fa-solid fa-shield-cat"></i> نظام التحقق البشري</h1>
-        <p>تحقق من أن الأعضاء الجدد بشر حقيقيون قبل أن يدخلوا السيرفر.</p>
+        <p>تحقق من أن الأعضاء الجدد بشر حقيقيون قبل أن يدخلوا السيرفر</p>
     </div>
 
     <% if (typeof success !== 'undefined') { %>
@@ -19,7 +19,7 @@
         <!-- نموذج الإعدادات -->
         <div class="glass-panel">
             <form action="/dashboard/<%= guild.id %>/captcha" method="POST">
-                <h3 style="margin-bottom: 15px; color: var(--primary);">١. الحالة والرتب</h3>
+                <h3 style="margin-bottom: 15px; color: var(--primary);">١ الحالة والرتب</h3>
                 <div class="form-group" style="margin-top:15px;">
                     <label>حالة نظام التحقق</label>
                     <select name="enabled" class="glass-input">
@@ -48,7 +48,7 @@
 
                 <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
 
-                <h3 style="margin-bottom: 15px; color: var(--primary);">٢. تصميم لوحة التحقق</h3>
+                <h3 style="margin-bottom: 15px; color: var(--primary);">٢ تصميم لوحة التحقق</h3>
                 <div class="form-group" style="margin-top:15px;">
                     <label>عنوان الإمبيد</label>
                     <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'التحقق البشري' %>" required>
@@ -83,7 +83,7 @@
 
                 <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
 
-                <h3 style="margin-bottom: 15px; color: var(--primary);">٣. نشر اللوحة</h3>
+                <h3 style="margin-bottom: 15px; color: var(--primary);">٣ نشر اللوحة</h3>
                 <div class="form-group" style="margin-top:15px;">
                     <label>قناة نشر لوحة التحقق</label>
                     <select name="panel_channel" class="glass-input">
@@ -98,7 +98,7 @@
                         <input type="checkbox" name="send_panel" value="yes">
                         إرسال / تحديث اللوحة الآن
                     </label>
-                    <small>فعّل هذا لإرسال لوحة التحقق إلى القناة المختارة.</small>
+                    <small>فعّل هذا لإرسال لوحة التحقق إلى القناة المختارة</small>
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="width: 100%;">

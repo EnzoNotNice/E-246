@@ -5,7 +5,7 @@
 <main class="app-content">
     <div class="content-header">
         <h1><i class="fa-solid fa-masks-theater"></i> التفاعل بالرتب</h1>
-        <p>أنشئ لوحة رتب تفاعلية يختار منها الأعضاء رتبهم بأنفسهم.</p>
+        <p>أنشئ لوحة رتب تفاعلية يختار منها الأعضاء رتبهم بأنفسهم</p>
     </div>
 
     <% if (typeof success !== 'undefined') { %>
@@ -19,7 +19,7 @@
         <!-- نموذج الإنشاء -->
         <div class="glass-panel">
             <form action="/dashboard/<%= guild.id %>/reactionroles" method="POST" id="rrForm">
-                <h3 style="margin-bottom: 20px; color: var(--primary);">١. تصميم الإمبيد</h3>
+                <h3 style="margin-bottom: 20px; color: var(--primary);">١ تصميم الإمبيد</h3>
                 <div class="form-group">
                     <label>عنوان الإمبيد</label>
                     <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'اختر رتبتك' %>" required>
@@ -45,7 +45,7 @@
 
                 <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
 
-                <h3 style="margin-bottom: 15px; color: var(--primary);">٢. نوع المكوّن</h3>
+                <h3 style="margin-bottom: 15px; color: var(--primary);">٢ نوع المكوّن</h3>
                 <div class="form-group" style="margin-top:15px;">
                     <label>اختر نوع المكوّن</label>
                     <select name="comp_type" id="comp_type" class="glass-input">
@@ -57,7 +57,7 @@
                 <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 style="color: var(--primary);">٣. قائمة الرتب</h3>
+                    <h3 style="color: var(--primary);">٣ قائمة الرتب</h3>
                     <button type="button" class="btn btn-secondary" onclick="addRoleRow()"><i class="fa-solid fa-plus"></i> إضافة رتبة</button>
                 </div>
                 <div id="rolesContainer"></div>
@@ -65,7 +65,7 @@
 
                 <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
 
-                <h3 style="margin-bottom: 15px; color: var(--primary);">٤. نشر اللوحة</h3>
+                <h3 style="margin-bottom: 15px; color: var(--primary);">٤ نشر اللوحة</h3>
                 <div class="form-group" style="margin-top:15px;">
                     <label>قناة النشر</label>
                     <select name="panel_channel" id="panel_channel" class="glass-input">
@@ -81,7 +81,7 @@
                         <input type="checkbox" name="send_panel" value="yes">
                         إرسال / تحديث اللوحة الآن
                     </label>
-                    <small>فعّل هذا الخيار لإرسال لوحة الرتب إلى القناة المختارة.</small>
+                    <small>فعّل هذا الخيار لإرسال لوحة الرتب إلى القناة المختارة</small>
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="width: 100%;" onclick="prepareSubmit(event)">
@@ -122,7 +122,7 @@
     <hr style="border-color: rgba(255,255,255,0.1); margin: 40px 0;">
     <div class="content-header" style="margin-bottom: 20px;">
         <h2><i class="fa-brands fa-discord"></i> رتب تفاعلية (عبر الأوامر المباشرة)</h2>
-        <p>هذه الرتب تم إنشاؤها عبر أمر <code>/reactrole</code> في الديسكورد وتسمح للأعضاء بالتفاعل مع أي رسالة قديمة لأخذ رتبة.</p>
+        <p>هذه الرتب تم إنشاؤها عبر أمر <code>/reactrole</code> في الديسكورد وتسمح للأعضاء بالتفاعل مع أي رسالة قديمة لأخذ رتبة</p>
     </div>
 
     <div class="glass-panel" style="overflow-x: auto;">
@@ -153,7 +153,7 @@
                     <% }) %>
                 <% } else { %>
                     <tr>
-                        <td colspan="4" style="padding: 20px; text-align: center; color: rgba(255,255,255,0.5);">لا توجد رتب تفاعلية مضافة عبر الديسكورد حالياً.</td>
+                        <td colspan="4" style="padding: 20px; text-align: center; color: rgba(255,255,255,0.5);">لا توجد رتب تفاعلية مضافة عبر الديسكورد حالياً</td>
                     </tr>
                 <% } %>
             </tbody>
