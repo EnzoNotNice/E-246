@@ -82,19 +82,26 @@ function replaceEmojisInObject(obj) {
     return obj;
 }
 
-// Hook EmbedBuilder to automatically replace emojis when serialized
+// Hook EmbedBuilder and ModalBuilder to automatically replace emojis when serialized
 const originalToJSON = EmbedBuilder.prototype.toJSON;
 EmbedBuilder.prototype.toJSON = function() {
     const json = originalToJSON.call(this);
     return replaceEmojisInObject(json);
 };
 
+const { ModalBuilder } = require('discord.js');
+const originalModalToJSON = ModalBuilder.prototype.toJSON;
+ModalBuilder.prototype.toJSON = function() {
+    const json = originalModalToJSON.call(this);
+    return replaceEmojisInObject(json);
+};
+
 // Hook MessagePayload to clean content/embeds/components right before dispatching to API
-const originalResolveData = MessagePayload.prototype.resolveData;
-MessagePayload.prototype.resolveData = function() {
-    originalResolveData.call(this);
-    if (this.data) {
-        this.data = replaceEmojisInObject(this.data);
+const originalResolveBody = MessagePayload.prototype.resolveBody;
+MessagePayload.prototype.resolveBody = function() {
+    originalResolveBody.call(this);
+    if (this.body) {
+        this.body = replaceEmojisInObject(this.body);
     }
     return this;
 };
