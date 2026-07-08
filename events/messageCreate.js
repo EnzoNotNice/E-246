@@ -17,6 +17,31 @@ module.exports = {
     const channelId = message.channel.id;
     const prefix = db.getGuildSettings(guildId).prefix || '#';
 
+    if (message.content.startsWith(prefix)) {
+      const args = message.content.slice(prefix.length).trim().split(/ +/);
+      const commandName = args.shift().toLowerCase();
+      if (commandName) {
+        let cmd = client.prefixCommands.get(commandName) || client.prefixCommands.find(c => c.aliases && c.aliases.includes(commandName));
+        if (!cmd) {
+          const customAliases = db.getAliases(guildId) || [];
+          const alias = customAliases.find(a => a.shortcut.toLowerCase() === commandName);
+          if (alias) {
+            const aliasParts = alias.command.trim().split(/ +/);
+            const mappedName = aliasParts.shift().toLowerCase();
+            cmd = client.prefixCommands.get(mappedName) || client.prefixCommands.find(c => c.aliases && c.aliases.includes(mappedName));
+            if (cmd) args.unshift(...aliasParts);
+          }
+        }
+        if (cmd) {
+          try {
+            await cmd.execute(message, args);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+    }
+
     if ([8, 9, 10, 11].includes(message.type)) {
       const settings = db.getGuildSettings(guildId);
       if (settings.autoboost_channel && settings.autoboost_message) {
