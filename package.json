@@ -1,15 +1,23 @@
 {
-  "name": "e",
+  "name": "e-246",
   "version": "1.0.3",
-  "description": "",
+  "description": "E-246 System - a full-featured Discord bot with a responsive web dashboard, moderation, leveling, tickets, temp voice channels and protection systems.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "deploy": "node deploy-commands.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "discord",
+    "discord-bot",
+    "discord.js",
+    "moderation",
+    "leveling",
+    "tickets",
+    "dashboard"
+  ],
+  "author": "EnzoCord",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
@@ -28,8 +36,6 @@
     "express": "^5.2.1",
     "express-rate-limit": "^7.0.1",
     "express-session": "^1.19.0",
-    "gif-encoder-2": "^1.0.5",
-    "gifencoder": "^2.0.1",
     "ioredis": "^5.3.2",
     "joi": "^17.1.0",
     "node-cache": "^5.1.2",
