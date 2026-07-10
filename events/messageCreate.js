@@ -22,21 +22,34 @@ module.exports = {
       const commandName = args.shift().toLowerCase();
       if (commandName) {
         let cmd = client.prefixCommands.get(commandName) || client.prefixCommands.find(c => c.aliases && c.aliases.includes(commandName));
-        if (!cmd) {
-          const customAliases = db.getAliases(guildId) || [];
-          const alias = customAliases.find(a => a.shortcut.toLowerCase() === commandName);
-          if (alias) {
-            const aliasParts = alias.command.trim().split(/ +/);
-            const mappedName = aliasParts.shift().toLowerCase();
-            cmd = client.prefixCommands.get(mappedName) || client.prefixCommands.find(c => c.aliases && c.aliases.includes(mappedName));
-            if (cmd) args.unshift(...aliasParts);
-          }
-        }
         if (cmd) {
           try {
             await cmd.execute(message, args);
           } catch (e) {
             console.error(e);
+          }
+        } else {
+          const customAliases = db.getAliases(guildId) || [];
+          const alias = customAliases.find(a => a.shortcut.toLowerCase() === commandName);
+          if (alias) {
+            const aliasParts = alias.command.trim().split(/ +/);
+            const mappedName = aliasParts.shift().toLowerCase();
+            const slashCmd = client.commands.get(mappedName);
+            if (slashCmd) {
+              const combinedArgs = [...aliasParts, ...args];
+              const { createFakeInteraction } = require('../utils/fakeInteraction');
+              const fakeInteraction = await createFakeInteraction(message, slashCmd, combinedArgs);
+              try {
+                await slashCmd.execute(fakeInteraction);
+              } catch (e) {
+                console.error(`Error executing alias slash command [${mappedName}]:`, e);
+                if (!fakeInteraction.replied && !fakeInteraction.deferred) {
+                  await message.reply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
+                } else {
+                  await fakeInteraction.editReply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
+                }
+              }
+            }
           }
         }
       }

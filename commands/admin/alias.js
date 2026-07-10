@@ -31,9 +31,10 @@ module.exports = {
       const command = interaction.options.getString('command').replace(/^\//, '');
       const shortcut = interaction.options.getString('shortcut').replace(/^#/, '');
 
-      const baseCmd = interaction.client.commands.get(command);
+      const baseCommandName = command.trim().split(/ +/)[0].toLowerCase();
+      const baseCmd = interaction.client.commands.get(baseCommandName);
       if (!baseCmd) {
-        return interaction.reply({ embeds: [error(`الأمر الأساسي \`${command}\` غير موجود.`)], flags: ['Ephemeral'] });
+        return interaction.reply({ embeds: [error(`الأمر الأساسي \`${baseCommandName}\` غير موجود.`)], flags: ['Ephemeral'] });
       }
 
       db.addAlias(guildId, shortcut, command);
