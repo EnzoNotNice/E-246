@@ -9,7 +9,7 @@ module.exports = {
     .setDescription('إعداد بيانات التذاكر')
     .addChannelOption(o => o.setName('category').setDescription('تصنيف فتح التذاكر').setRequired(true).addChannelTypes(ChannelType.GuildCategory))
     .addRoleOption(o => o.setName('staff_role').setDescription('رتبة إدارة التذاكر').setRequired(true))
-    .addChannelOption(o => o.setName('log_channel').setDescription('روم سجل التذاكر').addChannelTypes(ChannelType.GuildText))
+    .addChannelOption(o => o.setName('log_channel').setDescription('روم سجل التذاكر').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
     .addStringOption(o => o.setName('ticket_message').setDescription('رسالة فتح تذكرة'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 

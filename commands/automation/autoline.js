@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 const db = require('../../database/db');
 const { success, error } = require('../../utils/embeds');
 
@@ -6,7 +6,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('autoline')
     .setDescription('إعداد الخط التلقائي')
-    .addChannelOption(o => o.setName('channel').setDescription('الروم للإعداد').setRequired(true))
+    .addChannelOption(o => o.setName('channel').setDescription('الروم للإعداد').setRequired(true).addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

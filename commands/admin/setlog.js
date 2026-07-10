@@ -7,7 +7,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('setlog')
     .setDescription('روم السجلات الرئيسي')
-    .addChannelOption(o => o.setName('channel').setDescription('روم السجلات').setRequired(true).addChannelTypes(ChannelType.GuildText))
+    .addChannelOption(o => o.setName('channel').setDescription('روم السجلات').setRequired(true).addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

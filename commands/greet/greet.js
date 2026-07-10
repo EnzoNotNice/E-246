@@ -7,7 +7,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('greet')
     .setDescription('إعداد رسائل الترحيب')
-    .addChannelOption(o => o.setName('channel').setDescription('روم الترحيب').setRequired(true).addChannelTypes(ChannelType.GuildText))
+    .addChannelOption(o => o.setName('channel').setDescription('روم الترحيب').setRequired(true).addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {

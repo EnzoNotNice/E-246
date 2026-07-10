@@ -6,7 +6,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('unlock')
     .setDescription('فتح الروم')
-    .addChannelOption(o => o.setName('channel').setDescription('الروم للفتح').addChannelTypes(ChannelType.GuildText))
+    .addChannelOption(o => o.setName('channel').setDescription('الروم للفتح').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
     .addStringOption(o => o.setName('reason').setDescription('سبب الفتح'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 

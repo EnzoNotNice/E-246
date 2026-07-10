@@ -7,7 +7,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('send-panel')
     .setDescription('إرسال بانل التذاكر')
-    .addChannelOption(o => o.setName('channel').setDescription('روم إرسال البانل').addChannelTypes(ChannelType.GuildText))
+    .addChannelOption(o => o.setName('channel').setDescription('روم إرسال البانل').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
     .addStringOption(o => o.setName('title').setDescription('عنوان البانل'))
     .addStringOption(o => o.setName('description').setDescription('وصف البانل'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),

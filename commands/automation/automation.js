@@ -9,17 +9,17 @@ module.exports = {
     .setDescription('إدارة إعدادات الأوتوميشن')
     .addSubcommand(s => s.setName('show').setDescription('عرض إعدادات الأوتوميشن'))
     .addSubcommand(s => s.setName('images').setDescription('إعداد صور فقط')
-      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText)))
+      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)))
     .addSubcommand(s => s.setName('youtube').setDescription('إعداد روابط يوتيوب')
-      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText)))
+      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)))
     .addSubcommand(s => s.setName('lineadd').setDescription('إضافة فاصل تلقائي')
-      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText))
+      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
       .addStringOption(o => o.setName('separator').setDescription('نص الفاصل').setRequired(true)))
     .addSubcommand(s => s.setName('reactadd').setDescription('إضافة تفاعل تلقائي')
-      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText))
+      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
       .addStringOption(o => o.setName('emoji').setDescription('الإيموجي للتفاعل').setRequired(true)))
     .addSubcommand(s => s.setName('remove').setDescription('حذف أتمتة الروم')
-      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText))
+      .addChannelOption(o => o.setName('channel').setDescription('الروم').setRequired(true).addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
       .addStringOption(o => o.setName('type').setDescription('النوع للحذف').setRequired(true).addChoices(
         { name: 'Images Only', value: 'images' },
         { name: 'YouTube Only', value: 'youtube' },

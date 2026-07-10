@@ -10,7 +10,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('logs')
     .setDescription('إعداد سجلات السيرفر')
-    .addSubcommand(s => s.setName('channel').setDescription('تحديد روم السجلات').addChannelOption(o => o.setName('channel').setDescription('روم السجلات').setRequired(true).addChannelTypes(ChannelType.GuildText)))
+    .addSubcommand(s => s.setName('channel').setDescription('تحديد روم السجلات').addChannelOption(o => o.setName('channel').setDescription('روم السجلات').setRequired(true).addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)))
     .addSubcommand(s => s.setName('toggle').setDescription('تبديل نوع السجل').addStringOption(o => o.setName('type').setDescription('نوع السجل').setRequired(true).addChoices(...logTypes.map(t => ({ name: t.replace(/_/g, ' '), value: t })))))
     .addSubcommand(s => s.setName('show').setDescription('عرض إعدادات السجلات'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),

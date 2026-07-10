@@ -43,7 +43,10 @@ db.exec(`
     giveaway_emoji TEXT DEFAULT '🎉',
     log_channel TEXT,
     setlog_channel TEXT,
-    line_image TEXT
+    line_image TEXT,
+    autoboost_channel TEXT,
+    autoboost_message TEXT,
+    reply_type TEXT DEFAULT 'embed'
   );
 
   CREATE TABLE IF NOT EXISTS warnings (
