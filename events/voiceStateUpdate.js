@@ -10,7 +10,7 @@ module.exports = {
     const guildId = newState.guild.id;
     const userId = newState.member.id;
 
-    // Check Voice Ban
+    
     if (newState.channelId) {
       const tvChan = db.getTempVoiceChannel(newState.channelId);
       if (tvChan && db.isTempVoiceBanned(newState.channelId, userId)) {
@@ -28,7 +28,7 @@ module.exports = {
     if (isJoining || isSwitching) {
       newState.client.voiceSessions.set(sessionKey, Date.now());
 
-      // Temp Voice Logic (Join)
+      
       const tvSettings = db.getTempVoiceSettings(guildId);
       if (tvSettings && tvSettings.master_channel === newState.channelId) {
         try {
@@ -91,7 +91,7 @@ module.exports = {
     }
 
     if (isLeaving || isSwitching) {
-      // XP Logic
+      
       const startTime = newState.client.voiceSessions.get(sessionKey);
       if (startTime) {
         const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
@@ -104,7 +104,7 @@ module.exports = {
         }
       }
 
-      // Temp Voice Logic (Leave/Empty)
+      
       const oldChannel = oldState.channel;
       if (oldChannel) {
         const tempChannelData = db.getTempVoiceChannel(oldChannel.id);

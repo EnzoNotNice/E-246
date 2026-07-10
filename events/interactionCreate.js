@@ -8,6 +8,43 @@ module.exports = {
   async execute(interaction) {
     const client = interaction.client;
 
+    if (interaction.isAutocomplete()) {
+      if (interaction.commandName === 'play') {
+        const query = interaction.options.getFocused();
+        if (!query) return interaction.respond([]).catch(() => {});
+
+        try {
+          const fs = require('fs');
+          fs.appendFileSync('/home/enzo/Desktop/e/scratch/autocomplete.log', `[${new Date().toISOString()}] Query: "${query}"\n`);
+
+          if (query.startsWith('http://') || query.startsWith('https://')) {
+            await interaction.respond([{ name: query.substring(0, 100), value: query.substring(0, 100) }]).catch(() => {});
+            return;
+          }
+
+          const res = await fetch(`https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&client=firefox&q=${encodeURIComponent(query)}`);
+          const data = await res.json();
+          const suggestions = data[1] || [];
+
+          fs.appendFileSync('/home/enzo/Desktop/e/scratch/autocomplete.log', `[${new Date().toISOString()}] Suggestions found: ${suggestions.length}\n`);
+
+          const choices = suggestions.slice(0, 25).map(s => ({
+            name: s.substring(0, 100),
+            value: s.substring(0, 100)
+          }));
+          await interaction.respond(choices).catch((err) => {
+            fs.appendFileSync('/home/enzo/Desktop/e/scratch/autocomplete.log', `[${new Date().toISOString()}] Response error: ${err.message}\n`);
+          });
+        } catch (e) {
+          const fs = require('fs');
+          fs.appendFileSync('/home/enzo/Desktop/e/scratch/autocomplete.log', `[${new Date().toISOString()}] Error: ${e.stack}\n`);
+          console.error("Autocomplete Error:", e);
+          return interaction.respond([]).catch(() => {});
+        }
+      }
+      return;
+    }
+
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
@@ -140,7 +177,8 @@ module.exports = {
                 automation: '{emoji:adjustments}',
                 invite: '{emoji:folderopen}',
                 greet: '{emoji:folder}',
-                economy: '{emoji:gift}'
+                economy: '{emoji:gift}',
+                music: '{emoji:music_play}'
             };
 
             const arNames = {
@@ -153,7 +191,8 @@ module.exports = {
                 automation: 'الردود والخطوط',
                 invite: 'الدعوات',
                 greet: 'الترحيب',
-                economy: 'الاقتصاد'
+                economy: 'الاقتصاد',
+                music: 'الموسيقى'
             };
 
             const embed = new EmbedBuilder()
@@ -170,6 +209,68 @@ module.exports = {
 
     if (interaction.isButton()) {
       const id = interaction.customId;
+
+      if (id.startsWith('controller:')) {
+        const parts = id.split(':');
+        const action = parts[2];
+
+        const player = interaction.client.manager.getPlayer(interaction.guildId);
+        if (!player) return interaction.reply({ content: "{emoji:circlex} لا يوجد شيء مشغل حالياً.", flags: ['Ephemeral'] });
+
+        const voiceChannel = interaction.member.voice.channel;
+        if (!voiceChannel || voiceChannel.id !== player.voiceChannelId) {
+            return interaction.reply({ content: "{emoji:circlex} يجب أن تكون في نفس الغرفة الصوتية للبوت.", flags: ['Ephemeral'] });
+        }
+
+        if (action === 'PlayAndPause') {
+            if (!player.paused) {
+                await player.pause(true);
+                await interaction.reply({ content: "⏸️ تم إيقاف المقطع مؤقتاً.", flags: ['Ephemeral'] });
+            } else {
+                await player.pause(false);
+                await interaction.reply({ content: "▶️ تم استكمال تشغيل المقطع.", flags: ['Ephemeral'] });
+            }
+            if (player.nowPlayingMessage) {
+                player.nowPlayingMessage.edit({ components: [interaction.client.createController(interaction.guildId, player)] }).catch(() => {});
+            }
+            return;
+        }
+
+        if (action === 'Skip' || action === 'Next') {
+            if (player.queue.tracks.length === 0 && !player.get('autoQueue')) {
+                return interaction.reply({ content: "{emoji:circlex} لا توجد مقاطع أخرى لتخطيها.", flags: ['Ephemeral'] });
+            }
+            await player.skip();
+            return interaction.reply({ content: "⏭️ تم تخطي المقطع.", flags: ['Ephemeral'] });
+        }
+
+        if (action === 'Stop') {
+            player.destroy();
+            return interaction.reply({ content: "⏹️ تم إيقاف الموسيقى ومسح القائمة.", flags: ['Ephemeral'] });
+        }
+
+        if (action === 'Loop') {
+            if (player.repeatMode === 'off') {
+                player.setRepeatMode('track');
+                await interaction.reply({ content: "🔂 تم تفعيل تكرار المقطع.", flags: ['Ephemeral'] });
+            } else if (player.repeatMode === 'track') {
+                player.setRepeatMode('queue');
+                await interaction.reply({ content: "🔁 تم تفعيل تكرار القائمة.", flags: ['Ephemeral'] });
+            } else {
+                player.setRepeatMode('off');
+                await interaction.reply({ content: "🔄 تم إيقاف التكرار.", flags: ['Ephemeral'] });
+            }
+            if (player.nowPlayingMessage) {
+                player.nowPlayingMessage.edit({ components: [interaction.client.createController(interaction.guildId, player)] }).catch(() => {});
+            }
+            return;
+        }
+
+        if (action === 'Replay') {
+            await player.seek(0);
+            return interaction.reply({ content: "⏪ تم إعادة تشغيل المقطع.", flags: ['Ephemeral'] });
+        }
+      }
 
       if (id.startsWith('box_')) {
         if (id === 'box_claimed') return;
@@ -478,7 +579,7 @@ module.exports = {
         return;
       }
 
-      // Temp Voice Buttons
+      
       if (id.startsWith('tv_')) {
         let channel = interaction.channel;
         let channelId = interaction.channelId;

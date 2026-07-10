@@ -657,24 +657,24 @@ async function generateTempVCPanel() {
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Background
+  
   ctx.save();
   clipRoundedRect(ctx, 0, 0, width, height, 30);
-  ctx.fillStyle = '#111214'; // Very dark classic Discord color
+  ctx.fillStyle = '#111214'; 
   ctx.fillRect(0, 0, width, height);
 
-  // Subtle Header line
+  
   ctx.fillStyle = '#2b2d31';
   ctx.fillRect(0, 0, width, 140);
   
-  // Header Text
+  
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 56px IBMPlexSansArabic';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('لوحة تحكم الروم الصوتي', width / 2, 70);
 
-  // Border below header
+  
   ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
   ctx.fillRect(0, 140, width, 2);
 
@@ -703,7 +703,7 @@ async function generateTempVCPanel() {
     const x = width - padding - (col * (width / 2 - 40));
     const y = startY + (row * rowHeight);
 
-    // Draw Icon Box (Sleek dark theme)
+    
     drawRoundedRect(ctx, x - 80, y, 80, 80, 16, '#1e1f22');
     
     try {
@@ -713,7 +713,7 @@ async function generateTempVCPanel() {
       console.error('Failed to load icon:', buttons[i].icon);
     }
 
-    // Text Box
+    
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#f2f3f5';

@@ -9,7 +9,12 @@ module.exports = {
     console.log(`Serving ${client.guilds.cache.size} server(s)`);
     console.log(`Watching ${client.users.cache.size} user(s)`);
 
-    // Run automatic Application Emoji setup
+    if (client.manager) {
+      client.manager.init({ id: client.user.id, username: client.user.username });
+      client.on('raw', (d) => client.manager.sendRawData(d));
+    }
+
+    
     await emojiSetup(client);
 
     const { getBotSettings } = require('../database/db');

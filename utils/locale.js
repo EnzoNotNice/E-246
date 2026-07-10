@@ -45,7 +45,7 @@ class LocaleManager {
                 result = result.replace(new RegExp(`{${k}}`, 'g'), v);
             }
             
-            // Replace {emoji:name} placeholders dynamically
+            
             try {
                 const emojis = require('./emojis.json');
                 result = result.replace(/{emoji:(\w+)}/g, (match, name) => {

@@ -34,6 +34,7 @@ try { db.exec("ALTER TABLE protection_settings ADD COLUMN bypass_role TEXT"); } 
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN autoboost_channel TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE guild_settings ADD COLUMN autoboost_message TEXT"); } catch (e) {}
 try { db.exec("ALTER TABLE tempvoice_settings ADD COLUMN panel_channel TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE guild_settings ADD COLUMN reply_type TEXT DEFAULT 'embed'"); } catch (e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS guild_settings (
@@ -372,7 +373,7 @@ const helpers = {
     return row;
   },
   setGuildSetting(guildId, key, value) {
-    const allowed = ['prefix', 'giveaway_emoji', 'log_channel', 'setlog_channel', 'line_image', 'autoboost_channel', 'autoboost_message'];
+    const allowed = ['prefix', 'giveaway_emoji', 'log_channel', 'setlog_channel', 'line_image', 'autoboost_channel', 'autoboost_message', 'reply_type'];
     if (!allowed.includes(key)) throw new Error(`Invalid setting key: ${key}`);
     db.prepare(`INSERT INTO guild_settings (guildId) VALUES (?) ON CONFLICT(guildId) DO NOTHING`).run(guildId);
     db.prepare(`UPDATE guild_settings SET ${key} = ? WHERE guildId = ?`).run(value, guildId);
@@ -727,7 +728,7 @@ const helpers = {
     return db.prepare('UPDATE bot_settings SET status = ?, activity_type = ?, activity_name = ? WHERE id = 1').run(status, activity_type, activity_name);
   },
 
-  // Temp Voice User Settings
+  
   getTempVoiceUserSettings(userId) {
     return db.prepare('SELECT * FROM tempvoice_user_settings WHERE userId = ?').get(userId);
   },
@@ -739,7 +740,7 @@ const helpers = {
     `).run(userId, name, limit, name, limit);
   },
 
-  // Temp Voice Bans
+  
   addTempVoiceBan(channelId, targetId) {
     return db.prepare('INSERT OR IGNORE INTO tempvoice_bans (channelId, targetId) VALUES (?, ?)').run(channelId, targetId);
   },
@@ -754,7 +755,7 @@ const helpers = {
     return db.prepare('SELECT targetId FROM tempvoice_bans WHERE channelId = ?').all(channelId);
   },
 
-  // Temp Voice Trusted Users
+  
   addTempVoiceTrusted(channelId, userId) {
     return db.prepare('INSERT OR IGNORE INTO tempvoice_trusted (channelId, userId) VALUES (?, ?)').run(channelId, userId);
   },
@@ -769,7 +770,7 @@ const helpers = {
     return db.prepare('SELECT userId FROM tempvoice_trusted WHERE channelId = ?').all(channelId);
   },
 
-  // Statistics Logs
+  
   incrementDailyJoins(guildId) {
     return db.prepare(`
       INSERT INTO stats_daily_members (guildId, date, joins)
@@ -799,7 +800,7 @@ const helpers = {
     `).run(guildId, seconds, seconds);
   },
 
-  // Statistics Fetchers
+  
   getDailyMembersStats(guildId, daysCount = 7) {
     return db.prepare(`
       SELECT date, joins, leaves 
@@ -810,7 +811,7 @@ const helpers = {
     `).all(guildId, daysCount).reverse();
   },
   getHourlyMessagesStats(guildId) {
-    // Returns lifetime or overall aggregate message count per hour of day
+    
     return db.prepare(`
       SELECT hour, SUM(message_count) as count 
       FROM stats_hourly_messages 
@@ -829,7 +830,7 @@ const helpers = {
     `).all(guildId, daysCount).reverse();
   },
 
-  // Social Alerts
+  
   getSocialAlerts(guildId) {
     return db.prepare('SELECT * FROM social_alerts WHERE guildId = ?').all(guildId);
   },

@@ -89,7 +89,16 @@
                 <small>اكتب 'none' لتعطيل سجلات الإشراف</small>
             </div>
 
-            <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="reply_type">نوع ردود البوت (Bot Reply Type)</label>
+                <select id="reply_type" name="reply_type" class="glass-input">
+                    <option value="embed" <%= (settings && settings.reply_type === 'embed') ? 'selected' : '' %>>بطاقة (Embed Message)</option>
+                    <option value="normal" <%= (settings && settings.reply_type === 'normal') ? 'selected' : '' %>>رسالة عادية (Normal Message)</option>
+                </select>
+                <small>اختر ما إذا كان البوت يرسل الردود كرسائل عادية أو بطاقات مدمجة</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 15px;">حفظ التغييرات</button>
         </form>
     </div>
 </main>

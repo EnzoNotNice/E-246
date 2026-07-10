@@ -83,7 +83,7 @@ async function emojiSetup(client) {
                         image: base64Image
                     });
                     uploadedCount++;
-                    // Rate limit buffer
+                    
                     await new Promise(r => setTimeout(r, 1000));
                 } catch (e) {
                     console.error(`[EmojiSetup] Failed to upload ${name}:`, e.message);

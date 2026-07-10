@@ -13,7 +13,7 @@ module.exports = {
         const guildId = reaction.message.guildId;
         if (!guildId) return;
 
-        // React Roles
+        
         const emojiIdOrName = reaction.emoji.id || reaction.emoji.name;
         const reactRole = db.prepare('SELECT * FROM reactroles WHERE messageId = ? AND emoji = ?').get(reaction.message.id, emojiIdOrName);
         

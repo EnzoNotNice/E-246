@@ -129,7 +129,7 @@ async function generateRouletteGif(players, winnerIndex) {
     }
 
     return new Promise((resolve, reject) => {
-        // High quality APNG encoding
+        
         const ff = spawn('ffmpeg', [
             '-f', 'image2pipe',
             '-vcodec', 'png',

@@ -510,10 +510,10 @@ async function getUserBoostInfo(token, targetUserId = null) {
     }
     if (boostMonths < 1) {
       badgeTier = 1;
-      nextTierMonths = 2; // badgeTier 1 is 1 month, next is 2 months
-      // Actually if they have boost but < 1 month, they are tier 1, and next tier is 2 months. Wait! Tier 1 is 1 month. If < 1 month, they don't have tier 1 badge yet?
-      // Actually Discord shows the 1-month badge immediately upon boosting!
-      // So they have the 1-month badge, and the next is 2-month badge.
+      nextTierMonths = 2; 
+      
+      
+      
     }
 
     let timeRemainingMs = null;

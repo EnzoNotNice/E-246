@@ -30,7 +30,8 @@ module.exports = {
       greet: getEmojiId('folder', '1519212238160924692'),
       economy: getEmojiId('gift', '1519212237317865553'),
       games: getEmojiId('playerplay', '1519212218867253258'),
-      utils: getEmojiId('adjustments', '1519212254720167996')
+      utils: getEmojiId('adjustments', '1519212254720167996'),
+      music: getEmojiId('music_play', '1524935282565320775')
     };
 
     const arNames = {
@@ -45,7 +46,8 @@ module.exports = {
       greet: 'الترحيب',
       economy: 'الاقتصاد',
       games: 'الألعاب والتسلية',
-      utils: 'الأدوات'
+      utils: 'الأدوات',
+      music: 'الموسيقى'
     };
 
     const commandDirs = fs.readdirSync(path.join(__dirname, '..')).filter(d => d !== 'prefix' && fs.statSync(path.join(__dirname, '..', d)).isDirectory());

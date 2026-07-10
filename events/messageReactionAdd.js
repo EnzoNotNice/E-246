@@ -13,7 +13,7 @@ module.exports = {
         const guildId = reaction.message.guildId;
         if (!guildId) return;
 
-        // Update Reactions Count
+        
         let userLevel = db.prepare('SELECT * FROM levels WHERE userId = ? AND guildId = ?').get(user.id, guildId);
         if (!userLevel) {
             db.prepare('INSERT INTO levels (userId, guildId) VALUES (?, ?)').run(user.id, guildId);
@@ -21,7 +21,7 @@ module.exports = {
         }
         db.prepare('UPDATE levels SET reactionsCount = COALESCE(reactionsCount, 0) + 1 WHERE userId = ? AND guildId = ?').run(user.id, guildId);
 
-        // React Roles
+        
         const emojiIdOrName = reaction.emoji.id || reaction.emoji.name;
         const reactRole = db.prepare('SELECT * FROM reactroles WHERE messageId = ? AND emoji = ?').get(reaction.message.id, emojiIdOrName);
         

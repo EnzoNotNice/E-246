@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const { generateRouletteGif } = require('../../utils/rouletteHelper');
 const emojis = require('../../utils/emojis.json');
 
-// Prevent multiple games in the same channel simultaneously
+
 const activeGames = new Set();
 
 module.exports = {
@@ -43,10 +43,9 @@ module.exports = {
                 players = players.filter(p => p.id !== i.user.id);
             }
             
-            const playersText = players.length > 0 ? players.map(p => `<@${p.id}>`).join('\n') : 'لا يوجد أحد بعد';
+            const playersText = players.length > 0 ? players.slice(0, 40).map(p => `<@${p.id}>`).join('\n') + (players.length > 40 ? `\n...و ${players.length - 40} آخرين` : '') : 'لا يوجد أحد بعد';
             const newEmbed = EmbedBuilder.from(embed).setFields({ name: `اللاعبون (${players.length})`, value: playersText });
-            
-            await i.update({ embeds: [newEmbed] });
+            await i.update({ embeds: [newEmbed] }).catch(() => {});
         });
 
         collector.on('end', async () => {
@@ -55,7 +54,7 @@ module.exports = {
                 return interaction.channel.send(`${emojis.circlex} تم إلغاء اللعبة لعدم اكتمال العدد يجب أن يكون هناك لاعبان على الأقل`);
             }
 
-            // Disable join buttons
+            
             const disabledRow = new ActionRowBuilder().addComponents(
                 ButtonBuilder.from(joinBtn).setDisabled(true),
                 ButtonBuilder.from(leaveBtn).setDisabled(true)
@@ -64,7 +63,7 @@ module.exports = {
 
             await interaction.channel.send(`${emojis.confetti} بدأنا اللعبة بـ ${players.length} لاعبين جاري تدوير العجلة ${emojis.clock}`);
 
-            // Start the game loop
+            
             await playRound(interaction.channel);
         });
 
@@ -78,17 +77,17 @@ module.exports = {
                 return channel.send({ embeds: [winEmbed] });
             }
 
-            // Generate wheel
+            
             const winnerIndex = Math.floor(Math.random() * players.length);
             const winner = players[winnerIndex];
 
             const gifBuffer = await generateRouletteGif(players, winnerIndex);
             const attachment = new AttachmentBuilder(gifBuffer, { name: 'roulette.png' });
 
-            // Send the GIF outside the embed so it renders large and HD in Discord
+            
             await channel.send({ files: [attachment] });
 
-            // Wait a moment for GIF to play
+            
             await new Promise(res => setTimeout(res, 2000));
 
             const actionEmbed = new EmbedBuilder()
@@ -96,7 +95,7 @@ module.exports = {
                 .setDescription(`يا <@${winner.id}> اختار شخص تطرده برا اللعبة من القائمة أو تقدر تنسحب بنفسك وتعطي فرصة للباقين لديك 30 ثانية للاختيار`)
                 .setColor(0xFF0000);
 
-            // Select menu options for OTHER players - Display only their username
+            
             const options = players.filter(p => p.id !== winner.id).map(p => ({
                 label: p.name,
                 value: p.id,
@@ -141,12 +140,12 @@ module.exports = {
 
             roundCollector.on('end', async (collected, reason) => {
                 if (reason !== 'acted') {
-                    // Time out, random penalty
+                    
                     await actionMsg.edit({ content: `${emojis.alerttriangle} انتهى الوقت <@${winner.id}> لم يتخذ قراراً وتم استبعاده عشوائياً`, embeds: [], components: [] });
                     players = players.filter(p => p.id !== winner.id);
                 }
 
-                // Next round!
+                
                 setTimeout(() => playRound(channel), 2000);
             });
         }

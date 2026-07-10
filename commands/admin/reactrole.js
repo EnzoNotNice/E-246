@@ -20,7 +20,7 @@ module.exports = {
 
             await message.react(emoji);
 
-            // Strip emoji to handle custom emojis format `<:name:id>`
+            
             let emojiKey = emoji;
             if (emoji.startsWith('<:') || emoji.startsWith('<a:')) {
                 const parts = emoji.split(':');

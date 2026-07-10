@@ -9,7 +9,7 @@ module.exports = {
     async execute(client) {
         console.log('[SocialPoller] YouTube polling started...');
 
-        // Poll every 5 minutes (300000 ms)
+        
         setInterval(async () => {
             try {
                 const alerts = db.getAllSocialAlerts();
@@ -49,19 +49,19 @@ module.exports = {
 
                                 await channel.send({ content: content, embeds: [embed] });
 
-                                // Update database with the new video ID to prevent duplicate alerts
+                                
                                 db.updateSocialAlertLastVideo(alert.id, videoId);
                                 console.log(`[SocialPoller] Sent YouTube alert for ${alert.socialId} to ${channel.name}`);
                             }
                         }
                     } catch (err) {
-                        // Suppress feed parse errors (e.g. invalid channel ID or YouTube rate limit)
+                        
                         console.error(`[SocialPoller] Error polling YouTube for ${alert.socialId}:`, err.message);
                     }
                 }
             } catch (error) {
                 console.error('[SocialPoller] General error:', error);
             }
-        }, 300000); // 5 minutes
+        }, 300000); 
     }
 };

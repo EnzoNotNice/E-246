@@ -152,9 +152,10 @@ module.exports = (client) => {
     });
 
     router.post('/:id/general', checkAuth, checkGuildAccess, (req, res) => {
-        const { prefix, log_channel } = req.body;
+        const { prefix, log_channel, reply_type } = req.body;
         if (prefix) db.setGuildSetting(req.guild.id, 'prefix', prefix);
         if (log_channel) db.setGuildSetting(req.guild.id, 'log_channel', log_channel === 'none' ? null : log_channel);
+        if (reply_type) db.setGuildSetting(req.guild.id, 'reply_type', reply_type);
         res.redirect(`/dashboard/${req.guild.id}?success=تم+تحديث+الإعدادات+بنجاح`);
     });
 
@@ -224,7 +225,7 @@ module.exports = (client) => {
             
             // Optionally, we could save the image_url to the DB directly here, 
             // but the user clicks "Save Changes" on the form which posts to /:id/welcome 
-            // and saves it there using the hidden input. We just return the URL.
+            
             res.json({ success: true, url: imageUrl });
         } catch (e) {
             console.error('Upload Error:', e);
@@ -236,8 +237,8 @@ module.exports = (client) => {
         res.render('tempvoice', {
             guild: req.guild,
             settings: db.getTempVoiceSettings(req.guild.id),
-            channels: req.guild.channels.cache.filter(c => c.type === 2), // Voice channels
-            categories: req.guild.channels.cache.filter(c => c.type === 4) // Categories
+            channels: req.guild.channels.cache.filter(c => c.type === 2), 
+            categories: req.guild.channels.cache.filter(c => c.type === 4) 
         });
     });
 
@@ -749,13 +750,13 @@ module.exports = (client) => {
 
         let actualSocialId = socialId.trim();
         
-        // Basic validation for YouTube channel ID
+        
         if (platform === 'youtube') {
             if (actualSocialId.includes('youtube.com/channel/')) {
                 actualSocialId = actualSocialId.split('youtube.com/channel/')[1].split('/')[0];
             } else if (actualSocialId.includes('youtube.com/@')) {
-                 // For handles, we really need the channel ID, but for now we will just store it.
-                 // Ideally the user provides the UC... ID.
+                 
+                 
             }
         }
 

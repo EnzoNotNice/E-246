@@ -36,7 +36,7 @@ module.exports = {
         }
 
         try {
-            // Remove duplicates based on ID
+            
             const uniqueEmojis = foundEmojis.filter((e, index, self) => 
                 index === self.findIndex((t) => t.id === e.id)
             );
@@ -44,7 +44,7 @@ module.exports = {
             const AdmZip = require('adm-zip');
             const zip = new AdmZip();
 
-            // Fetch and append all emojis to the zip
+            
             for (const emoji of uniqueEmojis) {
                 const response = await fetch(emoji.url);
                 if (!response.ok) continue;

@@ -1,5 +1,7 @@
 require('dotenv').config();
 require('./utils/emojiReplacer');
+require('./utils/replyInterceptor');
+require('dns').setDefaultResultOrder('ipv4first');
 const { Client, GatewayIntentBits, Collection, Partials } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -24,7 +26,10 @@ client.prefixCommands = new Collection();
 client.inviteCache = new Map();
 client.voiceSessions = new Map();
 
-const ACTIVE_COMMAND_DIRS = ['admin', 'greet', 'invite', 'levels', 'protection', 'giveaway', 'automation', 'ticket', 'public', 'games', 'utils'];
+const { setupMusic } = require('./utils/music');
+setupMusic(client);
+
+const ACTIVE_COMMAND_DIRS = ['admin', 'greet', 'invite', 'levels', 'protection', 'giveaway', 'automation', 'ticket', 'public', 'games', 'utils', 'music'];
 
 for (const dir of ACTIVE_COMMAND_DIRS) {
   const dirPath = path.join(__dirname, 'commands', dir);
