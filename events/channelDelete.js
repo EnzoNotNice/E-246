@@ -7,7 +7,7 @@ module.exports = {
         if (!channel.guild) return;
 
         const embed = new EmbedBuilder()
-            .setTitle('➖ تم حذف روم')
+            .setTitle('{emoji:circlex} تم حذف روم')
             .addFields(
                 { name: 'اسم الروم', value: channel.name, inline: true }
             )

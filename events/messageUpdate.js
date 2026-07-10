@@ -9,7 +9,7 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setAuthor({ name: oldMessage.author.tag, iconURL: oldMessage.author.displayAvatarURL() })
-            .setTitle('✏️ تم تعديل رسالة')
+            .setTitle('{emoji:message} تم تعديل رسالة')
             .addFields(
                 { name: 'المرسل', value: `<@${oldMessage.author.id}>`, inline: true },
                 { name: 'الروم', value: `<#${oldMessage.channel.id}>`, inline: true },

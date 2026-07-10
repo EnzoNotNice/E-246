@@ -6,7 +6,7 @@ module.exports = {
     async execute(ban) {
         const embed = new EmbedBuilder()
             .setAuthor({ name: ban.user.tag, iconURL: ban.user.displayAvatarURL() })
-            .setTitle('🕊️ تم فك الحظر عن عضو (Unban)')
+            .setTitle('{emoji:shieldcheck} تم فك الحظر عن عضو (Unban)')
             .addFields(
                 { name: 'العضو', value: `<@${ban.user.id}>`, inline: true }
             )

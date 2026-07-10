@@ -1,3 +1,4 @@
+.env
 .env.*
 !.env.schema.json
 node_modules/

@@ -9,7 +9,7 @@ module.exports = {
         if (oldMember.nickname !== newMember.nickname) {
             const embed = new EmbedBuilder()
                 .setAuthor({ name: newMember.user.tag, iconURL: newMember.user.displayAvatarURL() })
-                .setTitle('📝 تغيير اللقب (Nickname)')
+                .setTitle('{emoji:user} تغيير اللقب (Nickname)')
                 .addFields(
                     { name: 'العضو', value: `<@${newMember.id}>`, inline: false },
                     { name: 'اللقب القديم', value: oldMember.nickname || 'بدون لقب', inline: true },
@@ -59,7 +59,7 @@ module.exports = {
 
                 const embed = new EmbedBuilder()
                     .setAuthor({ name: newMember.user.tag, iconURL: newMember.user.displayAvatarURL() })
-                    .setTitle('🏷️ تم إضافة رتبة لعضو')
+                    .setTitle('{emoji:settings} تم إضافة رتبة لعضو')
                     .addFields(
                         { name: 'العضو', value: `<@${newMember.id}>`, inline: true },
                         { name: 'الرتبة المُضافة', value: addedRoles.map(r => `<@&${r.id}>`).join(', '), inline: true }
@@ -72,7 +72,7 @@ module.exports = {
             if (removedRoles.size > 0) {
                 const embed = new EmbedBuilder()
                     .setAuthor({ name: newMember.user.tag, iconURL: newMember.user.displayAvatarURL() })
-                    .setTitle('🏷️ تم إزالة رتبة من عضو')
+                    .setTitle('{emoji:trash} تم إزالة رتبة من عضو')
                     .addFields(
                         { name: 'العضو', value: `<@${newMember.id}>`, inline: true },
                         { name: 'الرتبة المُزالة', value: removedRoles.map(r => `<@&${r.id}>`).join(', '), inline: true }

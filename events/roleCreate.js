@@ -5,7 +5,7 @@ module.exports = {
     name: Events.GuildRoleCreate,
     async execute(role) {
         const embed = new EmbedBuilder()
-            .setTitle('➕ تم إنشاء رتبة جديدة')
+            .setTitle('{emoji:settings} تم إنشاء رتبة جديدة')
             .addFields(
                 { name: 'الرتبة', value: `<@&${role.id}>`, inline: true },
                 { name: 'اللون', value: role.hexColor, inline: true }

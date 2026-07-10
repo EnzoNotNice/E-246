@@ -5,7 +5,7 @@ module.exports = {
     name: Events.GuildRoleDelete,
     async execute(role) {
         const embed = new EmbedBuilder()
-            .setTitle('➖ تم حذف رتبة')
+            .setTitle('{emoji:trash} تم حذف رتبة')
             .addFields(
                 { name: 'اسم الرتبة', value: role.name, inline: true }
             )
