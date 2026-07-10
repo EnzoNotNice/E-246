@@ -56,12 +56,12 @@ async function checkLevelUp(client, userId, guildId, channelId = null) {
     if (announceCh) {
       if (leveledUpText) {
         announceCh.send({
-          content: `{emoji:confetti} مبروك <@${userId}> لقد وصلت لـ **المستوى ${textLevel}**! {emoji:message}`
+          content: `{emoji:confetti} مبروك <@${userId}> لقد وصلت لـ **المستوى الكتابي ${textLevel}** {emoji:message}`
         }).catch(() => null);
       }
       if (leveledUpVoice) {
         announceCh.send({
-          content: `{emoji:confetti} مبروك <@${userId}> لقد وصلت لـ **المستوى الصوتي ${voiceLevel}**! {emoji:mic}`
+          content: `{emoji:confetti} مبروك <@${userId}> لقد وصلت لـ **المستوى الصوتي ${voiceLevel}** {emoji:mic}`
         }).catch(() => null);
       }
     }
