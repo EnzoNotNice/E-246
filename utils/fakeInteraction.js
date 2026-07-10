@@ -54,6 +54,10 @@ async function createFakeInteraction(message, cmd, args) {
       const userId = match[1];
       const user = await client.users.fetch(userId).catch(() => null);
       optionValues[optName] = user;
+      if (user) {
+        const member = await guild.members.fetch(user.id).catch(() => null);
+        optionValues[optName + '_member'] = member;
+      }
       argIndex++;
     } else if (optType === 7) { // Channel
       const match = val.match(/^<#(\d+)>$/) || [null, val];
@@ -80,9 +84,7 @@ async function createFakeInteraction(message, cmd, args) {
     getBoolean(name) { return optionValues[name] || null; },
     getUser(name) { return optionValues[name] || null; },
     getMember(name) {
-      const u = optionValues[name];
-      if (!u) return null;
-      return guild.members.cache.get(u.id) || null;
+      return optionValues[name + '_member'] || (optionValues[name] ? guild.members.cache.get(optionValues[name].id) : null) || null;
     },
     getChannel(name) { return optionValues[name] || null; },
     getRole(name) { return optionValues[name] || null; }

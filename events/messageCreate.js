@@ -30,8 +30,12 @@ module.exports = {
           }
         } else {
           const customAliases = db.getAliases(guildId) || [];
-          const alias = customAliases.find(a => a.shortcut.toLowerCase() === commandName);
+          const alias = customAliases.find(a => {
+            const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
+            return cleanShort.toLowerCase() === commandName;
+          });
           if (alias) {
+            console.log(`[Alias] Executing alias: ${commandName} -> ${alias.command}`);
             const aliasParts = alias.command.trim().split(/ +/);
             const mappedName = aliasParts.shift().toLowerCase();
             const slashCmd = client.commands.get(mappedName);

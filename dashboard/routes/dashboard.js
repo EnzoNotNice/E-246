@@ -322,8 +322,10 @@ module.exports = (client) => {
     router.post('/:id/aliases', checkAuth, checkGuildAccess, (req, res) => {
         const { shortcut, command } = req.body;
         if (shortcut && command) {
-            const cleanCommand = command.startsWith(db.getGuildSettings(req.guild.id).prefix) ? command.slice(1) : command;
-            db.addAlias(req.guild.id, shortcut, cleanCommand);
+            const prefix = db.getGuildSettings(req.guild.id).prefix || '#';
+            const cleanShortcut = shortcut.startsWith(prefix) ? shortcut.slice(prefix.length) : shortcut;
+            const cleanCommand = command.startsWith(prefix) ? command.slice(prefix.length) : command;
+            db.addAlias(req.guild.id, cleanShortcut.trim(), cleanCommand.trim());
         }
         res.redirect(`/dashboard/${req.guild.id}/aliases?success=تمت+إضافة+الاختصار`);
     });
