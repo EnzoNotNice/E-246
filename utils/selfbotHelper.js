@@ -1,7 +1,5 @@
 
 
-const dotenv = require('dotenv');
-dotenv.config();
 
 
 function getCalendarMonthsDifference(startDate, endDate) {
