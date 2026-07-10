@@ -17,41 +17,64 @@ module.exports = {
     const channelId = message.channel.id;
     const prefix = db.getGuildSettings(guildId).prefix || '#';
 
+    let isCommand = false;
+    let commandName = null;
+    let args = [];
+
     if (message.content.startsWith(prefix)) {
-      const args = message.content.slice(prefix.length).trim().split(/ +/);
-      const commandName = args.shift().toLowerCase();
-      if (commandName) {
-        let cmd = client.prefixCommands.get(commandName) || client.prefixCommands.find(c => c.aliases && c.aliases.includes(commandName));
-        if (cmd) {
-          try {
-            await cmd.execute(message, args);
-          } catch (e) {
-            console.error(e);
-          }
-        } else {
-          const customAliases = db.getAliases(guildId) || [];
-          const alias = customAliases.find(a => {
-            const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
-            return cleanShort.toLowerCase() === commandName;
-          });
-          if (alias) {
-            console.log(`[Alias] Executing alias: ${commandName} -> ${alias.command}`);
-            const aliasParts = alias.command.trim().split(/ +/);
-            const mappedName = aliasParts.shift().toLowerCase();
-            const slashCmd = client.commands.get(mappedName);
-            if (slashCmd) {
-              const combinedArgs = [...aliasParts, ...args];
-              const { createFakeInteraction } = require('../utils/fakeInteraction');
-              const fakeInteraction = await createFakeInteraction(message, slashCmd, combinedArgs);
-              try {
-                await slashCmd.execute(fakeInteraction);
-              } catch (e) {
-                console.error(`Error executing alias slash command [${mappedName}]:`, e);
-                if (!fakeInteraction.replied && !fakeInteraction.deferred) {
-                  await message.reply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
-                } else {
-                  await fakeInteraction.editReply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
-                }
+      console.log(`[MessageCreate] Detected prefix "${prefix}" in message: "${message.content}"`);
+      args = message.content.slice(prefix.length).trim().split(/ +/);
+      commandName = args.shift().toLowerCase();
+      isCommand = true;
+    } else {
+      const tempArgs = message.content.trim().split(/ +/);
+      const firstWord = tempArgs[0] ? tempArgs[0].toLowerCase() : '';
+      const customAliases = db.getAliases(guildId) || [];
+      const alias = customAliases.find(a => {
+        const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
+        return cleanShort.toLowerCase() === firstWord;
+      });
+      if (alias) {
+        console.log(`[MessageCreate] Detected prefix-free alias match for "${firstWord}"`);
+        args = tempArgs;
+        commandName = args.shift().toLowerCase();
+        isCommand = true;
+      }
+    }
+
+    if (isCommand && commandName) {
+      console.log(`[MessageCreate] Parsed commandName: "${commandName}", args:`, args);
+      let cmd = client.prefixCommands.get(commandName) || client.prefixCommands.find(c => c.aliases && c.aliases.includes(commandName));
+      if (cmd) {
+        try {
+          await cmd.execute(message, args);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        const customAliases = db.getAliases(guildId) || [];
+        const alias = customAliases.find(a => {
+          const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
+          return cleanShort.toLowerCase() === commandName;
+        });
+        if (alias) {
+          console.log(`[Alias] Executing alias: ${commandName} -> ${alias.command}`);
+          const aliasParts = alias.command.trim().split(/ +/);
+          const mappedName = aliasParts.shift().toLowerCase();
+          const slashCmd = client.commands.get(mappedName);
+          console.log(`[MessageCreate] Mapped command name: "${mappedName}", slashCmd found: ${!!slashCmd}`);
+          if (slashCmd) {
+            const combinedArgs = [...aliasParts, ...args];
+            const { createFakeInteraction } = require('../utils/fakeInteraction');
+            const fakeInteraction = await createFakeInteraction(message, slashCmd, combinedArgs);
+            try {
+              await slashCmd.execute(fakeInteraction);
+            } catch (e) {
+              console.error(`Error executing alias slash command [${mappedName}]:`, e);
+              if (!fakeInteraction.replied && !fakeInteraction.deferred) {
+                await message.reply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
+              } else {
+                await fakeInteraction.editReply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
               }
             }
           }

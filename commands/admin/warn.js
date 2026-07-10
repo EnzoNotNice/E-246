@@ -18,6 +18,8 @@ module.exports = {
 
     if (!target) return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
 
+    await interaction.deferReply({ flags: ['Ephemeral'] }).catch(() => null);
+
     db.addWarning(target.id, interaction.guildId, reason, interaction.user.id);
     const warnings = db.getWarnings(target.id, interaction.guildId);
 
@@ -30,7 +32,7 @@ module.exports = {
     const logEmbed = modlog('تم تحذير العضو', { tag: target.user.tag, id: target.id }, interaction.user, reason, { '{emoji:alerttriangle} إجمالي التحذيرات': String(warnings.length) });
     await sendLog(interaction.client, interaction.guildId, logEmbed, 'warn');
 
-    return interaction.reply({
+    return interaction.editReply({
       embeds: [success(locale.get('moderation.warnSuccess', { user: target.user.tag, reason, total: warnings.length }))]
     });
   }
