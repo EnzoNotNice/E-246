@@ -14,9 +14,6 @@ module.exports = {
         if (!query) return interaction.respond([]).catch(() => {});
 
         try {
-          const fs = require('fs');
-          fs.appendFileSync('/home/enzo/Desktop/e/scratch/autocomplete.log', `[${new Date().toISOString()}] Query: "${query}"\n`);
-
           if (query.startsWith('http://') || query.startsWith('https://')) {
             await interaction.respond([{ name: query.substring(0, 100), value: query.substring(0, 100) }]).catch(() => {});
             return;
@@ -26,18 +23,12 @@ module.exports = {
           const data = await res.json();
           const suggestions = data[1] || [];
 
-          fs.appendFileSync('/home/enzo/Desktop/e/scratch/autocomplete.log', `[${new Date().toISOString()}] Suggestions found: ${suggestions.length}\n`);
-
           const choices = suggestions.slice(0, 25).map(s => ({
             name: s.substring(0, 100),
             value: s.substring(0, 100)
           }));
-          await interaction.respond(choices).catch((err) => {
-            fs.appendFileSync('/home/enzo/Desktop/e/scratch/autocomplete.log', `[${new Date().toISOString()}] Response error: ${err.message}\n`);
-          });
+          await interaction.respond(choices).catch(() => {});
         } catch (e) {
-          const fs = require('fs');
-          fs.appendFileSync('/home/enzo/Desktop/e/scratch/autocomplete.log', `[${new Date().toISOString()}] Error: ${e.stack}\n`);
           console.error("Autocomplete Error:", e);
           return interaction.respond([]).catch(() => {});
         }

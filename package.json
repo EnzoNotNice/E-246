@@ -1,6 +1,6 @@
 {
   "name": "e-246",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "E-246 System - a full-featured Discord bot with a responsive web dashboard, moderation, leveling, tickets, temp voice channels and protection systems.",
   "main": "index.js",
   "scripts": {
