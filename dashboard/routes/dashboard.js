@@ -354,7 +354,7 @@ module.exports = (client) => {
             guild: req.guild,
             settings: db.getTicketSettings(req.guild.id),
             roles: req.guild.roles.cache.sort((a, b) => b.position - a.position),
-            channels: req.guild.channels.cache.filter(c => c.type === 0),
+            channels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5),
             categories: req.guild.channels.cache.filter(c => c.type === 4)
         });
     });
@@ -433,7 +433,7 @@ module.exports = (client) => {
     router.get('/:id/embed', checkAuth, checkGuildAccess, (req, res) => {
         res.render('embedbuilder', {
             guild: req.guild,
-            channels: req.guild.channels.cache.filter(c => c.type === 0)
+            channels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5)
         });
     });
 
@@ -487,7 +487,7 @@ module.exports = (client) => {
             client,
             nativeReactionRoles,
             roles: req.guild.roles.cache.sort((a, b) => b.position - a.position).map(r => ({id: r.id, name: r.name})),
-            textChannels: req.guild.channels.cache.filter(c => c.type === 0)
+            textChannels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5)
         });
     });
 
@@ -581,7 +581,7 @@ module.exports = (client) => {
             guild: req.guild,
             settings,
             client,
-            textChannels: req.guild.channels.cache.filter(c => c.type === 0)
+            textChannels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5)
         });
     });
 
@@ -649,7 +649,7 @@ module.exports = (client) => {
             settings,
             client,
             roles: req.guild.roles.cache.sort((a, b) => b.position - a.position).map(r => ({id: r.id, name: r.name})),
-            textChannels: req.guild.channels.cache.filter(c => c.type === 0)
+            textChannels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5)
         });
     });
 
@@ -734,7 +734,7 @@ module.exports = (client) => {
         res.render('alerts', {
             guild: req.guild,
             alerts,
-            textChannels: req.guild.channels.cache.filter(c => c.type === 0)
+            textChannels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5)
         });
     });
 
