@@ -44,8 +44,16 @@
                     </div>
                     <div style="flex: 1;">
                         <label for="command">أمر البوت الأساسي المراد تنفيذه</label>
-                        <input type="text" id="command" name="command" class="glass-input" required placeholder="e.g. ban">
-                        <small>لا تضع البادئة (اكتب ban أو kick فقط)</small>
+                        <select id="command" name="command" class="glass-input" required style="width: 100%; box-sizing: border-box; height: 48px; background-color: rgba(255, 255, 255, 0.05); color: #fff;">
+                            <% if (typeof commands !== 'undefined' && commands.length > 0) { %>
+                                <% commands.forEach(cmd => { %>
+                                    <option value="<%= cmd %>" style="background-color: #1e1f22; color: #dbdee1;">/<%= cmd %></option>
+                                <% }) %>
+                            <% } else { %>
+                                <option value="" disabled>لا توجد أوامر محملة</option>
+                            <% } %>
+                        </select>
+                        <small>اختر الأمر الذي تريد إنشاء اختصار له</small>
                     </div>
                 </div>
 

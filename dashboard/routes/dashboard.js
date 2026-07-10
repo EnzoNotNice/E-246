@@ -293,9 +293,29 @@ module.exports = (client) => {
     });
 
     router.get('/:id/aliases', checkAuth, checkGuildAccess, (req, res) => {
+        const commandNames = [];
+        for (const [name, cmd] of client.commands) {
+            try {
+                const serialized = cmd.data.toJSON ? cmd.data.toJSON() : cmd.data;
+                const subcommands = serialized.options ? serialized.options.filter(opt => opt.type === 1) : [];
+                if (subcommands.length > 0) {
+                    for (const sub of subcommands) {
+                        commandNames.push(`${name} ${sub.name}`);
+                    }
+                } else {
+                    commandNames.push(name);
+                }
+            } catch (err) {
+                console.error("Error serializing command for dashboard:", err);
+                commandNames.push(name);
+            }
+        }
+        commandNames.sort();
+
         res.render('aliases', {
             guild: req.guild,
-            aliases: db.getAliases(req.guild.id)
+            aliases: db.getAliases(req.guild.id),
+            commands: commandNames
         });
     });
 
