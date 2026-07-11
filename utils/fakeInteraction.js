@@ -8,14 +8,14 @@ async function createFakeInteraction(message, cmd, args) {
   let subcommandName = null;
   let optionDefs = cmd.data.options || [];
 
-  // Check if first arg is a subcommand
+  
   if (args.length > 0) {
     const firstArg = args[0].toLowerCase();
     const subcommandOpt = optionDefs.find(opt => opt.type === 1 && opt.name.toLowerCase() === firstArg);
     if (subcommandOpt) {
       subcommandName = subcommandOpt.name;
       optionDefs = subcommandOpt.options || [];
-      args.shift(); // Remove subcommand name from args
+      args.shift(); 
     }
   }
 
@@ -31,8 +31,8 @@ async function createFakeInteraction(message, cmd, args) {
 
     let val = args[argIndex];
 
-    if (optType === 3) { // String
-      // If it's the last option, consume the rest of args
+    if (optType === 3) { 
+      
       const isLast = optionDefs.indexOf(opt) === optionDefs.length - 1;
       if (isLast) {
         val = args.slice(argIndex).join(' ');
@@ -41,15 +41,15 @@ async function createFakeInteraction(message, cmd, args) {
         argIndex++;
       }
       optionValues[optName] = val;
-    } else if (optType === 4 || optType === 10) { // Integer or Number
+    } else if (optType === 4 || optType === 10) { 
       val = parseFloat(val);
       optionValues[optName] = isNaN(val) ? null : val;
       argIndex++;
-    } else if (optType === 5) { // Boolean
+    } else if (optType === 5) { 
       val = val.toLowerCase();
       optionValues[optName] = (val === 'true' || val === 'yes' || val === '1' || val === 'نعم');
       argIndex++;
-    } else if (optType === 6) { // User
+    } else if (optType === 6) { 
       const match = val.match(/^<@!?(\d+)>$/) || [null, val];
       const userId = match[1];
       const user = await client.users.fetch(userId).catch(() => null);
@@ -59,13 +59,13 @@ async function createFakeInteraction(message, cmd, args) {
         optionValues[optName + '_member'] = member;
       }
       argIndex++;
-    } else if (optType === 7) { // Channel
+    } else if (optType === 7) { 
       const match = val.match(/^<#(\d+)>$/) || [null, val];
       const channelId = match[1];
       const channel = guild.channels.cache.get(channelId) || await guild.channels.fetch(channelId).catch(() => null);
       optionValues[optName] = channel;
       argIndex++;
-    } else if (optType === 8) { // Role
+    } else if (optType === 8) { 
       const match = val.match(/^<@&(\d+)>$/) || [null, val];
       const roleId = match[1];
       const role = guild.roles.cache.get(roleId) || await guild.roles.fetch(roleId).catch(() => null);
@@ -119,8 +119,7 @@ async function createFakeInteraction(message, cmd, args) {
         throw new Error('Interaction already acknowledged.');
       }
       this.deferred = true;
-      repliedMessage = await message.reply({ content: '⏳ جاري التنفيذ...' }).catch(() => null);
-      return repliedMessage;
+      return null;
     },
 
     async editReply(payload) {
