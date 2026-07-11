@@ -27,17 +27,20 @@ module.exports = {
       commandName = args.shift().toLowerCase();
       isCommand = true;
     } else {
-      const content = message.content.trim().toLowerCase();
-      const customAliases = db.getAliases(guildId) || [];
-      const alias = customAliases.find(a => {
-        const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
-        return cleanShort.toLowerCase() === content;
-      });
-      if (alias) {
-        console.log(`[MessageCreate] Detected exact alias match for "${content}"`);
-        args = [];
-        commandName = content;
-        isCommand = true;
+      const words = message.content.trim().split(/ +/);
+      if (words.length > 0) {
+        const firstWord = words[0].toLowerCase();
+        const customAliases = db.getAliases(guildId) || [];
+        const alias = customAliases.find(a => {
+          const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
+          return cleanShort.toLowerCase() === firstWord;
+        });
+        if (alias) {
+          console.log(`[MessageCreate] Detected prefix-free alias match for "${firstWord}"`);
+          args = words.slice(1);
+          commandName = firstWord;
+          isCommand = true;
+        }
       }
     }
 

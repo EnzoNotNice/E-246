@@ -142,6 +142,10 @@ async function createFakeInteraction(message, cmd, args) {
       return repliedMessage;
     },
 
+    async fetchReply() {
+      return repliedMessage;
+    },
+
     async followUp(payload) {
       if (typeof payload === 'string') payload = { content: payload };
       return message.reply(payload).catch(() => null);

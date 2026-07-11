@@ -9,9 +9,13 @@ module.exports = {
     .setDescription('طرد عضو')
     .addUserOption(o => o.setName('user').setDescription('العضو للطرد').setRequired(true))
     .addStringOption(o => o.setName('reason').setDescription('سبب الطرد'))
-    .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ embeds: [error(locale.get('general.noPermission'))], flags: ['Ephemeral'] });
+    }
+
     const target = interaction.options.getMember('user');
     const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
 

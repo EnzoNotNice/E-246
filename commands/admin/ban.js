@@ -10,9 +10,13 @@ module.exports = {
     .addUserOption(o => o.setName('user').setDescription('العضو للحظر').setRequired(true))
     .addStringOption(o => o.setName('reason').setDescription('سبب الحظر'))
     .addIntegerOption(o => o.setName('delete_messages').setDescription('أيام حذف الرسائل').setMinValue(0).setMaxValue(7))
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ embeds: [error(locale.get('general.noPermission'))], flags: ['Ephemeral'] });
+    }
+
     const target = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
     const deleteDays = interaction.options.getInteger('delete_messages') ?? 0;
