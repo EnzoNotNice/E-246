@@ -1,5 +1,5 @@
 const { createCanvas, GlobalFonts } = require('@napi-rs/canvas');
-const { spawn } = require('child_process');
+const sharp = require('sharp');
 const path = require('path');
 
 try {
@@ -128,50 +128,13 @@ async function generateRouletteGif(players, winnerIndex) {
         renderFrame(finalRotation);
     }
 
-    return new Promise((resolve, reject) => {
-        let ff;
-        try {
-            ff = spawn('ffmpeg', [
-                '-f', 'image2pipe',
-                '-vcodec', 'png',
-                '-r', '28', 
-                '-i', '-',
-                '-plays', '0', 
-                '-f', 'apng',
-                '-'
-            ]);
-        } catch (e) {
-            return reject(new Error('ffmpeg not found. Please install ffmpeg to use roulette game.'));
-        }
-
-        ff.on('error', (err) => {
-            if (err.code === 'ENOENT') {
-                reject(new Error('ffmpeg not installed. Please install ffmpeg to use roulette game.'));
-            } else {
-                reject(err);
-            }
-        });
-
-        const outBuffers = [];
-        ff.stdout.on('data', chunk => outBuffers.push(chunk));
-        
-        let stderr = '';
-        ff.stderr.on('data', d => stderr += d.toString());
-
-        ff.on('close', code => {
-            if (code !== 0) {
-                console.error('ffmpeg stderr:', stderr);
-                reject(new Error(`ffmpeg exited with code ${code}`));
-            } else {
-                resolve(Buffer.concat(outBuffers));
-            }
-        });
-
-        for (const buf of pngFrames) {
-            ff.stdin.write(buf);
-        }
-        ff.stdin.end();
-    });
+    try {
+        return await sharp(pngFrames, { animated: true })
+            .png({ loop: 0, delay: new Array(pngFrames.length).fill(36), quality: 100 })
+            .toBuffer();
+    } catch (e) {
+        throw new Error(`APNG generation failed: ${e.message}`);
+    }
 }
 
 module.exports = { generateRouletteGif };
