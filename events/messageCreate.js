@@ -27,17 +27,16 @@ module.exports = {
       commandName = args.shift().toLowerCase();
       isCommand = true;
     } else {
-      const tempArgs = message.content.trim().split(/ +/);
-      const firstWord = tempArgs[0] ? tempArgs[0].toLowerCase() : '';
+      const content = message.content.trim().toLowerCase();
       const customAliases = db.getAliases(guildId) || [];
       const alias = customAliases.find(a => {
         const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
-        return cleanShort.toLowerCase() === firstWord;
+        return cleanShort.toLowerCase() === content;
       });
       if (alias) {
-        console.log(`[MessageCreate] Detected prefix-free alias match for "${firstWord}"`);
-        args = tempArgs;
-        commandName = args.shift().toLowerCase();
+        console.log(`[MessageCreate] Detected exact alias match for "${content}"`);
+        args = [];
+        commandName = content;
         isCommand = true;
       }
     }
@@ -64,6 +63,11 @@ module.exports = {
           const slashCmd = client.commands.get(mappedName);
           console.log(`[MessageCreate] Mapped command name: "${mappedName}", slashCmd found: ${!!slashCmd}`);
           if (slashCmd) {
+            const requiredPerms = slashCmd.data.defaultMemberPermissions;
+            if (requiredPerms && (!message.member || !message.member.permissions.has(requiredPerms))) {
+              return message.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
+            }
+
             const combinedArgs = [...aliasParts, ...args];
             const { createFakeInteraction } = require('../utils/fakeInteraction');
             const fakeInteraction = await createFakeInteraction(message, slashCmd, combinedArgs);

@@ -110,7 +110,13 @@ async function createFakeInteraction(message, cmd, args) {
       }
       this.replied = true;
       if (typeof payload === 'string') payload = { content: payload };
+      const shouldFetch = payload.fetchReply;
+      if (shouldFetch) delete payload.fetchReply;
       repliedMessage = await message.reply(payload).catch(() => null);
+      return repliedMessage;
+    },
+
+    async fetchReply() {
       return repliedMessage;
     },
 
