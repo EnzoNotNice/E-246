@@ -129,16 +129,28 @@ async function generateRouletteGif(players, winnerIndex) {
     }
 
     return new Promise((resolve, reject) => {
-        
-        const ff = spawn('ffmpeg', [
-            '-f', 'image2pipe',
-            '-vcodec', 'png',
-            '-r', '28', 
-            '-i', '-',
-            '-plays', '0', 
-            '-f', 'apng',
-            '-'
-        ]);
+        let ff;
+        try {
+            ff = spawn('ffmpeg', [
+                '-f', 'image2pipe',
+                '-vcodec', 'png',
+                '-r', '28', 
+                '-i', '-',
+                '-plays', '0', 
+                '-f', 'apng',
+                '-'
+            ]);
+        } catch (e) {
+            return reject(new Error('ffmpeg not found. Please install ffmpeg to use roulette game.'));
+        }
+
+        ff.on('error', (err) => {
+            if (err.code === 'ENOENT') {
+                reject(new Error('ffmpeg not installed. Please install ffmpeg to use roulette game.'));
+            } else {
+                reject(err);
+            }
+        });
 
         const outBuffers = [];
         ff.stdout.on('data', chunk => outBuffers.push(chunk));

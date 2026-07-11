@@ -63,8 +63,8 @@ module.exports = {
           const slashCmd = client.commands.get(mappedName);
           console.log(`[MessageCreate] Mapped command name: "${mappedName}", slashCmd found: ${!!slashCmd}`);
           if (slashCmd) {
-            const requiredPerms = slashCmd.data.defaultMemberPermissions;
-            if (requiredPerms && (!message.member || !message.member.permissions.has(requiredPerms))) {
+            const requiredPerms = slashCmd.data?.defaultMemberPermissions;
+            if (requiredPerms && message.member && !message.member.permissions.has(requiredPerms)) {
               return message.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
             }
 

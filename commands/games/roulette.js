@@ -31,6 +31,11 @@ module.exports = {
 
         await interaction.reply({ embeds: [embed], components: [row] });
         const message = await interaction.fetchReply();
+        
+        if (!message) {
+            activeGames.delete(interaction.channelId);
+            return;
+        }
 
         const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 30000 });
 
@@ -81,10 +86,15 @@ module.exports = {
             const winnerIndex = Math.floor(Math.random() * players.length);
             const winner = players[winnerIndex];
 
-            const gifBuffer = await generateRouletteGif(players, winnerIndex);
-            const attachment = new AttachmentBuilder(gifBuffer, { name: 'roulette.png' });
-
+            let gifBuffer;
+            try {
+                gifBuffer = await generateRouletteGif(players, winnerIndex);
+            } catch (e) {
+                console.error('[Roulette] Error generating GIF:', e.message);
+                return await channel.send({ content: `❌ خطأ في اللعبة: ${e.message}` });
+            }
             
+            const attachment = new AttachmentBuilder(gifBuffer, { name: 'roulette.png' });
             await channel.send({ files: [attachment] });
 
             
