@@ -109,6 +109,15 @@ process.on('uncaughtException', err => {
   console.error('[Uncaught Exception]', err);
 });
 
-require('./dashboard/server')(client);
+(async () => {
+  try {
+    const db = require('./database/db');
+    await db.connect();
 
-client.login(process.env.DISCORD_TOKEN);
+    require('./dashboard/server')(client);
+    client.login(process.env.DISCORD_TOKEN);
+  } catch (error) {
+    console.error('❌ Failed to start bot. Database connection error:', error);
+    process.exit(1);
+  }
+})();

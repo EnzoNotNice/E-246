@@ -38,14 +38,12 @@ function convertEmbedsToText(options) {
 
     if (plainText.trim()) {
         options.content = (options.content ? options.content + '\n\n' : '') + plainText.trim();
-        // Remove embeds since they are now converted to text
         delete options.embeds;
     }
 
     return options;
 }
 
-// Backup original methods
 const originalReply = CommandInteraction.prototype.reply;
 const originalEditReply = CommandInteraction.prototype.editReply;
 const originalFollowUp = CommandInteraction.prototype.followUp;

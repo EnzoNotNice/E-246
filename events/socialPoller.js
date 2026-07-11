@@ -31,7 +31,6 @@ module.exports = {
                             const videoId = latestVideo.id.replace('yt:video:', '');
 
                             if (alert.lastVideoId !== videoId) {
-                                // New video detected!
                                 const messageStr = alert.message || 'مقطع جديد! {url}';
                                 const content = messageStr
                                     .replace('{url}', latestVideo.link)
