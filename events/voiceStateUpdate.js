@@ -25,10 +25,38 @@ module.exports = {
 
     const sessionKey = `${guildId}:${userId}`;
 
+    if (isLeaving || isSwitching) {
+      const startTime = newState.client.voiceSessions.get(sessionKey);
+      if (startTime) {
+        const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
+        newState.client.voiceSessions.delete(sessionKey);
+
+        if (durationSeconds > 0) {
+          db.addVoiceXP(userId, guildId, durationSeconds);
+          db.addDailyVoiceSeconds(guildId, durationSeconds);
+          await checkLevelUp(newState.client, userId, guildId);
+        }
+      }
+
+      const oldChannel = oldState.channel;
+      if (oldChannel) {
+        const tempChannelData = db.getTempVoiceChannel(oldChannel.id);
+        if (tempChannelData) {
+          if (oldChannel.members.size === 0) {
+            try {
+              await oldChannel.delete();
+              db.removeTempVoiceChannel(oldChannel.id);
+            } catch (error) {
+              console.error('[TempVoice] Error deleting empty channel:', error);
+            }
+          }
+        }
+      }
+    }
+
     if (isJoining || isSwitching) {
       newState.client.voiceSessions.set(sessionKey, Date.now());
 
-      
       const tvSettings = db.getTempVoiceSettings(guildId);
       if (tvSettings && tvSettings.master_channel === newState.channelId) {
         try {
@@ -86,37 +114,6 @@ module.exports = {
 
         } catch (error) {
           console.error('[TempVoice] Error creating channel:', error);
-        }
-      }
-    }
-
-    if (isLeaving || isSwitching) {
-      
-      const startTime = newState.client.voiceSessions.get(sessionKey);
-      if (startTime) {
-        const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
-        newState.client.voiceSessions.delete(sessionKey);
-
-        if (durationSeconds > 0) {
-          db.addVoiceXP(userId, guildId, durationSeconds);
-          db.addDailyVoiceSeconds(guildId, durationSeconds);
-          await checkLevelUp(newState.client, userId, guildId);
-        }
-      }
-
-      
-      const oldChannel = oldState.channel;
-      if (oldChannel) {
-        const tempChannelData = db.getTempVoiceChannel(oldChannel.id);
-        if (tempChannelData) {
-          if (oldChannel.members.size === 0) {
-            try {
-              await oldChannel.delete();
-              db.removeTempVoiceChannel(oldChannel.id);
-            } catch (error) {
-              console.error('[TempVoice] Error deleting empty channel:', error);
-            }
-          }
         }
       }
     }

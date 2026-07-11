@@ -1,5 +1,7 @@
 const { Events } = require('discord.js');
 const emojiSetup = require('../utils/emojiSetup');
+const db = require('../database/db');
+const { checkLevelUp } = require('../utils/levels');
 
 module.exports = {
   name: Events.ClientReady,
@@ -61,5 +63,19 @@ module.exports = {
       }
     }
     console.log(`Resumed ${giveaways.length} active giveaway(s)`);
+
+    setInterval(async () => {
+      const now = Date.now();
+      for (const [sessionKey, startTime] of client.voiceSessions.entries()) {
+        const [guildId, userId] = sessionKey.split(':');
+        const durationSeconds = Math.floor((now - startTime) / 1000);
+        if (durationSeconds > 0) {
+          db.addVoiceXP(userId, guildId, durationSeconds);
+          db.addDailyVoiceSeconds(guildId, durationSeconds);
+          client.voiceSessions.set(sessionKey, now);
+          await checkLevelUp(client, userId, guildId);
+        }
+      }
+    }, 60000);
   }
 };

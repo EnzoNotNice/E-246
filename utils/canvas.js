@@ -151,6 +151,26 @@ async function createRankCard(user, textXp, textLevel, voiceTime, voiceLevel, me
 }
 
 async function createLeaderboardCanvas(guild, topUsers, requestingUserRank = null) {
+    const client = guild.client;
+    const mappedUsers = topUsers.map(userRecord => {
+        const cloned = { ...userRecord };
+        const sessionKey = `${guild.id}:${cloned.userId}`;
+        if (client.voiceSessions && client.voiceSessions.has(sessionKey)) {
+            const activeStart = client.voiceSessions.get(sessionKey);
+            const liveSeconds = Math.floor((Date.now() - activeStart) / 1000);
+            if (liveSeconds > 0) {
+                cloned.voice_xp = (cloned.voice_xp || 0) + liveSeconds;
+                const { getVoiceNextLvlTime } = require('./levels');
+                let liveVoiceLevel = cloned.voice_level || 0;
+                while (cloned.voice_xp >= getVoiceNextLvlTime(liveVoiceLevel)) {
+                    liveVoiceLevel++;
+                }
+                cloned.voice_level = liveVoiceLevel;
+            }
+        }
+        return cloned;
+    });
+
     const canvas = createCanvas(1280, 720);
     const ctx = canvas.getContext('2d');
 
@@ -269,12 +289,12 @@ async function createLeaderboardCanvas(guild, topUsers, requestingUserRank = nul
         ctx.fillText(`#${rank}`, x + cardWidth - 55, y + 57);
     }
 
-    for (let i = 0; i < topUsers.length; i++) {
+    for (let i = 0; i < mappedUsers.length; i++) {
         const col = Math.floor(i / 5);
         const row = i % 5;
         const xPos = col === 0 ? 50 : 670;
         const yPos = startY + (row * spacing);
-        await drawUserCard(topUsers[i], xPos, yPos, i + 1);
+        await drawUserCard(mappedUsers[i], xPos, yPos, i + 1);
     }
 
     if (requestingUserRank) {
