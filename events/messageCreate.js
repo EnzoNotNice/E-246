@@ -170,7 +170,7 @@ module.exports = {
     if (levelSettings.enabled) {
       const now = Math.floor(Date.now() / 1000);
       const userData = db.getLevel(userId, guildId);
-      const cooldown = levelSettings.xp_cooldown || 60;
+      const cooldown = levelSettings.xp_cooldown !== undefined && levelSettings.xp_cooldown !== null ? levelSettings.xp_cooldown : 60;
 
       if (!userData || (now - (userData.last_message || 0)) >= cooldown) {
         const xpGain = Math.floor(

@@ -17,8 +17,7 @@ module.exports = {
       });
     }
 
-    const requestingUserRankIndex = leaderboard.findIndex(u => u.userId === interaction.user.id);
-    const requestingUserRank = requestingUserRankIndex >= 0 ? requestingUserRankIndex + 1 : null;
+    const requestingUserRank = db.getUserRank(interaction.user.id, interaction.guildId);
 
     const buffer = await createLeaderboardCanvas(interaction.guild, leaderboard, requestingUserRank);
     const attachment = new AttachmentBuilder(buffer, { name: 'leaderboard.png' });

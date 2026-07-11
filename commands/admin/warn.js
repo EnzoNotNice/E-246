@@ -17,6 +17,10 @@ module.exports = {
     const reason = interaction.options.getString('reason');
 
     if (!target) return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
+    if (target.user.bot) return interaction.reply({ embeds: [error('لا يمكنك تحذير البوتات.')], flags: ['Ephemeral'] });
+    if (target.id === interaction.guild.ownerId) return interaction.reply({ embeds: [error(locale.get('general.noPermission'))], flags: ['Ephemeral'] });
+    if (interaction.user.id !== interaction.guild.ownerId && target.roles.highest.position >= interaction.member.roles.highest.position)
+      return interaction.reply({ embeds: [error(locale.get('general.noPermission'))], flags: ['Ephemeral'] });
 
     await interaction.deferReply({ flags: ['Ephemeral'] }).catch(() => null);
 

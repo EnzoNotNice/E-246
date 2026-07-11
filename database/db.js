@@ -427,6 +427,16 @@ const helpers = {
   getLeaderboard(guildId, limit = 10) {
     return db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY (xp + voice_xp) DESC LIMIT ?').all(guildId, limit);
   },
+  getUserRank(userId, guildId) {
+    const row = db.prepare(`
+      SELECT rank FROM (
+        SELECT userId, RANK() OVER (ORDER BY (xp + voice_xp) DESC) as rank
+        FROM levels
+        WHERE guildId = ?
+      ) WHERE userId = ?
+    `).get(guildId, userId);
+    return row ? row.rank : null;
+  },
   getLevelSettings(guildId) {
     let row = db.prepare('SELECT * FROM level_settings WHERE guildId = ?').get(guildId);
     if (!row) {

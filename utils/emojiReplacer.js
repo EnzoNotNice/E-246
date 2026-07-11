@@ -48,7 +48,21 @@ function replaceEmojis(text) {
             shield: '<:shield:1519212202676977788>',
             shieldlock: '<:shieldlock:1519212205638287522>',
             list: '<:list:1519212232670580868>',
-            alerttriangle: '<:alerttriangle:1519212253054767205>'
+            alerttriangle: '<:alerttriangle:1519212253054767205>',
+            confetti: '🎉',
+            message: '💬',
+            mic: '🎙️',
+            settings: '⚙️',
+            chartpie: '📊',
+            star: '⭐',
+            crown: '👑',
+            ticket: '🎫',
+            adjustments: '🛠️',
+            folderopen: '📂',
+            folder: '📁',
+            gift: '🎁',
+            music_play: '▶️',
+            infocircle: 'ℹ️'
         };
         return fallbacks[name] || match;
     });
