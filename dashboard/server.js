@@ -26,7 +26,7 @@ module.exports = (client) => {
     passport.serializeUser((user, done) => done(null, user));
     passport.deserializeUser((obj, done) => done(null, obj));
 
-    const callbackURL = process.env.CALLBACK_URL || `http://localhost:${PORT}/auth/callback`;
+    const callbackURL = process.env.CALLBACK_URL || '/auth/callback';
 
     passport.use(new Strategy({
         clientID: process.env.CLIENT_ID,
