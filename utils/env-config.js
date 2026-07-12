@@ -10,7 +10,7 @@ class EnvConfig {
       CLIENT_SECRET: { required: true, type: 'string' },
       PORT: { type: 'number', min: 1, max: 65535, default: 3000 },
       CALLBACK_URL: { type: 'string', pattern: /^https?:\/\// },
-      SESSION_SECRET: { required: true, type: 'string', minLength: 32 },
+      SESSION_SECRET: { required: false, type: 'string', minLength: 32 },
       RATE_LIMIT_WINDOW_MS: { type: 'number', min: 1000, default: 60000 },
       RATE_LIMIT_MAX_REQUESTS: { type: 'number', min: 1, default: 100 },
       LOG_LEVEL: { type: 'string', enum: ['error', 'warn', 'info', 'debug'], default: 'info' },
