@@ -2,6 +2,17 @@ require('dotenv').config();
 require('./utils/emojiReplacer');
 require('./utils/replyInterceptor');
 require('dns').setDefaultResultOrder('ipv4first');
+
+const https = require('https');
+if (process.env.HTTPS_PROXY) {
+  try {
+    const { HttpsProxyAgent } = require('https-proxy-agent');
+    https.globalAgent = new HttpsProxyAgent(process.env.HTTPS_PROXY);
+    console.log(`[Proxy] Outbound HTTPS proxy configured successfully: ${process.env.HTTPS_PROXY}`);
+  } catch (err) {
+    console.error('[Proxy] Failed to configure global HTTPS proxy:', err.message);
+  }
+}
 const { Client, GatewayIntentBits, Collection, Partials } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
