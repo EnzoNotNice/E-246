@@ -5,6 +5,11 @@ const emojis = require('../../utils/emojis.json');
 
 const activeGames = new Set();
 
+const WHEEL_COLORS = [
+    '#FF3366', '#33CCFF', '#33FF99', '#FF9933', '#9933FF', 
+    '#FFCC33', '#FF3333', '#33FFFC', '#B5FF33', '#E033FF'
+];
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('roulette')
@@ -42,7 +47,8 @@ module.exports = {
         collector.on('collect', async i => {
             if (i.customId === 'r_join') {
                 if (!players.some(p => p.id === i.user.id)) {
-                    players.push({ id: i.user.id, name: i.user.username });
+                    const color = WHEEL_COLORS[players.length % WHEEL_COLORS.length];
+                    players.push({ id: i.user.id, name: i.user.username, color });
                 }
             } else if (i.customId === 'r_leave') {
                 players = players.filter(p => p.id !== i.user.id);

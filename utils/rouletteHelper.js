@@ -19,7 +19,10 @@ async function generateRouletteGif(players, winnerIndex) {
     const sliceAngle = (2 * Math.PI) / totalSlices;
     const spins = 5;
     const centerOfWinner = winnerIndex * sliceAngle + (sliceAngle / 2);
-    const finalRotation = (spins * 2 * Math.PI) - (Math.PI / 2) - centerOfWinner;
+    
+    // Choose a random arrow angle around the wheel's circumference
+    const arrowAngle = Math.random() * 2 * Math.PI;
+    const finalRotation = (spins * 2 * Math.PI) + arrowAngle - centerOfWinner;
 
     const canvas = createCanvas(size, size);
     const ctx = canvas.getContext('2d');
@@ -47,7 +50,7 @@ async function generateRouletteGif(players, winnerIndex) {
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, half - 28, startAngle, endAngle);
         ctx.closePath();
-        ctx.fillStyle = WHEEL_COLORS[s % WHEEL_COLORS.length];
+        ctx.fillStyle = players[s].color || WHEEL_COLORS[s % WHEEL_COLORS.length];
         ctx.fill();
         ctx.save();
         ctx.rotate(startAngle);
@@ -87,16 +90,18 @@ async function generateRouletteGif(players, winnerIndex) {
     ctx.restore();
 
     ctx.save();
-    ctx.translate(half, 18);
+    ctx.translate(half, half);
+    ctx.rotate(arrowAngle);
+    ctx.translate(half - 18, 0);
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 14;
     ctx.shadowOffsetY = 6;
     ctx.beginPath();
-    ctx.moveTo(-26, 0);
-    ctx.lineTo(26, 0);
-    ctx.lineTo(0, 48);
+    ctx.moveTo(0, -26);
+    ctx.lineTo(0, 26);
+    ctx.lineTo(-48, 0);
     ctx.closePath();
-    const ptrGrad = ctx.createLinearGradient(0, 0, 0, 48);
+    const ptrGrad = ctx.createLinearGradient(0, 0, -48, 0);
     ptrGrad.addColorStop(0, '#FF3366');
     ptrGrad.addColorStop(1, '#FFCC33');
     ctx.fillStyle = ptrGrad;
