@@ -40,6 +40,13 @@ module.exports = (client) => {
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, 'views'));
 
+    app.use((req, res, next) => {
+        if (req.headers['x-forwarded-proto'] && !req.secure) {
+            return res.redirect(`https://${req.get('host')}${req.url}`);
+        }
+        next();
+    });
+
     app.use(generalLimiter);
     app.use(express.static(path.join(__dirname, 'public')));
     app.use('/uploads', express.static(path.join(__dirname, '..', 'database', 'uploads')));

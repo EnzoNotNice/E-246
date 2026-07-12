@@ -34,7 +34,7 @@ module.exports = {
         { name: '{emoji:message} الروومات', value: `\`${channels}\``, inline: true },
         { name: '{emoji:user} الرتب', value: `\`${roles}\``, inline: true },
         { name: '{emoji:moodsmile} الإيموجيات', value: `\`${emojis}\``, inline: true },
-        { name: '&#127912; الستيكرز', value: `\`${stickers}\``, inline: true },
+        { name: '{emoji:photo} الستيكرز', value: `\`${stickers}\``, inline: true },
         { name: '{emoji:bolt} البوستات', value: `\`${boosts}\` (${boostTier})`, inline: true },
         { name: '{emoji:shield} مستوى التحقق', value: verificationLevels[guild.verificationLevel], inline: true },
       )
