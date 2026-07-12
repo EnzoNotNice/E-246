@@ -104,6 +104,10 @@ async function connect() {
   await client.connect();
   mongoDb = client.db();
   console.log('✅ [MongoDB] Connected successfully to database');
+  
+  // Auto-delete message cache entries after 3 days (259200 seconds) to save database space
+  await mongoDb.collection('message_cache').createIndex({ createdAt: 1 }, { expireAfterSeconds: 259200 }).catch(() => {});
+  
   await loadMongoCache();
 }
 
@@ -1087,6 +1091,24 @@ const helpers = {
       mongoDb.collection('social_alerts').updateOne({ id }, { $set: { lastVideoId } }).catch(console.error);
     }
     return { changes: 1 };
+  },
+  saveMessage(messageId, channelId, guildId, authorId, authorTag, authorAvatar, content, attachments) {
+    const doc = {
+      messageId,
+      channelId,
+      guildId,
+      authorId,
+      authorTag,
+      authorAvatar,
+      content,
+      attachments,
+      createdAt: new Date()
+    };
+    mongoDb.collection('message_cache').insertOne(doc).catch(() => {});
+  },
+  async getCachedMessage(messageId) {
+    if (!mongoDb) return null;
+    return await mongoDb.collection('message_cache').findOne({ messageId }).catch(() => null);
   }
 };
 

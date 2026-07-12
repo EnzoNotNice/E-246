@@ -11,6 +11,17 @@ module.exports = {
   async execute(message) {
     if (message.author.bot || !message.guild) return;
 
+    db.saveMessage(
+      message.id,
+      message.channel.id,
+      message.guild.id,
+      message.author.id,
+      message.author.tag,
+      message.author.displayAvatarURL(),
+      message.content,
+      message.attachments.map(att => att.url)
+    );
+
     const client = message.client;
     const guildId = message.guild.id;
     const userId = message.author.id;
