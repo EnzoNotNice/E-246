@@ -25,7 +25,14 @@ module.exports = {
 
     const sessionKey = `${guildId}:${userId}`;
 
-    if (isLeaving || isSwitching) {
+    const oldActive = !!(oldState.channelId && oldState.channelId !== oldState.guild.afkChannelId && !oldState.selfMute && !oldState.serverMute && !oldState.selfDeaf && !oldState.serverDeaf);
+    const newActive = !!(newState.channelId && newState.channelId !== newState.guild.afkChannelId && !newState.selfMute && !newState.serverMute && !newState.selfDeaf && !newState.serverDeaf);
+    const channelSwitched = !!(oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId);
+
+    const shouldEndSession = (oldActive && !newActive) || (oldActive && channelSwitched);
+    const shouldStartSession = (!oldActive && newActive) || (newActive && channelSwitched);
+
+    if (shouldEndSession) {
       const startTime = newState.client.voiceSessions.get(sessionKey);
       if (startTime) {
         const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
@@ -37,7 +44,13 @@ module.exports = {
           await checkLevelUp(newState.client, userId, guildId);
         }
       }
+    }
 
+    if (shouldStartSession) {
+      newState.client.voiceSessions.set(sessionKey, Date.now());
+    }
+
+    if (isLeaving || isSwitching) {
       const oldChannel = oldState.channel;
       if (oldChannel) {
         const tempChannelData = db.getTempVoiceChannel(oldChannel.id);
@@ -55,8 +68,6 @@ module.exports = {
     }
 
     if (isJoining || isSwitching) {
-      newState.client.voiceSessions.set(sessionKey, Date.now());
-
       const tvSettings = db.getTempVoiceSettings(guildId);
       if (tvSettings && tvSettings.master_channel === newState.channelId) {
         try {

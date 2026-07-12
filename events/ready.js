@@ -44,9 +44,12 @@ module.exports = {
     for (const [, guild] of client.guilds.cache) {
       for (const [, voiceState] of guild.voiceStates.cache) {
         if (!voiceState.member || voiceState.member.user.bot) continue;
-        const sessionKey = `${guild.id}:${voiceState.member.id}`;
-        client.voiceSessions.set(sessionKey, Date.now());
-        voiceCount++;
+        const isActive = voiceState.channelId && voiceState.channelId !== guild.afkChannelId && !voiceState.selfMute && !voiceState.serverMute && !voiceState.selfDeaf && !voiceState.serverDeaf;
+        if (isActive) {
+          const sessionKey = `${guild.id}:${voiceState.member.id}`;
+          client.voiceSessions.set(sessionKey, Date.now());
+          voiceCount++;
+        }
       }
     }
     console.log(`Initialized ${voiceCount} voice session(s)`);
@@ -68,6 +71,17 @@ module.exports = {
       const now = Date.now();
       for (const [sessionKey, startTime] of client.voiceSessions.entries()) {
         const [guildId, userId] = sessionKey.split(':');
+        const guild = client.guilds.cache.get(guildId);
+        const member = guild ? guild.members.cache.get(userId) : null;
+        const voiceState = member ? member.voice : null;
+
+        const isActive = voiceState && voiceState.channelId && voiceState.channelId !== guild.afkChannelId && !voiceState.selfMute && !voiceState.serverMute && !voiceState.selfDeaf && !voiceState.serverDeaf;
+
+        if (!isActive) {
+          client.voiceSessions.delete(sessionKey);
+          continue;
+        }
+
         const durationSeconds = Math.floor((now - startTime) / 1000);
         if (durationSeconds > 0) {
           db.addVoiceXP(userId, guildId, durationSeconds);

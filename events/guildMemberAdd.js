@@ -111,7 +111,7 @@ module.exports = {
           .replace(/{count}/g, guild.memberCount.toString());
 
         let imagePathOrUrl = greet.image_url;
-        if (imagePathOrUrl.startsWith('/uploads/')) {
+        if (imagePathOrUrl && imagePathOrUrl.startsWith('/uploads/')) {
             const cleanPath = imagePathOrUrl.split('?')[0];
             const fileName = cleanPath.substring('/uploads/'.length);
             imagePathOrUrl = path.join(__dirname, '..', 'database', 'uploads', fileName);

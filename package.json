@@ -4,10 +4,7 @@
   "description": "E-246 System - a full-featured Discord bot with a responsive web dashboard, moderation, leveling, tickets, temp voice channels and protection systems.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "deploy": "node deploy-commands.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+    "start": "node index.js"},
   "keywords": [
     "discord",
     "discord-bot",
@@ -27,6 +24,7 @@
     "apng-js": "^1.1.5",
     "canvas": "^3.2.3",
     "colors": "^1.4.0",
+    "connect-mongo": "^6.0.0",
     "discord-html-transcripts": "^3.2.0",
     "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
@@ -40,11 +38,9 @@
     "mongodb": "^7.5.0",
     "passport": "^0.7.0",
     "passport-discord": "^0.1.4",
-    "pretty-ms": "^9.3.0",
+    "pretty-ms": "^7.0.1",
     "rate-limit-redis": "^4.3.1",
     "rss-parser": "^3.13.0",
-    "strip-comments": "^2.0.1",
-    "upng-js": "^2.1.0",
     "winston": "^3.10.0",
     "youtube-sr": "^4.3.12",
     "yt-search": "^2.13.1"

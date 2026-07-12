@@ -3,6 +3,7 @@ const session = require('express-session');
 const passport = require('passport');
 const path = require('path');
 const Strategy = require('passport-discord').Strategy;
+const MongoStore = require('connect-mongo');
 const db = require('../database/db');
 const healthCheckEndpoint = require('../utils/healthCheckEndpoint');
 const { generalLimiter, dashboardLimiter } = require('../utils/rateLimitMiddleware');
@@ -49,6 +50,11 @@ module.exports = (client) => {
         secret: process.env.SESSION_SECRET || process.env.CLIENT_SECRET,
         resave: false,
         saveUninitialized: false,
+        store: MongoStore.create({
+            mongoUrl: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/e246',
+            collectionName: 'sessions',
+            ttl: 24 * 60 * 60
+        }),
         cookie: { maxAge: 1000 * 60 * 60 * 24, httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' }
     }));
 
