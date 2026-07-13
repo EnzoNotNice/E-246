@@ -5,6 +5,7 @@ function xpForLevel(level) {
 }
 
 const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]+/i;
+const spamTracker = new Map();
 
 module.exports = {
   name: 'messageCreate',
@@ -62,34 +63,53 @@ module.exports = {
           console.error(e);
         }
       } else {
-        const customAliases = db.getAliases(guildId) || [];
-        const alias = customAliases.find(a => {
-          const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
-          return cleanShort.toLowerCase() === commandName;
-        });
-        if (alias) {
-          console.log(`[Alias] Executing alias: ${commandName} -> ${alias.command}`);
-          const aliasParts = alias.command.trim().split(/ +/);
-          const mappedName = aliasParts.shift().toLowerCase();
-          const slashCmd = client.commands.get(mappedName);
-          console.log(`[MessageCreate] Mapped command name: "${mappedName}", slashCmd found: ${!!slashCmd}`);
-          if (slashCmd) {
-            const requiredPerms = slashCmd.data?.defaultMemberPermissions;
-            if (requiredPerms && message.member && !message.member.permissions.has(requiredPerms)) {
-              return message.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
+        const slashCmd = client.commands.get(commandName);
+        if (slashCmd) {
+          const requiredPerms = slashCmd.data?.defaultMemberPermissions;
+          if (requiredPerms && message.member && !message.member.permissions.has(requiredPerms)) {
+            return message.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
+          }
+          const { createFakeInteraction } = require('../utils/fakeInteraction');
+          const fakeInteraction = await createFakeInteraction(message, slashCmd, args);
+          try {
+            await slashCmd.execute(fakeInteraction);
+          } catch (e) {
+            console.error(e);
+            if (!fakeInteraction.replied && !fakeInteraction.deferred) {
+              await message.reply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
+            } else {
+              await fakeInteraction.editReply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
             }
-
-            const combinedArgs = [...aliasParts, ...args];
-            const { createFakeInteraction } = require('../utils/fakeInteraction');
-            const fakeInteraction = await createFakeInteraction(message, slashCmd, combinedArgs);
-            try {
-              await slashCmd.execute(fakeInteraction);
-            } catch (e) {
-              console.error(`Error executing alias slash command [${mappedName}]:`, e);
-              if (!fakeInteraction.replied && !fakeInteraction.deferred) {
-                await message.reply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
-              } else {
-                await fakeInteraction.editReply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
+          }
+        } else {
+          const customAliases = db.getAliases(guildId) || [];
+          const alias = customAliases.find(a => {
+            const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
+            return cleanShort.toLowerCase() === commandName;
+          });
+          if (alias) {
+            console.log(`[Alias] Executing alias: ${commandName} -> ${alias.command}`);
+            const aliasParts = alias.command.trim().split(/ +/);
+            const mappedName = aliasParts.shift().toLowerCase();
+            const aliasSlashCmd = client.commands.get(mappedName);
+            console.log(`[MessageCreate] Mapped command name: "${mappedName}", slashCmd found: ${!!aliasSlashCmd}`);
+            if (aliasSlashCmd) {
+              const requiredPerms = aliasSlashCmd.data?.defaultMemberPermissions;
+              if (requiredPerms && message.member && !message.member.permissions.has(requiredPerms)) {
+                return message.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
+              }
+              const combinedArgs = [...aliasParts, ...args];
+              const { createFakeInteraction } = require('../utils/fakeInteraction');
+              const fakeInteraction = await createFakeInteraction(message, aliasSlashCmd, combinedArgs);
+              try {
+                await aliasSlashCmd.execute(fakeInteraction);
+              } catch (e) {
+                console.error(e);
+                if (!fakeInteraction.replied && !fakeInteraction.deferred) {
+                  await message.reply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
+                } else {
+                  await fakeInteraction.editReply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
+                }
               }
             }
           }
@@ -111,9 +131,16 @@ module.exports = {
     db.incrementHourlyMessages(guildId);
 
     const replies = db.getAutoReplies(guildId);
+    const contentLower = message.content.toLowerCase();
     for (const r of replies) {
-      if (message.content.toLowerCase().includes(r.trigger)) {
+      const trigger = String(r.trigger || '').toLowerCase();
+      if (trigger && contentLower.includes(trigger)) {
         message.reply({ content: r.response }).catch(() => null);
+        if (r.deleteTrigger) {
+          setTimeout(() => {
+            message.delete().catch(() => null);
+          }, 1000);
+        }
         break;
       }
     }
@@ -167,15 +194,36 @@ module.exports = {
     }
 
     const protection = db.getProtection(guildId);
-    if (protection && protection.antilink) {
+    if (protection) {
       const bypassRole = protection.bypass_role;
       const member = message.member;
-      if (!member || !bypassRole || !member.roles.cache.has(bypassRole)) {
+      const hasBypass = member && bypassRole && member.roles.cache.has(bypassRole);
+
+      if (!hasBypass && protection.antilink) {
         const linkRegex = /https?:\/\/[^\s]+/i;
         if (linkRegex.test(message.content)) {
           await message.delete().catch(() => null);
-          const warnMsg = await message.channel.send({ content: `${message.author}, ممنوع إرسال الروابط هنا` });
+          const warnMsg = await message.channel.send({ content: `${message.author}, {emoji:circlex} ممنوع إرسال الروابط هنا` });
           setTimeout(() => warnMsg.delete().catch(() => null), 5000);
+          return;
+        }
+      }
+
+      if (!hasBypass && protection.antispam) {
+        const key = `${guildId}_${userId}`;
+        const now = Date.now();
+        let times = spamTracker.get(key) || [];
+        times = times.filter(t => now - t < 5000);
+        times.push(now);
+        spamTracker.set(key, times);
+        if (times.length >= 6) {
+          await message.delete().catch(() => null);
+          if (member && member.moderatable) {
+            await member.timeout(60_000, 'Anti-Spam').catch(() => null);
+          }
+          const warnMsg = await message.channel.send({ content: `${message.author}, {emoji:alerttriangle} تم رصد سبام` });
+          setTimeout(() => warnMsg.delete().catch(() => null), 5000);
+          spamTracker.set(key, []);
           return;
         }
       }

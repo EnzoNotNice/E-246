@@ -9,16 +9,18 @@ module.exports = {
     .setDescription('إضافة رد تلقائي')
     .addStringOption(o => o.setName('trigger').setDescription('نص التشغيل').setRequired(true))
     .addStringOption(o => o.setName('response').setDescription('نص الرد').setRequired(true))
+    .addBooleanOption(o => o.setName('delete_message').setDescription('مسح رسالة العضو بعد الرد'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {
     const trigger = interaction.options.getString('trigger').toLowerCase();
     const response = interaction.options.getString('response');
+    const deleteTrigger = interaction.options.getBoolean('delete_message') ? 1 : 0;
 
     const existing = db.getAutoReplies(interaction.guildId).find(r => r.trigger === trigger);
     if (existing) return interaction.reply({ embeds: [error(locale.get('general.alreadyExists'))], flags: ['Ephemeral'] });
 
-    db.addAutoReply(interaction.guildId, trigger, response);
+    db.addAutoReply(interaction.guildId, trigger, response, deleteTrigger);
     return interaction.reply({ embeds: [success(locale.get('moderation.autoReplyAdded', { trigger, response }))] });
   }
 };

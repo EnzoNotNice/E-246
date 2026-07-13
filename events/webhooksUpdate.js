@@ -1,6 +1,7 @@
 const { Events, AuditLogEvent, EmbedBuilder } = require('discord.js');
 const db = require('../database/db');
 const { sendLog } = require('../utils/logger');
+const { handleLimit } = require('../utils/protectionAction');
 
 module.exports = {
   name: Events.WebhooksUpdate,
@@ -22,21 +23,25 @@ module.exports = {
             }
           }
 
-          const executorMember = await guild.members.fetch(executor.id).catch(() => null);
-          if (executorMember) {
-            await executorMember.roles.set([]).catch(() => null);
-          }
+          const exceeded = await handleLimit(guild, executor, 'webhook', 'webhook_limit', 'تجاوز حد الويبهوك');
 
-          const embed = new EmbedBuilder()
-            .setTitle('{emoji:shield} إنشاء ويبهوك غير مصرح به')
-            .setColor(0xFF0000)
-            .addFields(
-              { name: 'الروم', value: `<#${channel.id}>`, inline: true },
-              { name: 'الفاعل (المشرف)', value: `<@${executor.id}>`, inline: true },
-              { name: 'الإجراء المتخذ', value: 'تم حذف الويبهوك فوراً، وتجريد المشرف من كافة رتبه', inline: false }
-            )
-            .setTimestamp();
-          await sendLog(guild.client, guild.id, embed, 'protection');
+          if (!exceeded) {
+            const executorMember = await guild.members.fetch(executor.id).catch(() => null);
+            if (executorMember) {
+              await executorMember.roles.set([]).catch(() => null);
+            }
+
+            const embed = new EmbedBuilder()
+              .setTitle('{emoji:shield} إنشاء ويبهوك غير مصرح به')
+              .setColor(0xFF0000)
+              .addFields(
+                { name: '{emoji:folder} الروم', value: `<#${channel.id}>`, inline: true },
+                { name: '{emoji:user} الفاعل', value: `<@${executor.id}>`, inline: true },
+                { name: '{emoji:bolt} الإجراء', value: 'تم حذف الويبهوك وتجريد الرتب', inline: false }
+              )
+              .setTimestamp();
+            await sendLog(guild.client, guild.id, embed, 'protection');
+          }
         }
       }
     }

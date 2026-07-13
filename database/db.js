@@ -43,6 +43,18 @@ const cache = {
   social_alerts: []
 };
 
+
+function stripId(doc) {
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return doc;
+  const out = { ...doc };
+  delete out._id;
+  return out;
+}
+
+function safeSet(doc) {
+  return { $set: stripId(doc) };
+}
+
 async function loadMongoCache() {
   const collections = await mongoDb.collections();
   const names = collections.map(c => c.collectionName);
@@ -133,7 +145,7 @@ function translateSql(opType, sql, args) {
     } else {
       cache.reactroles.push(newDoc);
     }
-    mongoDb.collection('reactroles').updateOne({ messageId, emoji }, { $set: newDoc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('reactroles').updateOne({ messageId, emoji }, { $set: stripId(newDoc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -379,7 +391,7 @@ function translateSql(opType, sql, args) {
     doc.username_color = username_color;
     doc.username_size = username_size;
     cache.greet_settings.set(guildId, doc);
-    mongoDb.collection('greet_settings').updateOne({ guildId }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('greet_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -407,7 +419,7 @@ function translateSql(opType, sql, args) {
       doc[cols[i]] = channelVals[i];
     }
     cache.log_settings.set(guildId, doc);
-    mongoDb.collection('log_settings').updateOne({ guildId }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('log_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -512,7 +524,7 @@ const helpers = {
       doc.last_message = now;
     }
     cache.levels.set(`${userId}_${guildId}`, doc);
-    mongoDb.collection('levels').updateOne({ userId, guildId }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
   },
   addVoiceXP(userId, guildId, xp) {
     let doc = cache.levels.get(`${userId}_${guildId}`);
@@ -522,7 +534,7 @@ const helpers = {
       doc.voice_xp = (doc.voice_xp || 0) + xp;
     }
     cache.levels.set(`${userId}_${guildId}`, doc);
-    mongoDb.collection('levels').updateOne({ userId, guildId }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
   },
   setLevel(userId, guildId, level, xp, voice_level, voice_xp) {
     let doc = cache.levels.get(`${userId}_${guildId}`) || { userId, guildId, messages: 0, last_message: 0, reactionsCount: 0 };
@@ -531,7 +543,7 @@ const helpers = {
     doc.voice_level = voice_level;
     doc.voice_xp = voice_xp;
     cache.levels.set(`${userId}_${guildId}`, doc);
-    mongoDb.collection('levels').updateOne({ userId, guildId }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
   },
   getLeaderboard(guildId, limit = 10) {
     return Array.from(cache.levels.values())
@@ -640,6 +652,22 @@ const helpers = {
     }
     return row;
   },
+  updateProtection(guildId, data) {
+    let current = this.getProtection(guildId);
+    const fields = [
+      'enabled', 'antilink', 'antispam', 'antiraid', 'bypass_role',
+      'ban_limit', 'kick_limit', 'channel_limit', 'role_limit', 'webhook_limit', 'action'
+    ];
+    for (const key of fields) {
+      if (data[key] !== undefined) current[key] = data[key];
+    }
+    cache.protection_settings.set(guildId, current);
+    return mongoDb.collection('protection_settings').updateOne(
+      { guildId },
+      { $set: stripId(current) },
+      { upsert: true }
+    ).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+  },
   getWhitelist(guildId) {
     return cache.whitelist.filter(w => w.guildId === guildId);
   },
@@ -692,7 +720,7 @@ const helpers = {
     if (!doc) doc = { userId, guildId, total: 0, fake: 0, left: 0, bonus: 0 };
     doc[field] = (doc[field] || 0) + value;
     cache.invites.set(`${userId}_${guildId}`, doc);
-    mongoDb.collection('invites').updateOne({ userId, guildId }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('invites').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
   },
   resetInvites(userId, guildId) {
     let doc = cache.invites.get(`${userId}_${guildId}`);
@@ -750,7 +778,7 @@ const helpers = {
     if (data.panel_data !== undefined) current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
 
     cache.ticket_settings.set(guildId, current);
-    return mongoDb.collection('ticket_settings').updateOne({ guildId }, { $set: current }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return mongoDb.collection('ticket_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   createTicket(guildId, userId, channelId, category) {
     const timestamp = Math.floor(Date.now() / 1000);
@@ -774,8 +802,8 @@ const helpers = {
   getAutoReplies(guildId) {
     return cache.auto_reply.filter(a => a.guildId === guildId);
   },
-  addAutoReply(guildId, trigger, response) {
-    const doc = { guildId, trigger, response };
+  addAutoReply(guildId, trigger, response, deleteTrigger = 0) {
+    const doc = { guildId, trigger, response, deleteTrigger: Number(deleteTrigger) };
     cache.auto_reply.push(doc);
     mongoDb.collection('auto_reply').insertOne(doc).catch(console.error);
     return { changes: 1 };
@@ -790,7 +818,7 @@ const helpers = {
     const now = Math.floor(Date.now() / 1000);
     const doc = { channelId, content, authorId, authorTag, authorAvatar, timestamp: now };
     cache.snipe.set(channelId, doc);
-    mongoDb.collection('snipe').updateOne({ channelId }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('snipe').updateOne({ channelId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
   },
   getSnipe(channelId) {
     return cache.snipe.get(channelId);
@@ -845,7 +873,7 @@ const helpers = {
     if (data.questions !== undefined) current.questions = typeof data.questions === 'string' ? JSON.parse(data.questions) : data.questions;
 
     cache.forms_settings.set(guildId, current);
-    return mongoDb.collection('forms_settings').updateOne({ guildId }, { $set: current }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return mongoDb.collection('forms_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   getReactionRoles(guildId) {
@@ -863,7 +891,7 @@ const helpers = {
     if (data.roles_data !== undefined) current.roles_data = typeof data.roles_data === 'string' ? JSON.parse(data.roles_data) : data.roles_data;
 
     cache.reaction_roles.set(guildId, current);
-    return mongoDb.collection('reaction_roles').updateOne({ guildId }, { $set: current }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return mongoDb.collection('reaction_roles').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   getCaptchaSettings(guildId) {
@@ -884,7 +912,7 @@ const helpers = {
     if (data.panel_data !== undefined) current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
 
     cache.captcha_settings.set(guildId, current);
-    return mongoDb.collection('captcha_settings').updateOne({ guildId }, { $set: current }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return mongoDb.collection('captcha_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   getTempVoiceSettings(guildId) {
@@ -922,7 +950,7 @@ const helpers = {
   setJailSettings(guildId, roleId, channelId, staffVoiceId) {
     const doc = { guildId, jailRoleId: roleId, jailChannelId: channelId, staffVoiceId };
     cache.jail_settings.set(guildId, doc);
-    return mongoDb.collection('jail_settings').updateOne({ guildId }, { $set: doc }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return mongoDb.collection('jail_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   getJailedUser(userId, guildId) {
     return cache.jailed_users.get(`${userId}_${guildId}`);
@@ -931,7 +959,7 @@ const helpers = {
     const now = Math.floor(Date.now() / 1000);
     const doc = { userId, guildId, oldRoles, jailedAt: now };
     cache.jailed_users.set(`${userId}_${guildId}`, doc);
-    return mongoDb.collection('jailed_users').updateOne({ userId, guildId }, { $set: doc }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return mongoDb.collection('jailed_users').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   removeJailedUser(userId, guildId) {
     cache.jailed_users.delete(`${userId}_${guildId}`);
@@ -976,13 +1004,13 @@ const helpers = {
   saveTempVoiceUserSettings(userId, name, limit) {
     const doc = { userId, preferredName: name, preferredLimit: limit };
     cache.tempvoice_user_settings.set(userId, doc);
-    return mongoDb.collection('tempvoice_user_settings').updateOne({ userId }, { $set: doc }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return mongoDb.collection('tempvoice_user_settings').updateOne({ userId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   addTempVoiceBan(channelId, targetId) {
     const doc = { channelId, targetId };
     cache.tempvoice_bans.set(`${channelId}_${targetId}`, doc);
-    return mongoDb.collection('tempvoice_bans').updateOne({ channelId, targetId }, { $set: doc }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return mongoDb.collection('tempvoice_bans').updateOne({ channelId, targetId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   removeTempVoiceBan(channelId, targetId) {
     cache.tempvoice_bans.delete(`${channelId}_${targetId}`);
@@ -998,7 +1026,7 @@ const helpers = {
   addTempVoiceTrusted(channelId, userId) {
     const doc = { channelId, userId };
     cache.tempvoice_trusted.set(`${channelId}_${userId}`, doc);
-    return mongoDb.collection('tempvoice_trusted').updateOne({ channelId, userId }, { $set: doc }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return mongoDb.collection('tempvoice_trusted').updateOne({ channelId, userId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   removeTempVoiceTrusted(channelId, userId) {
     cache.tempvoice_trusted.delete(`${channelId}_${userId}`);
@@ -1016,7 +1044,7 @@ const helpers = {
     let doc = cache.stats_daily_members.get(`${guildId}_${today}`);
     if (!doc) { doc = { guildId, date: today, joins: 1, leaves: 0 }; } else { doc.joins = (doc.joins || 0) + 1; }
     cache.stats_daily_members.set(`${guildId}_${today}`, doc);
-    mongoDb.collection('stats_daily_members').updateOne({ guildId, date: today }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('stats_daily_members').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   },
   incrementDailyLeaves(guildId) {
@@ -1024,7 +1052,7 @@ const helpers = {
     let doc = cache.stats_daily_members.get(`${guildId}_${today}`);
     if (!doc) { doc = { guildId, date: today, joins: 0, leaves: 1 }; } else { doc.leaves = (doc.leaves || 0) + 1; }
     cache.stats_daily_members.set(`${guildId}_${today}`, doc);
-    mongoDb.collection('stats_daily_members').updateOne({ guildId, date: today }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('stats_daily_members').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   },
   incrementHourlyMessages(guildId) {
@@ -1033,7 +1061,7 @@ const helpers = {
     let doc = cache.stats_hourly_messages.get(`${guildId}_${today}_${hour}`);
     if (!doc) { doc = { guildId, date: today, hour, message_count: 1 }; } else { doc.message_count = (doc.message_count || 0) + 1; }
     cache.stats_hourly_messages.set(`${guildId}_${today}_${hour}`, doc);
-    mongoDb.collection('stats_hourly_messages').updateOne({ guildId, date: today, hour }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('stats_hourly_messages').updateOne({ guildId, date: today, hour }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   },
   addDailyVoiceSeconds(guildId, seconds) {
@@ -1041,7 +1069,7 @@ const helpers = {
     let doc = cache.stats_daily_voice.get(`${guildId}_${today}`);
     if (!doc) { doc = { guildId, date: today, seconds }; } else { doc.seconds = (doc.seconds || 0) + seconds; }
     cache.stats_daily_voice.set(`${guildId}_${today}`, doc);
-    mongoDb.collection('stats_daily_voice').updateOne({ guildId, date: today }, { $set: doc }, { upsert: true }).catch(console.error);
+    mongoDb.collection('stats_daily_voice').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   },
 
@@ -1092,6 +1120,14 @@ const helpers = {
     }
     return { changes: 1 };
   },
+  updateSocialAlertSocialId(id, socialId) {
+    const idx = cache.social_alerts.findIndex(a => a.id === id);
+    if (idx !== -1) {
+      cache.social_alerts[idx].socialId = socialId;
+      mongoDb.collection('social_alerts').updateOne({ id }, { $set: { socialId } }).catch(console.error);
+    }
+    return { changes: 1 };
+  },
   saveMessage(messageId, channelId, guildId, authorId, authorTag, authorAvatar, content, attachments) {
     const doc = {
       messageId,
@@ -1112,4 +1148,6 @@ const helpers = {
   }
 };
 
+helpers.stripId = stripId;
+helpers.safeSet = safeSet;
 module.exports = helpers;

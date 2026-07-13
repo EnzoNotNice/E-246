@@ -5,6 +5,7 @@ const db = require('../../database/db');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const { resolveYouTubeChannelId, isValidYouTubeChannelId } = require('../../utils/youtubeResolve');
 function isHexColor(value) {
     return typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value);
 }
@@ -251,21 +252,26 @@ module.exports = (client) => {
     router.get('/:id/protection', checkAuth, checkGuildAccess, (req, res) => {
         res.render('protection', {
             guild: req.guild,
-            settings: db.getProtection(req.guild.id)
+            settings: db.getProtection(req.guild.id),
+            roles: req.guild.roles.cache.filter(r => r.id !== req.guild.id).sort((a, b) => b.position - a.position)
         });
     });
 
     router.post('/:id/protection', checkAuth, checkGuildAccess, (req, res) => {
-        const { enabled, ban_limit, kick_limit, action } = req.body;
-        db.db.prepare(`
-            INSERT INTO protection_settings (guildId, enabled, ban_limit, kick_limit, action)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(guildId) DO UPDATE SET
-            enabled = ?, ban_limit = ?, kick_limit = ?, action = ?
-        `).run(
-            req.guild.id, parseInt(enabled), parseInt(ban_limit), parseInt(kick_limit), action,
-            parseInt(enabled), parseInt(ban_limit), parseInt(kick_limit), action
-        );
+        const b = req.body;
+        db.updateProtection(req.guild.id, {
+            enabled: b.enabled === '1' || b.enabled === 1 ? 1 : 0,
+            antilink: b.antilink === '1' || b.antilink === 'on' || b.antilink === 1 ? 1 : 0,
+            antispam: b.antispam === '1' || b.antispam === 'on' || b.antispam === 1 ? 1 : 0,
+            antiraid: b.antiraid === '1' || b.antiraid === 'on' || b.antiraid === 1 ? 1 : 0,
+            bypass_role: b.bypass_role || null,
+            ban_limit: parseInt(b.ban_limit) || 3,
+            kick_limit: parseInt(b.kick_limit) || 3,
+            channel_limit: parseInt(b.channel_limit) || 3,
+            role_limit: parseInt(b.role_limit) || 3,
+            webhook_limit: parseInt(b.webhook_limit) || 3,
+            action: b.action || 'ban'
+        });
         res.redirect(`/dashboard/${req.guild.id}/protection?success=تم+تحديث+إعدادات+الحماية`);
     });
 
@@ -277,9 +283,9 @@ module.exports = (client) => {
     });
 
     router.post('/:id/autoreplies', checkAuth, checkGuildAccess, (req, res) => {
-        const { trigger, response } = req.body;
+        const { trigger, response, deleteTrigger } = req.body;
         if (trigger && response) {
-            db.addAutoReply(req.guild.id, trigger, response);
+            db.addAutoReply(req.guild.id, trigger, response, deleteTrigger === 'on' ? 1 : 0);
         }
         res.redirect(`/dashboard/${req.guild.id}/autoreplies?success=تمت+إضافة+الرد+التلقائي`);
     });
@@ -771,14 +777,15 @@ module.exports = (client) => {
         }
 
         let actualSocialId = socialId.trim();
-        
-        
+
         if (platform === 'youtube') {
-            if (actualSocialId.includes('youtube.com/channel/')) {
-                actualSocialId = actualSocialId.split('youtube.com/channel/')[1].split('/')[0];
-            } else if (actualSocialId.includes('youtube.com/@')) {
-                 
-                 
+            try {
+                const resolved = await resolveYouTubeChannelId(actualSocialId);
+                if (isValidYouTubeChannelId(resolved)) {
+                    actualSocialId = resolved;
+                }
+            } catch (e) {
+                console.error('[Alerts] YouTube resolve failed:', e.message);
             }
         }
 

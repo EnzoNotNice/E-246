@@ -4,7 +4,8 @@
   "description": "E-246 System - a full-featured Discord bot with a responsive web dashboard, moderation, leveling, tickets, temp voice channels and protection systems.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node tests/verify-fixes.js"
   },
   "keywords": [
     "discord",

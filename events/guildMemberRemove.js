@@ -1,6 +1,7 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, AuditLogEvent } = require('discord.js');
 const db = require('../database/db');
 const { sendLog } = require('../utils/logger');
+const { handleLimit } = require('../utils/protectionAction');
 
 module.exports = {
   name: 'guildMemberRemove',
@@ -11,8 +12,12 @@ module.exports = {
     db.incrementDailyLeaves(guildId);
 
     try {
-      const allInvites = db.db.prepare('SELECT * FROM invites WHERE guildId = ?').all(guildId);
-    } catch (e) {}
+      const logs = await member.guild.fetchAuditLogs({ type: AuditLogEvent.MemberKick, limit: 1 });
+      const entry = logs.entries.first();
+      if (entry && entry.target?.id === member.id && Date.now() - entry.createdTimestamp < 15000) {
+        await handleLimit(member.guild, entry.executor, 'kick', 'kick_limit', 'تجاوز حد الكيك');
+      }
+    } catch (_) {}
 
     try {
       const inviteLogs = db.getInviteLogs(guildId);
@@ -28,7 +33,7 @@ module.exports = {
           logCh.send({ embeds: [leaveEmbed] }).catch(() => null);
         }
       }
-    } catch (e) {}
+    } catch (_) {}
 
     const logEmbed = new EmbedBuilder()
       .setColor(0xED4245)

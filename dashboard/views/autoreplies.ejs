@@ -22,9 +22,15 @@
                                 <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">المحفّز</span>
                                 <span style="margin-right: 8px; font-weight: 700; color: var(--primary);"><%= reply.trigger %></span>
                             </div>
-                            <div>
+                            <div style="margin-bottom: 6px;">
                                 <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">الرد</span>
                                 <span style="margin-right: 8px; color: #d0d0d0;"><%= reply.response %></span>
+                            </div>
+                            <div>
+                                <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">مسح الرسالة بعد الرد</span>
+                                <span style="margin-right: 8px; font-weight: 600; color: <%= reply.deleteTrigger ? '#57F287' : '#ED4245' %>;">
+                                    <%= reply.deleteTrigger ? 'مفعّل' : 'معطّل' %>
+                                </span>
                             </div>
                         </div>
                         <form action="/dashboard/<%= guild.id %>/autoreplies/delete" method="POST" style="margin:0;">
@@ -53,6 +59,11 @@
             <div class="form-group">
                 <label for="response">رد البوت</label>
                 <input type="text" id="response" name="response" class="glass-input" required placeholder="مثال وعليكم السلام ورحمة الله">
+            </div>
+
+            <div class="form-group" style="display:flex; align-items:center; gap:12px;">
+                <input type="checkbox" id="deleteTrigger" name="deleteTrigger" style="width:18px; height:18px; accent-color: var(--primary);">
+                <label for="deleteTrigger" style="margin:0; cursor:pointer;">مسح رسالة العضو بعد الرد</label>
             </div>
 
             <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> إضافة الرد</button>

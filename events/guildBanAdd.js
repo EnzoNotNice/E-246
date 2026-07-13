@@ -1,5 +1,6 @@
-const { Events, EmbedBuilder } = require('discord.js');
+const { Events, EmbedBuilder, AuditLogEvent } = require('discord.js');
 const { sendLog } = require('../utils/logger');
+const { handleLimit } = require('../utils/protectionAction');
 
 module.exports = {
     name: Events.GuildBanAdd,
@@ -16,5 +17,13 @@ module.exports = {
             .setFooter({ text: `ID: ${ban.user.id}` });
 
         await sendLog(ban.client, ban.guild.id, embed, 'ban');
+
+        try {
+            const logs = await ban.guild.fetchAuditLogs({ type: AuditLogEvent.MemberBanAdd, limit: 1 });
+            const entry = logs.entries.first();
+            if (entry && entry.target?.id === ban.user.id && Date.now() - entry.createdTimestamp < 15000) {
+                await handleLimit(ban.guild, entry.executor, 'ban', 'ban_limit', 'تجاوز حد الباند');
+            }
+        } catch (_) {}
     },
 };

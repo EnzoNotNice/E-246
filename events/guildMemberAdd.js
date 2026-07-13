@@ -5,12 +5,33 @@ Canvas.registerFont(path.join(__dirname, '..', 'assets', 'font.ttf'), { family: 
 const db = require('../database/db');
 const { sendLog } = require('../utils/logger');
 
+const raidJoins = new Map();
+
 module.exports = {
   name: 'guildMemberAdd',
   async execute(member) {
     const guild = member.guild;
     const guildId = guild.id;
     const client = member.client;
+
+    const protection = db.getProtection(guildId);
+    if (protection && protection.antiraid && !member.user.bot) {
+      const now = Date.now();
+      let joins = raidJoins.get(guildId) || [];
+      joins = joins.filter(t => now - t < 10000);
+      joins.push(now);
+      raidJoins.set(guildId, joins);
+      if (joins.length >= 8) {
+        await member.kick('Anti-Raid').catch(() => null);
+        const embed = new EmbedBuilder()
+          .setTitle('{emoji:shieldlock} حماية الرايد')
+          .setColor(0xFF0000)
+          .setDescription(`تم طرد <@${member.id}> بسبب انضمام جماعي مريب`)
+          .setTimestamp();
+        await sendLog(client, guildId, embed, 'protection');
+        return;
+      }
+    }
 
     if (member.user.bot) {
       const auditLogs = await guild.fetchAuditLogs({ type: AuditLogEvent.BotAdd, limit: 1 }).catch(() => null);

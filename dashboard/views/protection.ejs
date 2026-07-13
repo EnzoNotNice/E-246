@@ -5,7 +5,7 @@
 <main class="app-content">
     <div class="content-header">
         <h1><i class="fa-solid fa-shield-halved"></i> إعدادات الحماية</h1>
-        <p>حدود مكافحة النيوك لحماية سيرفرك من المشرفين المتهورين</p>
+        <p>جميع أنواع الحماية وحدود مكافحة النيوك لحماية سيرفرك</p>
     </div>
 
     <div class="glass-panel">
@@ -17,19 +17,69 @@
             <div class="form-group">
                 <label for="enabled">حالة نظام الحماية</label>
                 <select id="enabled" name="enabled" class="glass-input">
-                    <option value="1" <%= settings.enabled === 1 ? 'selected' : '' %>>مفعّل</option>
-                    <option value="0" <%= settings.enabled === 0 ? 'selected' : '' %>>معطّل</option>
+                    <option value="1" <%= settings.enabled == 1 ? 'selected' : '' %>>مفعّل</option>
+                    <option value="0" <%= settings.enabled != 1 ? 'selected' : '' %>>معطّل</option>
                 </select>
             </div>
 
-            <div class="form-group" style="display: flex; gap: 20px;">
-                <div style="flex: 1;">
-                    <label for="ban_limit">حد عمليات الباند في الدقيقة</label>
-                    <input type="number" id="ban_limit" name="ban_limit" class="glass-input" value="<%= settings.ban_limit %>" required>
+            <h3 style="margin: 25px 0 15px; color: var(--primary);">أنواع الحماية</h3>
+
+            <div class="form-group" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 180px;">
+                    <label for="antilink">منع الروابط (Anti-Link)</label>
+                    <select id="antilink" name="antilink" class="glass-input">
+                        <option value="1" <%= settings.antilink == 1 ? 'selected' : '' %>>مفعّل</option>
+                        <option value="0" <%= settings.antilink != 1 ? 'selected' : '' %>>معطّل</option>
+                    </select>
                 </div>
-                <div style="flex: 1;">
-                    <label for="kick_limit">حد عمليات الكيك في الدقيقة</label>
-                    <input type="number" id="kick_limit" name="kick_limit" class="glass-input" value="<%= settings.kick_limit %>" required>
+                <div style="flex: 1; min-width: 180px;">
+                    <label for="antispam">منع السبام (Anti-Spam)</label>
+                    <select id="antispam" name="antispam" class="glass-input">
+                        <option value="1" <%= settings.antispam == 1 ? 'selected' : '' %>>مفعّل</option>
+                        <option value="0" <%= settings.antispam != 1 ? 'selected' : '' %>>معطّل</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 180px;">
+                    <label for="antiraid">منع الرايد (Anti-Raid)</label>
+                    <select id="antiraid" name="antiraid" class="glass-input">
+                        <option value="1" <%= settings.antiraid == 1 ? 'selected' : '' %>>مفعّل</option>
+                        <option value="0" <%= settings.antiraid != 1 ? 'selected' : '' %>>معطّل</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="bypass_role">رتبة الاستثناء (Bypass Role)</label>
+                <select id="bypass_role" name="bypass_role" class="glass-input">
+                    <option value="">بدون</option>
+                    <% if (typeof roles !== 'undefined') { roles.forEach(r => { %>
+                        <option value="<%= r.id %>" <%= settings.bypass_role === r.id ? 'selected' : '' %>><%= r.name %></option>
+                    <% }) } %>
+                </select>
+            </div>
+
+            <h3 style="margin: 25px 0 15px; color: var(--primary);">حدود مكافحة النيوك</h3>
+
+            <div class="form-group" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 140px;">
+                    <label for="ban_limit">حد الباند / دقيقة</label>
+                    <input type="number" id="ban_limit" name="ban_limit" class="glass-input" min="1" max="50" value="<%= settings.ban_limit || 3 %>" required>
+                </div>
+                <div style="flex: 1; min-width: 140px;">
+                    <label for="kick_limit">حد الكيك / دقيقة</label>
+                    <input type="number" id="kick_limit" name="kick_limit" class="glass-input" min="1" max="50" value="<%= settings.kick_limit || 3 %>" required>
+                </div>
+                <div style="flex: 1; min-width: 140px;">
+                    <label for="channel_limit">حد القنوات / دقيقة</label>
+                    <input type="number" id="channel_limit" name="channel_limit" class="glass-input" min="1" max="50" value="<%= settings.channel_limit || 3 %>" required>
+                </div>
+                <div style="flex: 1; min-width: 140px;">
+                    <label for="role_limit">حد الرتب / دقيقة</label>
+                    <input type="number" id="role_limit" name="role_limit" class="glass-input" min="1" max="50" value="<%= settings.role_limit || 3 %>" required>
+                </div>
+                <div style="flex: 1; min-width: 140px;">
+                    <label for="webhook_limit">حد الويبهوك / دقيقة</label>
+                    <input type="number" id="webhook_limit" name="webhook_limit" class="glass-input" min="1" max="50" value="<%= settings.webhook_limit || 3 %>" required>
                 </div>
             </div>
 
@@ -39,6 +89,7 @@
                     <option value="ban" <%= settings.action === 'ban' ? 'selected' : '' %>>باند المخالف</option>
                     <option value="kick" <%= settings.action === 'kick' ? 'selected' : '' %>>كيك المخالف</option>
                     <option value="timeout" <%= settings.action === 'timeout' ? 'selected' : '' %>>تايم اوت للمخالف (28 يوم)</option>
+                    <option value="strip" <%= settings.action === 'strip' ? 'selected' : '' %>>تجريد الرتب</option>
                 </select>
             </div>
 
