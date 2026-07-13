@@ -1,7 +1,42 @@
 require('dotenv').config();
+
+if (!process.env.FONTCONFIG_PATH && !process.env.FONTCONFIG_FILE) {
+  const fc = pathJoinSafeFontconfig();
+  if (fc) {
+    process.env.FONTCONFIG_PATH = fc.dir;
+    process.env.FONTCONFIG_FILE = fc.file;
+  }
+}
+
 require('./utils/emojiReplacer');
 require('./utils/replyInterceptor');
 require('dns').setDefaultResultOrder('ipv4first');
+
+function pathJoinSafeFontconfig() {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const dir = path.join(__dirname, 'assets', 'fontconfig');
+    const conf = path.join(dir, 'fonts.conf');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(conf)) {
+      fs.writeFileSync(
+        conf,
+        `<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+<fontconfig>
+  <dir>${path.join(__dirname, 'assets', 'fonts').replace(/&/g, '&amp;')}</dir>
+  <dir>${path.join(__dirname, 'assets').replace(/&/g, '&amp;')}</dir>
+  <cachedir>/tmp/fontconfig-cache</cachedir>
+</fontconfig>
+`
+      );
+    }
+    return { dir, file: conf };
+  } catch {
+    return null;
+  }
+}
 
 const https = require('https');
 if (process.env.HTTPS_PROXY) {
@@ -13,7 +48,7 @@ if (process.env.HTTPS_PROXY) {
     console.error('[Proxy] Failed to configure global HTTPS proxy:', err.message);
   }
 }
-const { Client, GatewayIntentBits, Collection, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Partials, Events } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -64,28 +99,59 @@ for (const [_, cmd] of client.commands) {
   commandsJson.push(cmd.data.toJSON());
 }
 
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+async function deploySlashCommands(client) {
+  const token = process.env.DISCORD_TOKEN;
+  const clientId = process.env.CLIENT_ID || client?.user?.id;
+  if (!token || !clientId) {
+    console.error('[Deploy] Missing DISCORD_TOKEN or CLIENT_ID — skip slash deploy');
+    return;
+  }
 
-(async () => {
+  const rest = new REST({ version: '10' }).setToken(token);
+  const guildId = process.env.GUILD_ID?.trim();
+
+  const putGlobal = async () => {
+    await rest.put(Routes.applicationCommands(clientId), { body: commandsJson });
+    console.log(`[Deploy] Auto-deployed ${commandsJson.length} commands globally`);
+  };
+
+  const putGuild = async (id) => {
+    await rest.put(Routes.applicationGuildCommands(clientId, id), { body: commandsJson });
+    console.log(`[Deploy] Auto-deployed ${commandsJson.length} commands to guild ${id}`);
+  };
+
   try {
-    const guildId = process.env.GUILD_ID;
     if (guildId) {
-      await rest.put(
-        Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
-        { body: commandsJson }
-      );
-      console.log(`Auto-deployed ${commandsJson.length} commands to guild ${guildId}`);
+      const inGuild = client?.guilds?.cache?.has(guildId);
+      if (!inGuild) {
+        console.warn(`[Deploy] GUILD_ID=${guildId} is not a guild this bot is in — using global deploy`);
+        await putGlobal();
+        return;
+      }
+      try {
+        await putGuild(guildId);
+      } catch (guildErr) {
+        if (guildErr.code === 50001 || guildErr.status === 403) {
+          console.warn(
+            `[Deploy] Missing Access for guild ${guildId} (re-invite bot with scope applications.commands). Falling back to global.`
+          );
+          await putGlobal();
+          return;
+        }
+        throw guildErr;
+      }
     } else {
-      await rest.put(
-        Routes.applicationCommands(process.env.CLIENT_ID),
-        { body: commandsJson }
-      );
-      console.log(`Auto-deployed ${commandsJson.length} commands globally`);
+      await putGlobal();
     }
   } catch (error) {
-    console.error('Failed to auto-deploy commands:', error);
+    console.error('[Deploy] Failed to auto-deploy commands:', error.code || '', error.message || error);
   }
-})();
+}
+
+client.deploySlashCommands = deploySlashCommands;
+client.once(Events.ClientReady, () => {
+  deploySlashCommands(client).catch((e) => console.error('[Deploy]', e.message || e));
+});
 
 const prefixDir = path.join(__dirname, 'commands', 'prefix');
 if (fs.existsSync(prefixDir)) {
