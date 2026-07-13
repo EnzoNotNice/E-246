@@ -32,29 +32,62 @@ module.exports = {
     let isCommand = false;
     let commandName = null;
     let args = [];
+    let resolvedAlias = null;
+
+    const customAliases = db.getAliases(guildId) || [];
+    const normalizeShort = (s) => {
+      let short = String(s || '');
+      if (short.startsWith(prefix)) short = short.slice(prefix.length);
+      return short.toLowerCase();
+    };
 
     if (message.content.startsWith(prefix)) {
-      console.log(`[MessageCreate] Detected prefix "${prefix}" in message: "${message.content}"`);
-      args = message.content.slice(prefix.length).trim().split(/ +/);
-      commandName = args.shift().toLowerCase();
-      isCommand = true;
+      args = message.content.slice(prefix.length).trim().split(/ +/).filter(Boolean);
+      commandName = (args.shift() || '').toLowerCase();
+      isCommand = !!commandName;
     } else {
-      const content = message.content.trim().toLowerCase();
-      const customAliases = db.getAliases(guildId) || [];
-      const alias = customAliases.find(a => {
-        const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
-        return cleanShort.toLowerCase() === content;
-      });
-      if (alias) {
-        console.log(`[MessageCreate] Detected exact alias match for "${content}"`);
-        args = [];
-        commandName = content;
+      const content = message.content.trim();
+      const contentLower = content.toLowerCase();
+      const matched = customAliases
+        .map((a) => ({ alias: a, short: normalizeShort(a.shortcut) }))
+        .filter((x) => x.short)
+        .sort((a, b) => b.short.length - a.short.length)
+        .find((x) => contentLower === x.short || contentLower.startsWith(x.short + ' '));
+
+      if (matched) {
+        resolvedAlias = matched.alias;
+        commandName = matched.short;
+        const rest = contentLower === matched.short ? '' : content.slice(matched.short.length).trim();
+        args = rest ? rest.split(/ +/).filter(Boolean) : [];
         isCommand = true;
       }
     }
 
     if (isCommand && commandName) {
-      console.log(`[MessageCreate] Parsed commandName: "${commandName}", args:`, args);
+      const { buildCommandHelpEmbed, shouldShowCommandHelp } = require('../utils/commandHelp');
+      const { createFakeInteraction } = require('../utils/fakeInteraction');
+
+      async function runSlash(slashCmd, runArgs) {
+        const requiredPerms = slashCmd.data?.defaultMemberPermissions;
+        if (requiredPerms && message.member && !message.member.permissions.has(requiredPerms)) {
+          return message.reply({ content: '{emoji:circlex} ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
+        }
+        if (shouldShowCommandHelp(slashCmd, runArgs)) {
+          return message.reply({ embeds: [buildCommandHelpEmbed(slashCmd, guildId, prefix)] }).catch(() => null);
+        }
+        const fakeInteraction = await createFakeInteraction(message, slashCmd, runArgs);
+        try {
+          await slashCmd.execute(fakeInteraction);
+        } catch (e) {
+          console.error(e);
+          if (!fakeInteraction.replied && !fakeInteraction.deferred) {
+            await message.reply({ content: '{emoji:circlex} حدث خطأ أثناء تنفيذ الأمر.' }).catch(() => null);
+          } else {
+            await fakeInteraction.editReply({ content: '{emoji:circlex} حدث خطأ أثناء تنفيذ الأمر.' }).catch(() => null);
+          }
+        }
+      }
+
       let cmd = client.prefixCommands.get(commandName) || client.prefixCommands.find(c => c.aliases && c.aliases.includes(commandName));
       if (cmd) {
         try {
@@ -63,56 +96,23 @@ module.exports = {
           console.error(e);
         }
       } else {
-        const slashCmd = client.commands.get(commandName);
-        if (slashCmd) {
-          const requiredPerms = slashCmd.data?.defaultMemberPermissions;
-          if (requiredPerms && message.member && !message.member.permissions.has(requiredPerms)) {
-            return message.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
-          }
-          const { createFakeInteraction } = require('../utils/fakeInteraction');
-          const fakeInteraction = await createFakeInteraction(message, slashCmd, args);
-          try {
-            await slashCmd.execute(fakeInteraction);
-          } catch (e) {
-            console.error(e);
-            if (!fakeInteraction.replied && !fakeInteraction.deferred) {
-              await message.reply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
-            } else {
-              await fakeInteraction.editReply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
-            }
-          }
-        } else {
-          const customAliases = db.getAliases(guildId) || [];
-          const alias = customAliases.find(a => {
-            const cleanShort = a.shortcut.startsWith(prefix) ? a.shortcut.slice(prefix.length) : a.shortcut;
-            return cleanShort.toLowerCase() === commandName;
-          });
+        let slashCmd = client.commands.get(commandName);
+        let runArgs = args;
+
+        if (!slashCmd) {
+          const alias =
+            resolvedAlias ||
+            customAliases.find((a) => normalizeShort(a.shortcut) === commandName);
           if (alias) {
-            console.log(`[Alias] Executing alias: ${commandName} -> ${alias.command}`);
-            const aliasParts = alias.command.trim().split(/ +/);
-            const mappedName = aliasParts.shift().toLowerCase();
-            const aliasSlashCmd = client.commands.get(mappedName);
-            console.log(`[MessageCreate] Mapped command name: "${mappedName}", slashCmd found: ${!!aliasSlashCmd}`);
-            if (aliasSlashCmd) {
-              const requiredPerms = aliasSlashCmd.data?.defaultMemberPermissions;
-              if (requiredPerms && message.member && !message.member.permissions.has(requiredPerms)) {
-                return message.reply({ content: '❌ ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
-              }
-              const combinedArgs = [...aliasParts, ...args];
-              const { createFakeInteraction } = require('../utils/fakeInteraction');
-              const fakeInteraction = await createFakeInteraction(message, aliasSlashCmd, combinedArgs);
-              try {
-                await aliasSlashCmd.execute(fakeInteraction);
-              } catch (e) {
-                console.error(e);
-                if (!fakeInteraction.replied && !fakeInteraction.deferred) {
-                  await message.reply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
-                } else {
-                  await fakeInteraction.editReply({ content: `❌ حدث خطأ أثناء تنفيذ الأمر.` }).catch(() => null);
-                }
-              }
-            }
+            const aliasParts = String(alias.command || '').replace(/^\//, '').trim().split(/ +/).filter(Boolean);
+            const mappedName = (aliasParts.shift() || '').toLowerCase();
+            slashCmd = client.commands.get(mappedName);
+            runArgs = [...aliasParts, ...args];
           }
+        }
+
+        if (slashCmd) {
+          await runSlash(slashCmd, runArgs);
         }
       }
     }
