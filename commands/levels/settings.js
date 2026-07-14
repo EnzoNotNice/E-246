@@ -28,7 +28,8 @@ module.exports = {
     const settings = db.getLevelSettings(interaction.guildId);
 
     if (sub === 'show') {
-      const rewards = JSON.parse(settings.role_rewards || '[]');
+      const rawRewards = settings.role_rewards;
+      const rewards = Array.isArray(rawRewards) ? rawRewards : JSON.parse(rawRewards || '[]');
       const rewardStr = rewards.length ? rewards.map(r => `المستوى **${r.level}** → <@&${r.roleId}>`).join('\n') : 'لا يوجد';
       const embed = new EmbedBuilder()
         .setColor(0xFFD700)
@@ -73,7 +74,8 @@ module.exports = {
     if (sub === 'reward') {
       const level = interaction.options.getInteger('level');
       const role = interaction.options.getRole('role');
-      const rewards = JSON.parse(settings.role_rewards || '[]').filter(r => r.level !== level);
+      const rawRewards = settings.role_rewards;
+      const rewards = (Array.isArray(rawRewards) ? rawRewards : JSON.parse(rawRewards || '[]')).filter(r => r.level !== level);
       rewards.push({ level, roleId: role.id });
       rewards.sort((a, b) => a.level - b.level);
       db.db.prepare('UPDATE level_settings SET role_rewards = ? WHERE guildId = ?').run(JSON.stringify(rewards), interaction.guildId);
@@ -82,7 +84,8 @@ module.exports = {
 
     if (sub === 'removereward') {
       const level = interaction.options.getInteger('level');
-      const rewards = JSON.parse(settings.role_rewards || '[]').filter(r => r.level !== level);
+      const rawRewards = settings.role_rewards;
+      const rewards = (Array.isArray(rawRewards) ? rawRewards : JSON.parse(rawRewards || '[]')).filter(r => r.level !== level);
       db.db.prepare('UPDATE level_settings SET role_rewards = ? WHERE guildId = ?').run(JSON.stringify(rewards), interaction.guildId);
       return interaction.reply({ embeds: [success(locale.get('levels.rewardRemoved', { level }))] });
     }

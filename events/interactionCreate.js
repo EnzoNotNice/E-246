@@ -214,12 +214,16 @@ module.exports = {
         }
 
         if (action === 'PlayAndPause') {
-            if (!player.paused) {
-                await player.pause(true);
-                await interaction.reply({ content: "⏸️ تم إيقاف المقطع مؤقتاً.", flags: ['Ephemeral'] });
-            } else {
-                await player.pause(false);
-                await interaction.reply({ content: "▶️ تم استكمال تشغيل المقطع.", flags: ['Ephemeral'] });
+            try {
+                if (!player.paused) {
+                    await player.pause(true);
+                    await interaction.reply({ content: "⏸️ تم إيقاف المقطع مؤقتاً.", flags: ['Ephemeral'] });
+                } else {
+                    await player.pause(false);
+                    await interaction.reply({ content: "▶️ تم استكمال تشغيل المقطع.", flags: ['Ephemeral'] });
+                }
+            } catch (err) {
+                await interaction.reply({ content: "⚠️ حدثت مشكلة أثناء تغيير حالة التشغيل.", flags: ['Ephemeral'] }).catch(() => null);
             }
             if (player.nowPlayingMessage) {
                 player.nowPlayingMessage.edit({ components: [interaction.client.createController(interaction.guildId, player)] }).catch(() => {});
