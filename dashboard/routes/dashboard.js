@@ -132,6 +132,9 @@ module.exports = (client) => {
             ? broadcast_tokens.split('\n').map(t => t.trim()).filter(Boolean)
             : [];
         db.updateBotSettings(status, activity_type, activity_name, emoji_color, tokensArray);
+
+        const emojiSetup = require('../../utils/emojiSetup');
+        emojiSetup(client).catch(console.error);
         
         const { ActivityType } = require('discord.js');
         const actType = ActivityType[activity_type] || ActivityType.Playing;

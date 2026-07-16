@@ -65,6 +65,18 @@ async function emojiSetup(client) {
             try { emojisJson = JSON.parse(fs.readFileSync(emojisJsonPath, 'utf8')); } catch(e) {}
         }
 
+        const colorChanged = emojisJson.__color__ !== color;
+        if (colorChanged) {
+            console.log(`[EmojiSetup] Color changed from ${emojisJson.__color__} to ${color}. Deleting existing application emojis...`);
+            for (const emojiItem of emojiList) {
+                console.log(`[EmojiSetup] Deleting application emoji: ${emojiItem.name}...`);
+                await request('DELETE', `/applications/${botId}/emojis/${emojiItem.id}`, token).catch(() => null);
+                await new Promise(r => setTimeout(r, 250));
+            }
+            existingMap.clear();
+            emojisJson = {};
+        }
+
         let uploadedCount = 0;
 
         for (const file of files) {
@@ -104,6 +116,7 @@ async function emojiSetup(client) {
             emojisJson[name] = format;
         }
 
+        emojisJson.__color__ = color;
         fs.writeFileSync(emojisJsonPath, JSON.stringify(emojisJson, null, 4));
         if (uploadedCount > 0) {
             console.log(`[EmojiSetup] Successfully uploaded ${uploadedCount} new application emojis and updated emojis.json.`);
