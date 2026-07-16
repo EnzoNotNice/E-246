@@ -65,19 +65,18 @@ async function emojiSetup(client) {
             try { emojisJson = JSON.parse(fs.readFileSync(emojisJsonPath, 'utf8')); } catch(e) {}
         }
 
-        const colorChanged = emojisJson.__color__ !== color;
-        if (colorChanged) {
-            console.log(`[EmojiSetup] Color changed from ${emojisJson.__color__} to ${color}. Deleting existing application emojis...`);
-            for (const emojiItem of emojiList) {
-                console.log(`[EmojiSetup] Deleting application emoji: ${emojiItem.name}...`);
-                await request('DELETE', `/applications/${botId}/emojis/${emojiItem.id}`, token).catch(() => null);
-                await new Promise(r => setTimeout(r, 250));
-            }
-            existingMap.clear();
-            emojisJson = {};
-        }
+        const colorPrefixes = {
+            blue: 'b',
+            red: 'r',
+            green: 'g',
+            purple: 'p',
+            gold: 'y',
+            pink: 'pk'
+        };
+        const prefix = colorPrefixes[color] || 'b';
 
         let uploadedCount = 0;
+        const freshEmojisJson = { __color__: color };
 
         for (const file of files) {
             const ext = path.extname(file);
@@ -86,25 +85,27 @@ async function emojiSetup(client) {
             
             const isAnimated = ext === '.gif';
             const mime = isAnimated ? 'image/gif' : 'image/png';
+            const discordName = `${prefix}_${name}`;
             
-            let emojiObj = existingMap.get(name);
+            let emojiObj = existingMap.get(discordName);
 
             if (!emojiObj) {
-                console.log(`[EmojiSetup] Uploading missing emoji: ${name}...`);
+                console.log(`[EmojiSetup] Uploading missing emoji: ${discordName}...`);
                 const filePath = path.join(emojisDir, file);
                 const fileData = fs.readFileSync(filePath);
                 const base64Image = `data:${mime};base64,${fileData.toString('base64')}`;
 
                 try {
                     emojiObj = await request('POST', `/applications/${botId}/emojis`, token, {
-                        name: name,
+                        name: discordName,
                         image: base64Image
                     });
                     uploadedCount++;
+                    existingMap.set(discordName, emojiObj);
                     
                     await new Promise(r => setTimeout(r, 1000));
                 } catch (e) {
-                    console.error(`[EmojiSetup] Failed to upload ${name}:`, e.message);
+                    console.error(`[EmojiSetup] Failed to upload ${discordName}:`, e.message);
                     continue;
                 }
             }
@@ -113,11 +114,11 @@ async function emojiSetup(client) {
                 ? `<a:${emojiObj.name}:${emojiObj.id}>` 
                 : `<:${emojiObj.name}:${emojiObj.id}>`;
             
-            emojisJson[name] = format;
+            freshEmojisJson[name] = format;
         }
 
-        emojisJson.__color__ = color;
-        fs.writeFileSync(emojisJsonPath, JSON.stringify(emojisJson, null, 4));
+        freshEmojisJson.__color__ = color;
+        fs.writeFileSync(emojisJsonPath, JSON.stringify(freshEmojisJson, null, 4));
         if (uploadedCount > 0) {
             console.log(`[EmojiSetup] Successfully uploaded ${uploadedCount} new application emojis and updated emojis.json.`);
         } else {
