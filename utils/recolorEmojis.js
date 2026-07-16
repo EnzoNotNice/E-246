@@ -59,13 +59,13 @@ async function recolorEmojis() {
   const colorHues = {
     blue: 220,
     red: 0,
-    green: 120,
-    purple: 270,
-    gold: 45,
+    green: 145,
+    purple: 275,
+    gold: 42,
     pink: 325
   };
 
-  const targetHue = colorHues[color] || 220;
+  const targetHue = colorHues[color] !== undefined ? colorHues[color] : 220;
   const files = fs.readdirSync(originalDir);
 
   for (const file of files) {
@@ -75,9 +75,10 @@ async function recolorEmojis() {
     const sourcePath = path.join(originalDir, file);
     const targetPath = path.join(targetDir, file);
 
-    if (fs.existsSync(targetPath)) continue;
 
-    if (ext === '.gif' || color === 'blue') {
+
+    const isBoostOrNitro = file.toLowerCase().includes('boost') || file.toLowerCase().includes('nitro');
+    if (ext === '.gif' || color === 'purple' || isBoostOrNitro) {
       fs.copyFileSync(sourcePath, targetPath);
       continue;
     }
@@ -101,8 +102,7 @@ async function recolorEmojis() {
         const [h, s, l] = rgbToHsl(r, g, b);
 
         if (s > 10) {
-          const shift = (h - 220 + targetHue + 360) % 360;
-          const [nr, ng, nb] = hslToRgb(shift, s, l);
+          const [nr, ng, nb] = hslToRgb(targetHue, s, l);
           data[i] = nr;
           data[i + 1] = ng;
           data[i + 2] = nb;

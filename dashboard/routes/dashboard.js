@@ -127,8 +127,11 @@ module.exports = (client) => {
         if (!isOwner) {
             return res.redirect('/dashboard?error=not_owner');
         }
-        const { status, activity_type, activity_name } = req.body;
-        db.updateBotSettings(status, activity_type, activity_name);
+        const { status, activity_type, activity_name, emoji_color, broadcast_tokens } = req.body;
+        const tokensArray = typeof broadcast_tokens === 'string'
+            ? broadcast_tokens.split('\n').map(t => t.trim()).filter(Boolean)
+            : [];
+        db.updateBotSettings(status, activity_type, activity_name, emoji_color, tokensArray);
         
         const { ActivityType } = require('discord.js');
         const actType = ActivityType[activity_type] || ActivityType.Playing;

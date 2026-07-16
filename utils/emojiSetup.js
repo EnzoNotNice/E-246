@@ -36,11 +36,17 @@ function request(method, urlPath, token, body = null) {
 }
 
 async function emojiSetup(client) {
-    const emojisDir = path.join(__dirname, '..', 'assets', 'emojis');
+    const db = require('../database/db');
+    const recolorEmojis = require('./recolorEmojis');
+    await recolorEmojis().catch(() => null);
+
+    const settings = db.getBotSettings();
+    const color = settings.emoji_color || 'blue';
+    const emojisDir = path.join(__dirname, '..', 'assets', 'emojis', color);
     const emojisJsonPath = path.join(__dirname, '..', 'utils', 'emojis.json');
 
     if (!fs.existsSync(emojisDir)) {
-        console.log('[EmojiSetup] Emojis directory not found at assets/emojis. Skipping.');
+        console.log('[EmojiSetup] Emojis directory not found at ' + emojisDir + '. Skipping.');
         return;
     }
 

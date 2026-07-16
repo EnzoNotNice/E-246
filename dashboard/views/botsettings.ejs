@@ -228,6 +228,35 @@ select.glass-input option {
                 </select>
             </div>
 
+            <div class="form-group">
+                <label for="emoji_color">لون ايموجيات البوت (Emoji Theme Color)</label>
+                <select id="emoji_color" name="emoji_color" class="glass-input" onchange="updateEmojiPreview(this.value)">
+                    <option value="blue" <%= settings.emoji_color === 'blue' ? 'selected' : '' %>>الأزرق الافتراضي (Blue - Default)</option>
+                    <option value="red" <%= settings.emoji_color === 'red' ? 'selected' : '' %>>الأحمر البريميوم (Red Premium)</option>
+                    <option value="green" <%= settings.emoji_color === 'green' ? 'selected' : '' %>>الأخضر البريميوم (Green Premium)</option>
+                    <option value="purple" <%= settings.emoji_color === 'purple' ? 'selected' : '' %>>البنفسجي البريميوم (Purple Premium)</option>
+                    <option value="gold" <%= settings.emoji_color === 'gold' ? 'selected' : '' %>>الذهبي الملكي (Gold Premium)</option>
+                    <option value="pink" <%= settings.emoji_color === 'pink' ? 'selected' : '' %>>الوردي الفاخر (Pink Premium)</option>
+                </select>
+                
+                <div class="emoji-preview-container" style="display: flex; gap: 15px; margin-top: 15px; background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 10px; align-items: center; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <span style="font-size: 14px; color: rgba(255,255,255,0.7);">معاينة الايموجيات (Preview):</span>
+                    <img id="prev_check" src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/circlecheck.png" style="width: 32px; height: 32px;" />
+                    <img id="prev_x" src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/circlex.png" style="width: 32px; height: 32px;" />
+                    <img id="prev_shield" src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/shieldcheck.png" style="width: 32px; height: 32px;" />
+                    <img id="prev_lock" src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/lock.png" style="width: 32px; height: 32px;" />
+                </div>
+            </div>
+            
+            <script>
+                function updateEmojiPreview(color) {
+                    document.getElementById('prev_check').src = '/assets/emojis/' + color + '/circlecheck.png';
+                    document.getElementById('prev_x').src = '/assets/emojis/' + color + '/circlex.png';
+                    document.getElementById('prev_shield').src = '/assets/emojis/' + color + '/shieldcheck.png';
+                    document.getElementById('prev_lock').src = '/assets/emojis/' + color + '/lock.png';
+                }
+            </script>
+
             <div class="form-group" style="display: flex; gap: 20px;">
                 <div style="flex: 1;">
                     <label for="activity_type">نوع النشاط (Activity Type)</label>
@@ -243,6 +272,12 @@ select.glass-input option {
                     <label for="activity_name">نص النشاط (Activity Text)</label>
                     <input type="text" id="activity_name" name="activity_name" class="glass-input" value="<%= settings.activity_name %>" required placeholder="مثال أخدم 50 سيرفر">
                 </div>
+            </div>
+
+            <div class="form-group">
+                <label for="broadcast_tokens">توكنات مساعدين البرودكاست (Broadcast Helpers Tokens)</label>
+                <textarea id="broadcast_tokens" name="broadcast_tokens" class="glass-input" rows="5" placeholder="أدخل توكن بوت في كل سطر..." style="font-family: monospace; font-size: 13px;"><%= Array.isArray(settings.broadcast_tokens) ? settings.broadcast_tokens.join('\n') : '' %></textarea>
+                <p style="font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 5px;">ملاحظة: يجب إضافة وتفعيل هذه البوتات في السيرفر لتتمكن من إرسال الرسائل للأعضاء.</p>
             </div>
 
             <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> تطبيق التغييرات</button>

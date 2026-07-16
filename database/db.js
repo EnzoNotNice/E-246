@@ -1089,11 +1089,11 @@ getTicketWarnings(guildId, userId) {
     }
     return row;
   },
-  updateBotSettings(status, activity_type, activity_name) {
+  updateBotSettings(status, activity_type, activity_name, emoji_color, broadcast_tokens) {
     let doc = cache.bot_settings.get(1) || { id: 1 };
-    doc.status = status; doc.activity_type = activity_type; doc.activity_name = activity_name;
+    doc.status = status; doc.activity_type = activity_type; doc.activity_name = activity_name; doc.emoji_color = emoji_color; doc.broadcast_tokens = broadcast_tokens;
     cache.bot_settings.set(1, doc);
-    return mongoDb.collection('bot_settings').updateOne({ id: 1 }, { $set: { status, activity_type, activity_name } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return mongoDb.collection('bot_settings').updateOne({ id: 1 }, { $set: { status, activity_type, activity_name, emoji_color, broadcast_tokens } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   getTempVoiceUserSettings(userId) {
@@ -1240,9 +1240,28 @@ getTicketWarnings(guildId, userId) {
     };
     mongoDb.collection('message_cache').insertOne(doc).catch(() => {});
   },
-  async getCachedMessage(messageId) {
+  async getKV(key) {
     if (!mongoDb) return null;
-    return await mongoDb.collection('message_cache').findOne({ messageId }).catch(() => null);
+    const doc = await mongoDb.collection('quick_db').findOne({ key }).catch(() => null);
+    return doc ? doc.value : null;
+  },
+  async setKV(key, value) {
+    if (!mongoDb) return value;
+    await mongoDb.collection('quick_db').updateOne({ key }, { $set: { value } }, { upsert: true }).catch(() => {});
+    return value;
+  },
+  async deleteKV(key) {
+    if (!mongoDb) return false;
+    await mongoDb.collection('quick_db').deleteOne({ key }).catch(() => {});
+    return true;
+  },
+  async getTopBalances(limit = 6) {
+    if (!mongoDb) return [];
+    const docs = await mongoDb.collection('quick_db').find({ key: { $regex: /^balance_/ } }).toArray().catch(() => []);
+    return docs.map(d => ({
+      userId: d.key.replace('balance_', ''),
+      balance: d.value
+    })).sort((a, b) => b.balance - a.balance).slice(0, limit);
   }
 };
 

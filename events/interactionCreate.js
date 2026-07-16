@@ -281,18 +281,57 @@ module.exports = {
             members = members.filter(m => !m.presence || m.presence.status === 'offline');
         }
 
+        const botSettings = db.getBotSettings();
+        const helperTokens = Array.isArray(botSettings.broadcast_tokens) ? botSettings.broadcast_tokens : [];
+
+        const { Client: HelperClient, GatewayIntentBits } = require('discord.js');
+        const helperClients = [];
+        for (const token of helperTokens) {
+            try {
+                const helper = new HelperClient({ intents: [GatewayIntentBits.Guilds] });
+                await helper.login(token);
+                helperClients.push(helper);
+            } catch (err) {
+                // Ignore invalid tokens
+            }
+        }
+
+        const activeBots = [interaction.client, ...helperClients];
+        const membersArray = Array.from(members.values());
+        const chunks = Array.from({ length: activeBots.length }, () => []);
+        membersArray.forEach((member, index) => {
+            chunks[index % activeBots.length].push(member);
+        });
+
         let sent = 0;
         let failed = 0;
 
-        for (const [memberId, member] of members) {
-            try {
-                await new Promise(r => setTimeout(r, 1500));
-
-                await member.send({ content: `${messageContent}\n\n${member}` });
-                sent++;
-            } catch (e) {
-                failed++;
+        await Promise.all(activeBots.map(async (bot, botIndex) => {
+            const myMembers = chunks[botIndex];
+            for (const member of myMembers) {
+                try {
+                    await new Promise(r => setTimeout(r, 1500));
+                    if (bot.user.id === interaction.client.user.id) {
+                        await member.send({ content: `${messageContent}\n\n${member}` });
+                    } else {
+                        const user = await bot.users.fetch(member.id).catch(() => null);
+                        if (user) {
+                            await user.send({ content: `${messageContent}\n\n${member}` });
+                        } else {
+                            throw new Error('User not fetchable');
+                        }
+                    }
+                    sent++;
+                } catch (e) {
+                    failed++;
+                }
             }
+        }));
+
+        for (const helper of helperClients) {
+            try {
+                await helper.destroy();
+            } catch (err) {}
         }
 
         global.bcCache.delete(bcKey);
