@@ -154,6 +154,38 @@ module.exports = {
       const bgPath = path.join(__dirname, '../../assets/games/faster.png');
       const background = await loadImage(bgPath);
       ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = 'rgba(15, 15, 20, 0.8)';
+      ctx.fillRect(720, 20, 280, 140);
+
+      try {
+        const iconUrl = interaction.guild.iconURL({ extension: 'png', size: 128 }) || interaction.client.user.displayAvatarURL({ extension: 'png', size: 128 });
+        const icon = await loadImage(iconUrl);
+        
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(780, 90, 45, 0, Math.PI * 2, true);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(icon, 735, 45, 90, 90);
+        ctx.restore();
+
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(780, 90, 45, 0, Math.PI * 2, true);
+        ctx.stroke();
+
+        ctx.font = 'bold 20px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'left';
+        const guildName = interaction.guild.name.length > 12 ? interaction.guild.name.slice(0, 12) + '..' : interaction.guild.name;
+        ctx.fillText(guildName, 840, 85);
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#B5BAC1';
+        ctx.fillText('سيرفر اللعب', 840, 110);
+      } catch (err) {}
+
       ctx.font = 'bold 48px Arial';
       ctx.fillStyle = '#FFFFFF';
       ctx.textAlign = 'center';

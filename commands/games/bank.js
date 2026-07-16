@@ -128,6 +128,12 @@ module.exports = {
     const subcommand = interaction.options.getSubcommand();
     const userId = interaction.user.id;
 
+    const guildSettings = db.getGuildSettings(interaction.guildId);
+    const bankChannelId = guildSettings ? guildSettings.bank_channel : null;
+    if (bankChannelId && interaction.channelId !== bankChannelId) {
+      return interaction.reply({ content: `{emoji:circlex} لا يمكنك استخدام أوامر البنك خارج الروم المخصص: <#${bankChannelId}>`, ephemeral: true });
+    }
+
     let userBalance = await db.getKV(`balance_${userId}`) || 0;
 
     const loanRepayTime = await db.getKV(`loan_repay_${userId}`);

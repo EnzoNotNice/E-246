@@ -98,6 +98,12 @@
                 <small>اختر ما إذا كان البوت يرسل الردود كرسائل عادية أو بطاقات مدمجة</small>
             </div>
 
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="bank_channel">روم لعبة البنك المحدد (Bank Channel ID)</label>
+                <input type="text" id="bank_channel" name="bank_channel" class="glass-input" value="<%= (settings && settings.bank_channel) ? settings.bank_channel : 'none' %>">
+                <small>أدخل المعرف (ID) الخاص بالروم المسموح فيه بأوامر البنك، أو 'none' للسماح بها في أي روم</small>
+            </div>
+
             <button type="submit" class="btn btn-primary" style="margin-top: 15px;">حفظ التغييرات</button>
         </form>
     </div>

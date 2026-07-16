@@ -156,10 +156,11 @@ module.exports = (client) => {
     });
 
     router.post('/:id/general', checkAuth, checkGuildAccess, (req, res) => {
-        const { prefix, log_channel, reply_type } = req.body;
+        const { prefix, log_channel, reply_type, bank_channel } = req.body;
         if (prefix) db.setGuildSetting(req.guild.id, 'prefix', prefix);
         if (log_channel) db.setGuildSetting(req.guild.id, 'log_channel', log_channel === 'none' ? null : log_channel);
         if (reply_type) db.setGuildSetting(req.guild.id, 'reply_type', reply_type);
+        if (bank_channel) db.setGuildSetting(req.guild.id, 'bank_channel', bank_channel === 'none' ? null : bank_channel);
         res.redirect(`/dashboard/${req.guild.id}?success=تم+تحديث+الإعدادات+بنجاح`);
     });
 

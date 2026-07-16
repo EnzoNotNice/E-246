@@ -485,7 +485,7 @@ const helpers = {
     return row;
   },
   setGuildSetting(guildId, key, value) {
-    const allowed = ['prefix', 'giveaway_emoji', 'log_channel', 'setlog_channel', 'line_image', 'autoboost_channel', 'autoboost_message', 'reply_type'];
+    const allowed = ['prefix', 'giveaway_emoji', 'log_channel', 'setlog_channel', 'line_image', 'autoboost_channel', 'autoboost_message', 'reply_type', 'bank_channel'];
     if (!allowed.includes(key)) throw new Error(`Invalid setting key: ${key}`);
 
     let doc = cache.guild_settings.get(guildId) || { guildId };
