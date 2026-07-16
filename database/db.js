@@ -303,7 +303,7 @@ function translateSql(opType, sql, args) {
   }
 
   if (/INSERT INTO ticket_settings/i.test(cleanSql)) {
-    const [guildId, category_id, staff_role, log_channel, ticket_message] = args;
+    const [guildId, category_id, staff_role, log_channel, ticket_message, feedbacks_channel, owners_role] = args;
     let doc = cache.ticket_settings.get(guildId) || { guildId };
     doc.category_id = category_id;
     doc.staff_role = staff_role;
@@ -759,6 +759,8 @@ const helpers = {
     if (!row) {
       row = {
         guildId, category_id: null, log_channel: null, staff_role: null, panel_channel: null,
+        feedbacks_channel: null,
+        owners_role: null,
         support_message: 'Click the button below to open a ticket!',
         ticket_message: 'Thank you for opening a ticket! Support will be with you shortly.', panel_data: {}
       };
@@ -771,6 +773,8 @@ const helpers = {
     let current = this.getTicketSettings(guildId);
     if (data.category_id !== undefined) current.category_id = data.category_id;
     if (data.log_channel !== undefined) current.log_channel = data.log_channel;
+    if (data.feedbacks_channel !== undefined ) current.feedbacks_channel = data.feedbacks_channel;
+    if (data.owners_role !== undefined) current.owners_role = data.owners_role;
     if (data.staff_role !== undefined) current.staff_role = data.staff_role;
     if (data.panel_channel !== undefined) current.panel_channel = data.panel_channel;
     if (data.support_message !== undefined) current.support_message = data.support_message;
@@ -798,6 +802,100 @@ const helpers = {
     }
     return { changes: 1 };
   },
+  claimTicket(channelId, userId) {
+    const ticket = cache.tickets.find(t => t.channelId === channelId);
+
+    if (!ticket) return false;
+
+    ticket.claimedBy = userId;
+
+    mongoDb.collection("tickets").updateOne(
+        { channelId },
+        { $set: { claimedBy: userId } }
+    ).catch(console.error);
+
+    return true;
+},
+
+
+addTicketBlacklist(guildId, userId) {
+
+    const row = {
+        guildId,
+        userId,
+        createdAt: Date.now()
+    };
+
+    cache.ticket_blacklist ??= [];
+    cache.ticket_blacklist.push(row);
+
+    return mongoDb
+        .collection("ticket_blacklist")
+        .insertOne(row);
+},
+
+removeTicketBlacklist(guildId, userId) {
+
+    cache.ticket_blacklist =
+        (cache.ticket_blacklist || [])
+        .filter(
+            x =>
+                !(
+                    x.guildId === guildId &&
+                    x.userId === userId
+                )
+        );
+
+    return mongoDb
+        .collection("ticket_blacklist")
+        .deleteOne({
+            guildId,
+            userId
+        });
+},
+
+isTicketBlacklisted(guildId, userId) {
+
+    return (cache.ticket_blacklist || [])
+        .some(
+            x =>
+                x.guildId === guildId &&
+                x.userId === userId
+        );
+},
+
+
+addTicketWarning(guildId, userId, moderatorId, reason) {
+
+    const row = {
+        guildId,
+        userId,
+        moderatorId,
+        reason,
+        createdAt: Date.now()
+    };
+
+    cache.ticket_warnings ??= [];
+    cache.ticket_warnings.push(row);
+
+    return mongoDb
+        .collection("ticket_warnings")
+        .insertOne(row);
+},
+
+getTicketWarnings(guildId, userId) {
+
+    return (cache.ticket_warnings || [])
+        .filter(
+            x =>
+                x.guildId === guildId &&
+                x.userId === userId
+        );
+},
+
+
+
+
 
   getAutoReplies(guildId) {
     return cache.auto_reply.filter(a => a.guildId === guildId);

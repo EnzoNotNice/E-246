@@ -66,8 +66,13 @@ async function checkLevelUp(client, userId, guildId, channelId = null) {
       }
     }
 
-    const rawRewards = levelSettings.role_rewards;
-    const rewards = Array.isArray(rawRewards) ? rawRewards : (typeof rawRewards === 'string' ? JSON.parse(rawRewards || '[]') : []);
+    let rewards = [];
+    try {
+      rewards = JSON.parse(levelSettings.role_rewards || '[]');
+      if (!Array.isArray(rewards)) rewards = [];
+    } catch (err) {
+      rewards = [];
+    }
     const maxLevel = Math.max(textLevel, voiceLevel);
     const reward = rewards.find(r => r.level === maxLevel);
     if (reward) {

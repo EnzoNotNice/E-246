@@ -377,86 +377,125 @@ module.exports = (client) => {
         res.redirect(`/dashboard/${req.guild.id}/logs?success=تم+تحديث+إعدادات+السجلات`);
     });
 
-    router.get('/:id/tickets', checkAuth, checkGuildAccess, (req, res) => {
-        res.render('tickets', {
-            guild: req.guild,
-            settings: db.getTicketSettings(req.guild.id),
-            roles: req.guild.roles.cache.sort((a, b) => b.position - a.position),
-            channels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5),
-            categories: req.guild.channels.cache.filter(c => c.type === 4)
-        });
+
+    router.get('/:id/tickets', checkAuth, checkGuildAccess, async (req, res) => {
+    const settings = await db.getTicketSettings(req.guild.id);
+
+    res.render('tickets', {
+        guild: req.guild,
+        settings,
+        roles: req.guild.roles.cache.sort((a, b) => b.position - a.position),
+        channels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5),
+        categories: req.guild.channels.cache.filter(c => c.type === 4),
+        success:  req.query.success,
+        error: req.query.error
     });
+});
 
     router.post('/:id/tickets', checkAuth, checkGuildAccess, async (req, res) => {
+    try {
+
         const b = req.body;
 
-        if (!channelExists(req.guild, b.category_id) || !channelExists(req.guild, b.log_channel) || !channelExists(req.guild, b.panel_channel) || !roleExists(req.guild, b.staff_role)) {
-            return res.redirect(`/dashboard/${req.guild.id}/tickets?error=Invalid+channel+or+role`);
+        let panelData = {};
+
+        try {
+            panelData = JSON.parse(b.panel_data_json || "{}");
+
+            panelData.actions = {
+    call_user: b.call_user || "none",
+    call_support: b.call_support || "none",
+    call_owners: b.call_owners || "none",
+    warn_user: b.warn_user || "none",
+    blacklist_user: b.blacklist_user || "none",
+    rename_ticket: b.rename_ticket || "none",
+    lock_ticket: b.lock_ticket || "none",
+    unlock_ticket: b.unlock_ticket || "none"
+};
+
+        } catch {
+            return res.redirect(
+                `/dashboard/${req.guild.id}/tickets?error=Invalid+panel+data`
+            );
         }
 
-        const panelData = {
-            title: b.title || 'تذاكر الدعم',
-            description: b.description || 'اضغط على الزر أدناه لفتح تذكرة دعم',
-            color: safeColor(b.color),
-            thumbnail: safeUrl(b.thumbnail),
-            image: safeUrl(b.image),
-            comp_type: b.comp_type || 'button',
-            label: b.comp_label || 'فتح تذكرة',
-            emoji: b.comp_emoji || '🎫'
-        };
+        console.log("BODY:", req.body);
+console.log("PANEL:", panelData);
 
-        db.updateTicketSettings(req.guild.id, {
+        await db.updateTicketSettings(req.guild.id, {
             category_id: b.category_id || null,
             log_channel: b.log_channel || null,
+            feedbacks_channel: b.feedbacks_channel || null,
+
             staff_role: b.staff_role || null,
+            owners_role: b.owners_role || null,
+
             panel_channel: b.panel_channel || null,
-            ticket_message: b.ticket_message || 'شكراً لفتح تذكرة، سيتواصل معك فريق الدعم قريباً.',
-            panel_data: JSON.stringify(panelData)
+
+            ticket_message:
+                b.ticket_message ||
+                'شكراً لفتح تذكرة، سيتواصل معك فريق الدعم قريباً.',
+
+            panel_data: panelData
         });
 
-        if (b.send_panel === 'yes' && b.panel_channel) {
-            try {
-                const pChannel = req.guild.channels.cache.get(b.panel_channel);
-                if (pChannel) {
-                    const embed = new EmbedBuilder()
-                        .setColor(parseInt(panelData.color.replace('#', ''), 16))
-                        .setTitle(panelData.title.substring(0, 256))
-                        .setDescription(panelData.description.substring(0, 4096));
+        try {
 
-                    if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
-                    if (panelData.image) embed.setImage(panelData.image);
+    if (b.panel_channel) {
 
-                    const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
-                    const row = new ActionRowBuilder();
+        const pChannel = req.guild.channels.cache.get(b.panel_channel);
 
-                    if (panelData.comp_type === 'button') {
-                        const btn = new ButtonBuilder()
-                            .setCustomId('ticket_create_btn')
-                            .setLabel(panelData.label.substring(0, 80))
-                            .setStyle(ButtonStyle.Primary);
-                        if (panelData.emoji) btn.setEmoji(panelData.emoji);
-                        row.addComponents(btn);
-                    } else {
-                        const sel = new StringSelectMenuBuilder()
-                            .setCustomId('ticket_create_select')
-                            .setPlaceholder('اختر خياراً...')
-                            .addOptions(
-                                new StringSelectMenuOptionBuilder()
-                                    .setLabel(panelData.label.substring(0, 100))
-                                    .setValue('open_ticket_opt')
-                            );
-                        if (panelData.emoji) sel.options[0].setEmoji(panelData.emoji);
-                        row.addComponents(sel);
-                    }
+        if (pChannel) {
 
-                    await pChannel.send({ embeds: [embed], components: [row] });
-                }
-            } catch (e) {
-                console.error("Error sending advanced ticket panel via dashboard", e);
-            }
+            const {
+                EmbedBuilder,
+                ActionRowBuilder,
+                ButtonBuilder,
+                ButtonStyle
+            } = require("discord.js");
+
+            const embed = new EmbedBuilder()
+                .setColor(0x5865F2)
+                .setTitle(panelData.title || "تذاكر الدعم")
+                .setDescription(
+                    panelData.description ||
+                    "اضغط على الزر أدناه لفتح تذكرة"
+                );
+
+            const row = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId("ticket_create_btn")
+                        .setLabel(panelData.label || "فتح تذكرة")
+                        .setEmoji(panelData.emoji || "🎫")
+                        .setStyle(ButtonStyle.Primary)
+                );
+
+            await pChannel.send({
+                embeds: [embed],
+                components: [row]
+            });
+
         }
-        res.redirect(`/dashboard/${req.guild.id}/tickets?success=تم+تحديث+إعدادات+التذاكر`);
-    });
+
+    }
+
+} catch(err) {
+    console.error("Ticket Panel Error:", err);
+}
+
+        res.redirect(
+            `/dashboard/${req.guild.id}/tickets?success=تم+حفظ+الإعدادات`
+        );
+
+    } catch (err) {
+        console.error(err);
+
+        res.redirect(
+            `/dashboard/${req.guild.id}/tickets?error=Save+Failed`
+        );
+    }
+});
 
     router.get('/:id/embed', checkAuth, checkGuildAccess, (req, res) => {
         res.render('embedbuilder', {

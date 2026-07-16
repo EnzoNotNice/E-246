@@ -10,6 +10,7 @@ module.exports = {
     .addChannelOption(o => o.setName('category').setDescription('تصنيف فتح التذاكر').setRequired(true).addChannelTypes(ChannelType.GuildCategory))
     .addRoleOption(o => o.setName('staff_role').setDescription('رتبة إدارة التذاكر').setRequired(true))
     .addChannelOption(o => o.setName('log_channel').setDescription('روم سجل التذاكر').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
+    .addChannelOption(o => o.setName('feedbacks_channel').setDescription('روم تقييم الاداري').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement))
     .addStringOption(o => o.setName('ticket_message').setDescription('رسالة فتح تذكرة'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
@@ -17,17 +18,18 @@ module.exports = {
     const category = interaction.options.getChannel('category');
     const staffRole = interaction.options.getRole('staff_role');
     const logChannel = interaction.options.getChannel('log_channel');
+    const feedbacksChannel = interaction.options.getChannel('feedbacks_channel');
     const ticketMsg = interaction.options.getString('ticket_message');
 
     db.db.prepare(`
-      INSERT INTO ticket_settings (guildId, category_id, staff_role, log_channel, ticket_message)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO ticket_settings (guildId, category_id, staff_role, log_channel, feedbacks_channel, ticket_message)
+      VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(guildId) DO UPDATE SET
         category_id = ?, staff_role = ?,
         log_channel = COALESCE(?, log_channel),
         ticket_message = COALESCE(?, ticket_message)
     `).run(
-      interaction.guildId, category.id, staffRole.id, logChannel?.id || null, ticketMsg || null,
+      interaction.guildId, category.id, staffRole.id, logChannel?.id || null, feedbacksChannel?.id || null, ticketMsg || null,
       category.id, staffRole.id, logChannel?.id || null, ticketMsg || null
     );
 

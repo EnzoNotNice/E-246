@@ -20,6 +20,10 @@
       "label": "إغلاق التذكرة",
       "emoji": "<:lock:1519212231332593785>"
     },
+    "AdminFeedback": {
+      "label": "تقييم الاداري",
+      "emoji": "<:circlecheck:1519212246876557413>"
+    },
     "ticketDelete": {
       "label": "حذف",
       "emoji": "<:trash:1519212192912637962>"
@@ -58,6 +62,7 @@
     "successCreated": "**تم إنشاء تذكرتك ** {channel}",
     "closedTitle": "تذكرة مغلقة",
     "closedDesc": "أُغلقت بواسطة {user}",
+    "closedDM": "تم إغلاق تذكرتك في سيرفر {server} يرجى تقييمك خدمة الاداري لك في التذكرة",
     "reopenedDesc": "**تم إعادة فتح التذكرة بواسطة {user}**",
     "deletingDesc": "**جاري حفظ السجل وحذف التذكرة**",
     "deletedLogTitle": "تذكرة محذوفة",
