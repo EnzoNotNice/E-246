@@ -81,7 +81,7 @@ module.exports = {
       );
       await msg.edit({ components: [disabledRow] }).catch(() => {});
 
-      await interaction.channel.send(`تبدأ اللعبة قريباً! ستبدأ الجولة الأولى في غضون 5 ثوانٍ...`).catch(() => {});
+      await interaction.channel.send(`تبدأ اللعبة قريباً، ستبدأ الجولة الأولى في غضون 5 ثوانٍ...`).catch(() => {});
 
       setTimeout(() => playRound(), 5000);
     });
@@ -94,8 +94,8 @@ module.exports = {
         const winner = players[0];
         const winnerUser = await interaction.client.users.fetch(winner).catch(() => null);
         const winnerEmbed = new EmbedBuilder()
-          .setTitle(`🎉 لدينا فائز في لعبة القنبلة! 🎉`)
-          .setDescription(`مبروك <@${winner}> لقد نجوت وفزت باللعبة!\n\nعدد القلوب المتبقية: **${playerHearts[winner]}**`)
+          .setTitle(`🎉 لدينا فائز في لعبة القنبلة 🎉`)
+          .setDescription(`مبروك <@${winner}> لقد نجوت وفزت باللعبة\n\nعدد القلوب المتبقية: **${playerHearts[winner]}**`)
           .setColor(0xFFD700);
 
         if (winnerUser) {
@@ -116,11 +116,11 @@ module.exports = {
         return playRound();
       }
 
-      const imageBuffer = await generateImage(question.partial, user.username);
+      const imageBuffer = await generateImage(question.partial, user);
       const attachment = new AttachmentBuilder(imageBuffer, { name: 'bomb.png' });
 
       await interaction.channel.send({
-        content: `الدور على: <@${player}>\nاكمل الكلمة الموضحة في الصورة بالأسفل خلال 15 ثانية!\nالقلوب المتبقية لك: **${playerHearts[player]}**`,
+        content: `الدور على: <@${player}>\nاكمل الكلمة الموضحة في الصورة بالأسفل خلال 15 ثانية\nالقلوب المتبقية لك: **${playerHearts[player]}**`,
         files: [attachment]
       });
 
@@ -131,7 +131,7 @@ module.exports = {
       wordCollector.on('collect', async m => {
         if (!answered) {
           answered = true;
-          await m.reply('إجابة صحيحة! تم تفادي القنبلة والانتقال للجولة التالية.').catch(() => {});
+          await m.reply('إجابة صحيحة، تم تفادي القنبلة والانتقال للجولة التالية.').catch(() => {});
           wordCollector.stop('answered');
         }
       });
@@ -140,11 +140,11 @@ module.exports = {
         if (reason !== 'answered') {
           playerHearts[player]--;
           if (playerHearts[player] <= 0) {
-            await interaction.channel.send(`خسر <@${player}> كل قلوبه وتم إقصاؤه من اللعبة! الكلمة الكاملة كانت: **${question.complete}**`).catch(() => {});
+            await interaction.channel.send(`خسر <@${player}> كل قلوبه وتم إقصاؤه من اللعبة، الكلمة الكاملة كانت: **${question.complete}**`).catch(() => {});
             players = players.filter(id => id !== player);
             delete playerHearts[player];
           } else {
-            await interaction.channel.send(`انتهى الوقت! خسر <@${player}> قلباً. القلوب المتبقية له: **${playerHearts[player]}**\nالكلمة الكاملة كانت: **${question.complete}**`).catch(() => {});
+            await interaction.channel.send(`انتهى الوقت، خسر <@${player}> قلباً. القلوب المتبقية له: **${playerHearts[player]}**\nالكلمة الكاملة كانت: **${question.complete}**`).catch(() => {});
           }
         }
         setTimeout(() => {
@@ -153,20 +153,82 @@ module.exports = {
       });
     }
 
-    async function generateImage(partialText, playerName) {
-      const canvas = createCanvas(1024, 512);
+    async function generateImage(partialText, user) {
+      const canvas = createCanvas(800, 300);
       const ctx = canvas.getContext('2d');
-      const bgPath = path.join(__dirname, '../../assets/games/bomb.png');
-      const background = await loadImage(bgPath);
-      ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-      ctx.font = 'bold 48px Arial';
+
+      function roundRect(c, x, y, w, h, r) {
+        c.beginPath();
+        c.moveTo(x + r, y);
+        c.lineTo(x + w - r, y);
+        c.quadraticCurveTo(x + w, y, x + w, y + r);
+        c.lineTo(x + w, y + h - r);
+        c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        c.lineTo(x + r, y + h);
+        c.quadraticCurveTo(x, y + h, x, y + h - r);
+        c.lineTo(x, y + r);
+        c.quadraticCurveTo(x, y, x + r, y);
+        c.closePath();
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      ctx.shadowBlur = 20;
+      ctx.shadowOffsetY = 10;
+      roundRect(ctx, 20, 20, 760, 260, 25);
+      ctx.fillStyle = 'rgba(15, 15, 20, 0.75)';
+      ctx.fill();
+      ctx.restore();
+
+      roundRect(ctx, 20, 20, 760, 260, 25);
+      ctx.lineWidth = 2;
+      const borderGrad = ctx.createLinearGradient(20, 20, 780, 280);
+      borderGrad.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+      borderGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
+      borderGrad.addColorStop(1, 'rgba(255, 255, 255, 0.25)');
+      ctx.strokeStyle = borderGrad;
+      ctx.stroke();
+
+      try {
+        const avatarUrl = user.displayAvatarURL({ extension: 'png', size: 256 });
+        const res = await fetch(avatarUrl);
+        const arrayBuffer = await res.arrayBuffer();
+        const avatar = await loadImage(Buffer.from(arrayBuffer));
+        
+        if (avatar) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(140, 150, 80, 0, Math.PI * 2, true);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(avatar, 60, 70, 160, 160);
+          ctx.restore();
+
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(140, 150, 80, 0, Math.PI * 2, true);
+          ctx.stroke();
+        }
+      } catch (err) {}
+
+      ctx.font = 'bold 24px "IBMPlexSansArabic", "CustomFont", sans-serif';
+      ctx.fillStyle = '#FF5252';
+      ctx.textAlign = 'right';
+      const displayName = user.username.length > 18 ? user.username.slice(0, 15) + '..' : user.username;
+      ctx.fillText(`دور اللاعب: ${displayName}`, 740, 80);
+
+      ctx.font = 'bold 54px "IBMPlexSansArabic", "CustomFont", sans-serif';
       ctx.fillStyle = '#FFFFFF';
       ctx.textAlign = 'center';
-      ctx.fillText(partialText, 330, 320);
+      ctx.fillText(`${partialText}..`, 480, 170);
 
-      ctx.font = 'bold 36px Arial';
+      ctx.font = '20px "IBMPlexSansArabic", "CustomFont", sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
       ctx.textAlign = 'center';
-      ctx.fillText(playerName, 850, 460);
+      ctx.fillText('أكمل الكلمة الموضحة أعلاه قبل انفجار القنبلة', 480, 230);
 
       return canvas.toBuffer();
     }

@@ -78,7 +78,7 @@ module.exports = {
       );
       await msg.edit({ components: [disabledRow] }).catch(() => {});
 
-      await interaction.channel.send(`تبدأ اللعبة قريباً! ستبدأ الجولة الأولى في غضون 5 ثوانٍ...`).catch(() => {});
+      await interaction.channel.send(`تبدأ اللعبة قريباً، ستبدأ الجولة الأولى في غضون 5 ثوانٍ...`).catch(() => {});
 
       setTimeout(() => playRound(), 5000);
     });
@@ -94,7 +94,7 @@ module.exports = {
       const attachment = new AttachmentBuilder(imageBuffer, { name: 'faster.png' });
 
       await interaction.channel.send({
-        content: `**الجولة ${currentRound}/${totalRounds}**\nاكتب الكلمة الموضحة في الصورة بأسرع ما يمكن!`,
+        content: `**الجولة ${currentRound}/${totalRounds}**\nاكتب الكلمة الموضحة في الصورة بأسرع ما يمكن`,
         files: [attachment]
       });
 
@@ -106,14 +106,14 @@ module.exports = {
         if (!answered) {
           answered = true;
           playerPoints[m.author.id]++;
-          await m.reply(`إجابة صحيحة! حصل <@${m.author.id}> على نقطة.`).catch(() => {});
+          await m.reply(`إجابة صحيحة، حصل <@${m.author.id}> على نقطة.`).catch(() => {});
           wordCollector.stop('answered');
         }
       });
 
       wordCollector.on('end', (collected, reason) => {
         if (reason !== 'answered') {
-          interaction.channel.send(`انتهى وقت الجولة! الكلمة الصحيحة هي: **${word}**`).catch(() => {});
+          interaction.channel.send(`انتهى وقت الجولة، الكلمة الصحيحة هي: **${word}**`).catch(() => {});
         }
         setTimeout(() => {
           currentRound++;
@@ -149,47 +149,82 @@ module.exports = {
     }
 
     async function generateImage(word) {
-      const canvas = createCanvas(1024, 512);
+      const canvas = createCanvas(800, 300);
       const ctx = canvas.getContext('2d');
-      const bgPath = path.join(__dirname, '../../assets/games/faster.png');
-      const background = await loadImage(bgPath);
-      ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = 'rgba(15, 15, 20, 0.8)';
-      ctx.fillRect(720, 20, 280, 140);
+      function roundRect(c, x, y, w, h, r) {
+        c.beginPath();
+        c.moveTo(x + r, y);
+        c.lineTo(x + w - r, y);
+        c.quadraticCurveTo(x + w, y, x + w, y + r);
+        c.lineTo(x + w, y + h - r);
+        c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        c.lineTo(x + r, y + h);
+        c.quadraticCurveTo(x, y + h, x, y + h - r);
+        c.lineTo(x, y + r);
+        c.quadraticCurveTo(x, y, x + r, y);
+        c.closePath();
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      ctx.shadowBlur = 20;
+      ctx.shadowOffsetY = 10;
+      roundRect(ctx, 20, 20, 760, 260, 25);
+      ctx.fillStyle = 'rgba(15, 15, 20, 0.75)';
+      ctx.fill();
+      ctx.restore();
+
+      roundRect(ctx, 20, 20, 760, 260, 25);
+      ctx.lineWidth = 2;
+      const borderGrad = ctx.createLinearGradient(20, 20, 780, 280);
+      borderGrad.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+      borderGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
+      borderGrad.addColorStop(1, 'rgba(255, 255, 255, 0.25)');
+      ctx.strokeStyle = borderGrad;
+      ctx.stroke();
 
       try {
-        const iconUrl = interaction.guild.iconURL({ extension: 'png', size: 128 }) || interaction.client.user.displayAvatarURL({ extension: 'png', size: 128 });
-        const icon = await loadImage(iconUrl);
+        const iconUrl = interaction.guild.iconURL({ extension: 'png', size: 256 }) || interaction.client.user.displayAvatarURL({ extension: 'png', size: 256 });
+        const res = await fetch(iconUrl);
+        const arrayBuffer = await res.arrayBuffer();
+        const avatar = await loadImage(Buffer.from(arrayBuffer));
         
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(780, 90, 45, 0, Math.PI * 2, true);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(icon, 735, 45, 90, 90);
-        ctx.restore();
+        if (avatar) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(140, 150, 80, 0, Math.PI * 2, true);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(avatar, 60, 70, 160, 160);
+          ctx.restore();
 
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(780, 90, 45, 0, Math.PI * 2, true);
-        ctx.stroke();
-
-        ctx.font = 'bold 20px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'left';
-        const guildName = interaction.guild.name.length > 12 ? interaction.guild.name.slice(0, 12) + '..' : interaction.guild.name;
-        ctx.fillText(guildName, 840, 85);
-        ctx.font = '16px Arial';
-        ctx.fillStyle = '#B5BAC1';
-        ctx.fillText('سيرفر اللعب', 840, 110);
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(140, 150, 80, 0, Math.PI * 2, true);
+          ctx.stroke();
+        }
       } catch (err) {}
 
-      ctx.font = 'bold 48px Arial';
+      ctx.font = 'bold 24px "IBMPlexSansArabic", "CustomFont", sans-serif';
+      ctx.fillStyle = '#8C52FF';
+      ctx.textAlign = 'right';
+      const guildName = interaction.guild.name.length > 18 ? interaction.guild.name.slice(0, 15) + '..' : interaction.guild.name;
+      ctx.fillText(guildName, 740, 80);
+
+      ctx.font = 'bold 54px "IBMPlexSansArabic", "CustomFont", sans-serif';
       ctx.fillStyle = '#FFFFFF';
       ctx.textAlign = 'center';
-      ctx.fillText(word, 330, 320);
+      ctx.fillText(word, 480, 170);
+
+      ctx.font = '20px "IBMPlexSansArabic", "CustomFont", sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.textAlign = 'center';
+      ctx.fillText('اكتب الكلمة الموضحة أعلاه بأسرع ما يمكن', 480, 230);
+
       return canvas.toBuffer();
     }
   }
