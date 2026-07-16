@@ -11,27 +11,30 @@ module.exports = {
   async execute(interaction) {
     const emojisJson = require('../../utils/emojis.json');
     
-    function getEmojiId(emojiKey, fallbackId) {
+    function parseEmoji(emojiKey, fallbackId) {
       const emojiStr = emojisJson[emojiKey];
-      if (!emojiStr) return fallbackId;
-      const match = emojiStr.match(/:(\d+)>/);
-      return match ? match[1] : fallbackId;
+      if (!emojiStr) return { id: fallbackId };
+      const customMatch = emojiStr.match(/<a?:(\w+):(\d+)>/);
+      if (customMatch) {
+        return { id: customMatch[2] };
+      }
+      return { name: emojiStr };
     }
 
     const emojis = {
-      admin: getEmojiId('crown', '1519212241310715916'),
-      public: getEmojiId('infocircle', '1519212235258335324'),
-      giveaway: getEmojiId('confetti', '1519212243026448394'),
-      ticket: getEmojiId('ticket', '1519212195945119814'),
-      protection: getEmojiId('shield', '1519212231332593785'),
-      levels: getEmojiId('chartpie', '1519212248479043634'),
-      automation: getEmojiId('settings', '1519212254720167996'),
-      invite: getEmojiId('mail', '1519212239876395138'),
-      greet: getEmojiId('folder', '1519212238160924692'),
-      economy: getEmojiId('gift', '1519212237317865553'),
-      games: getEmojiId('playerplay', '1519212218867253258'),
-      utils: getEmojiId('adjustments', '1519212254720167996'),
-      music: getEmojiId('music_play', '1524935282565320775')
+      admin: parseEmoji('crown', '1525592197913645118'),
+      public: parseEmoji('infocircle', '1525592250497761421'),
+      giveaway: parseEmoji('confetti', '1525592192255525044'),
+      ticket: parseEmoji('ticket', '1525592573039743097'),
+      protection: parseEmoji('shield', '1525592537669046282'),
+      levels: parseEmoji('chartpie', '1525592168058716273'),
+      automation: parseEmoji('settings', '1525592531398823988'),
+      invite: parseEmoji('mail', '1525592273121841322'),
+      greet: parseEmoji('folder', '1525592214846181487'),
+      economy: parseEmoji('gift', '1525592226690765001'),
+      games: parseEmoji('playerplay', '1525592513254002841'),
+      utils: parseEmoji('adjustments', '1525592066627993792'),
+      music: parseEmoji('music_play', '1525592315060687060')
     };
 
     const arNames = {
@@ -53,11 +56,12 @@ module.exports = {
     const commandDirs = fs.readdirSync(path.join(__dirname, '..')).filter(d => d !== 'prefix' && fs.statSync(path.join(__dirname, '..', d)).isDirectory());
 
     const options = commandDirs.map(dir => {
+      const emoji = emojis[dir] || { id: '1525592214846181487' };
       return {
         label: `أوامر ${arNames[dir] || dir}`,
         description: `عرض جميع أوامر قسم ${arNames[dir] || dir}`,
         value: `help_${dir}`,
-        emoji: emojis[dir] || '1519212238160924692'
+        emoji: emoji
       };
     });
 

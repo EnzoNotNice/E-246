@@ -89,12 +89,15 @@ module.exports = {
                 public: '{emoji:infocircle}',
                 giveaway: '{emoji:confetti}',
                 ticket: '{emoji:ticket}',
-                protection: '{emoji:lock}',
+                protection: '{emoji:shield}',
                 levels: '{emoji:chartpie}',
-                automation: '{emoji:adjustments}',
-                invite: '{emoji:folderopen}',
+                automation: '{emoji:settings}',
+                invite: '{emoji:mail}',
                 greet: '{emoji:folder}',
-                economy: '{emoji:gift}'
+                economy: '{emoji:gift}',
+                games: '{emoji:playerplay}',
+                utils: '{emoji:adjustments}',
+                music: '{emoji:music_play}'
             };
 
             const arNames = {
@@ -104,10 +107,13 @@ module.exports = {
                 ticket: 'التذاكر',
                 protection: 'الحماية',
                 levels: 'المستويات',
-                automation: 'الردود والخطوط',
+                automation: 'الردود التلقائية والخطوط',
                 invite: 'الدعوات',
                 greet: 'الترحيب',
-                economy: 'الاقتصاد'
+                economy: 'الاقتصاد',
+                games: 'الألعاب والتسلية',
+                utils: 'الأدوات',
+                music: 'الموسيقى'
             };
 
             const embed = new EmbedBuilder()
