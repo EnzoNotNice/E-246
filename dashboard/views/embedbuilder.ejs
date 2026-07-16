@@ -58,7 +58,7 @@
             <div class="alert alert-success" style="background: rgba(237, 66, 69, 0.1); border-color: rgba(237,66,69,0.3); color: #ED4245;"><i class="fa-solid fa-triangle-exclamation"></i> <%= req.query.error %></div>
         <% } %>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
+        <div class="grid-2col" style="margin-top: 20px;">
             <!-- قسم النموذج -->
             <div>
                 <form action="/dashboard/<%= guild.id %>/embed" method="POST" class="settings-form">
@@ -75,7 +75,7 @@
 
                     <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
 
-                    <div class="guild-grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="grid-2col-sm">
                         <div class="form-group">
                             <label for="author_name">اسم المؤلف</label>
                             <input type="text" id="author_name" name="author_name" class="glass-input" placeholder="مثال النظام">
@@ -86,7 +86,7 @@
                         </div>
                     </div>
 
-                    <div class="guild-grid" style="grid-template-columns: 2fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div class="grid-form-2-1">
                         <div class="form-group">
                             <label for="title">عنوان الإمبيد</label>
                             <input type="text" id="title" name="title" class="glass-input" placeholder="النص الرئيسي للعنوان">
@@ -102,7 +102,7 @@
                         <textarea id="description" name="description" class="glass-input" rows="5" placeholder="محتوى النص الرئيسي (يدعم Markdown)"></textarea>
                     </div>
 
-                    <div class="guild-grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div class="grid-2col-sm" style="margin-top: 15px;">
                         <div class="form-group">
                             <label for="thumbnail">رابط الصورة المصغرة (أعلى اليمين)</label>
                             <input type="url" id="thumbnail" name="thumbnail" class="glass-input" placeholder="https://...">
@@ -113,7 +113,7 @@
                         </div>
                     </div>
 
-                    <div class="guild-grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div class="grid-2col-sm" style="margin-top: 15px;">
                         <div class="form-group">
                             <label for="footer_text">نص الفوتر</label>
                             <input type="text" id="footer_text" name="footer_text" class="glass-input" placeholder="مثال مشغّل بواسطة E-246">

@@ -15,7 +15,7 @@
         <div class="alert alert-success" style="background: rgba(237, 66, 69, 0.1); border-color: rgba(237,66,69,0.3); color: #ED4245;"><i class="fa-solid fa-triangle-exclamation"></i> <%= error %></div>
     <% } %>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+    <div class="grid-2col">
         <!-- نموذج الإعدادات -->
         <div class="glass-panel">
             <form action="/dashboard/<%= guild.id %>/captcha" method="POST">
@@ -65,7 +65,7 @@
                     <label>نص الزر</label>
                     <input type="text" name="btn_text" id="btn_text" class="glass-input" value="<%= settings.panel_data.btn_text || 'تحقق الآن' %>" required>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="grid-2col-sm">
                     <div class="form-group">
                         <label>إيموجي الزر</label>
                         <input type="text" name="btn_emoji" id="btn_emoji" class="glass-input" value="<%= settings.panel_data.btn_emoji || '✅' %>">
@@ -109,7 +109,7 @@
 
         <!-- المعاينة المباشرة -->
         <div>
-            <div class="glass-panel" style="position: sticky; top: 90px;">
+            <div class="glass-panel sticky-preview" style="top: 90px;">
                 <h3 style="margin-bottom: 20px;"><i class="fa-brands fa-discord"></i> معاينة مباشرة</h3>
                 <div style="background: #36393f; border-radius: 8px; padding: 16px; font-family: 'gg sans', Arial, sans-serif;">
                     <div style="display: flex; gap: 16px;">

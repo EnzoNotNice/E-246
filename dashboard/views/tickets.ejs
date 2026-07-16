@@ -91,6 +91,11 @@
     top: 20px;
     align-self: start;
 }
+@media (max-width: 768px) {
+    .preview-column {
+        position: static !important;
+    }
+}
 
 .alert-success {
     background: #22c55e20;
@@ -116,6 +121,14 @@
     grid-template-columns: minmax(0,1fr) 420px;
     gap:25px;
     align-items:start;
+}
+@media (max-width: 768px) {
+    .tickets-layout {
+        grid-template-columns: 1fr !important;
+    }
+    .tickets-layout .sticky-preview {
+        position: static !important;
+    }
 }
 </style>
 
@@ -151,7 +164,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                 <form action="/dashboard/<%= guild.id %>/tickets" method="POST" class="settings-form">
 
                     <h3 style="margin-bottom: 15px; color: var(--primary);">١ الإعدادات الأساسية</h3>
-                    <div class="guild-grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="grid-2col-sm">
                         <div class="form-group">
                             <label>تصنيف التذاكر</label>
                             <select name="category_id" class="glass-input">
@@ -216,7 +229,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                     <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
 
                     <h3 style="margin-bottom: 15px; color: var(--primary);">٢ نوع المكوّن التفاعلي</h3>
-                    <div class="guild-grid" style="grid-template-columns: 1fr 2fr; gap: 15px;">
+                    <div class="grid-form-1-2">
                         <div class="form-group">
                             <label>نوع المكوّن</label>
                             <select id="comp_type" name="comp_type" class="glass-input">
@@ -237,7 +250,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                     <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
 
                     <h3 style="margin-bottom: 15px; color: var(--primary);">٣ تصميم إمبيد اللوحة</h3>
-                    <div class="guild-grid" style="grid-template-columns: 2fr 1fr; gap: 15px;">
+                    <div class="grid-form-2-1">
                         <div class="form-group">
                             <label>عنوان الإمبيد</label>
                             <input type="text" id="title" name="title" class="glass-input" value="<%= pData.title || 'دعم فني' %>">
@@ -251,7 +264,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                         <label>وصف الإمبيد</label>
                         <textarea id="description" name="description" class="glass-input" rows="4"><%= pData.description || 'اضغط على الزر أدناه لفتح تذكرة!' %></textarea>
                     </div>
-                    <div class="guild-grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div class="grid-2col-sm" style="margin-top: 15px;">
                         <div class="form-group">
                             <label>رابط الصورة المصغرة</label>
                             <input type="url" id="thumbnail" name="thumbnail" class="glass-input" value="<%= pData.thumbnail || '' %>">
@@ -431,7 +444,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
         </small>
     </div>
 
-    <div class="guild-grid" style="grid-template-columns:1fr 1fr; gap:15px;">
+    <div class="grid-2col-sm">
 
         <div class="form-group">
             <label>اللون</label>
@@ -465,7 +478,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
         >
     </div>
 
-    <div class="guild-grid" style="grid-template-columns:1fr 1fr; gap:15px;">
+    <div class="grid-2col-sm">
 
         <div class="form-group">
             <label>Footer</label>
@@ -772,7 +785,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
         card.className = "glass-panel";
         card.style.marginTop = "15px";
         card.innerHTML = `
-            <div class="guild-grid" style="grid-template-columns:1fr 120px 180px; gap:10px;">
+            <div class="guild-grid grid-form-3" style="grid-template-columns:1fr 120px 180px; gap:10px;">
                 <input type="text" class="glass-input" name="custom_btn_label[]" placeholder="اسم الزر">
                 <input type="text" class="glass-input" name="custom_btn_emoji[]" placeholder="⭐">
                 <select class="glass-input" name="custom_btn_style[]">
@@ -846,7 +859,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
             option.className = "menu-option";
             option.style.marginTop = "10px";
             option.innerHTML = `
-                <div class="guild-grid" style="grid-template-columns:1fr 120px; gap:10px;">
+                <div class="guild-grid grid-form-2" style="grid-template-columns:1fr 120px; gap:10px;">
                     <input type="text" class="glass-input option-label" placeholder="اسم الخيار">
                     <input type="text" class="glass-input option-emoji" placeholder="⭐">
                 </div>
