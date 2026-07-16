@@ -103,7 +103,7 @@ async function emojiSetup(client) {
                     uploadedCount++;
                     existingMap.set(discordName, emojiObj);
                     
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise(r => setTimeout(r, 200));
                 } catch (e) {
                     console.error(`[EmojiSetup] Failed to upload ${discordName}:`, e.message);
                     continue;
