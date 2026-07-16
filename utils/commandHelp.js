@@ -1,5 +1,20 @@
 const { EmbedBuilder, ApplicationCommandOptionType } = require('discord.js');
 const db = require('../database/db');
+const fs = require('fs');
+const path = require('path');
+
+function getEmojisJson() {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, 'emojis.json'), 'utf8'));
+}
+
+function resolveEmoji(key, fallback) {
+  const emojisJson = getEmojisJson();
+  const val = emojisJson[key];
+  if (!val) return fallback;
+  const m = val.match(/<a?:(\w+):(\d+)>/);
+  if (m) return `<${m[0].startsWith('<a:') ? 'a:' : ':'}${m[1]}:${m[2]}>`;
+  return val;
+}
 
 function getCommandJson(cmd) {
   if (!cmd?.data) return null;
@@ -89,21 +104,21 @@ function buildCommandHelpEmbed(cmd, guildId, prefix = '#') {
 
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
-    .setTitle(`{emoji:list} Command: \`${name}\``)
+    .setTitle(`${resolveEmoji('list', '📋')} Command: \`${name}\``)
     .setDescription(description)
     .addFields(
       {
-        name: '{emoji:bolt} Aliases',
+        name: `${resolveEmoji('bolt', '⚡')} Aliases`,
         value: aliases.length ? aliases.map((a) => `\`${a}\``).join(', ') : 'لا توجد اختصارات',
         inline: false
       },
       {
-        name: '{emoji:settings} Usage',
+        name: `${resolveEmoji('settings', '⚙️')} Usage`,
         value: `\`${formatUsage(name, options)}\``,
         inline: false
       },
       {
-        name: '{emoji:star} Examples',
+        name: `${resolveEmoji('star', '⭐')} Examples`,
         value: formatExamples(name, options),
         inline: false
       }

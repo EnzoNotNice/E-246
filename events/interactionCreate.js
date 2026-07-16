@@ -96,20 +96,29 @@ module.exports = {
                 }
             }
 
-            const emojis = {
-                admin: '{emoji:crown}',
-                public: '{emoji:infocircle}',
-                giveaway: '{emoji:confetti}',
-                ticket: '{emoji:ticket}',
-                protection: '{emoji:shield}',
-                levels: '{emoji:chartpie}',
-                automation: '{emoji:settings}',
-                invite: '{emoji:mail}',
-                greet: '{emoji:folder}',
-                economy: '{emoji:gift}',
-                games: '{emoji:playerplay}',
-                utils: '{emoji:adjustments}',
-                music: '{emoji:music_play}'
+            const emojisJson = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '../utils/emojis.json'), 'utf8'));
+            function resolveEmoji(key, fallback) {
+                const val = emojisJson[key];
+                if (!val) return fallback;
+                const m = val.match(/<a?:(\w+):(\d+)>/);
+                if (m) return `<${m[0].startsWith('<a:') ? 'a:' : ':'}${m[1]}:${m[2]}>`;
+                return val;
+            }
+
+            const categoryEmojis = {
+                admin: resolveEmoji('crown', '👑'),
+                public: resolveEmoji('infocircle', 'ℹ️'),
+                giveaway: resolveEmoji('confetti', '🎉'),
+                ticket: resolveEmoji('ticket', '🎫'),
+                protection: resolveEmoji('shield', '🛡️'),
+                levels: resolveEmoji('chartpie', '📊'),
+                automation: resolveEmoji('settings', '⚙️'),
+                invite: resolveEmoji('mail', '✉️'),
+                greet: resolveEmoji('folder', '📁'),
+                economy: resolveEmoji('gift', '🎁'),
+                games: resolveEmoji('playerplay', '🎮'),
+                utils: resolveEmoji('adjustments', '🛠️'),
+                music: resolveEmoji('music_play', '🎵')
             };
 
             const arNames = {
@@ -128,9 +137,11 @@ module.exports = {
                 music: 'الموسيقى'
             };
 
+            const categoryEmoji = categoryEmojis[category] || '📁';
+
             const embed = new EmbedBuilder()
                 .setColor(0x2B2D31)
-                .setTitle(`${emojis[category] || '{emoji:folder}'} أوامر ${arNames[category] || category}`)
+                .setTitle(`${categoryEmoji} أوامر ${arNames[category] || category}`)
                 .setDescription(commandList.length > 0 ? commandList.join('\n') : 'لا توجد أوامر في هذا القسم حالياً')
                 .setThumbnail(interaction.client.user.displayAvatarURL())
                 .setFooter({ text: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })

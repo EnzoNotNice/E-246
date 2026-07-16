@@ -227,12 +227,16 @@ process.on('uncaughtException', err => {
 (async () => {
   try {
     const db = require('./database/db');
-    await db.connect();
+    try {
+      await db.connect();
+    } catch (error) {
+      console.error('⚠️ MongoDB connection failed, continuing without database:', error.message);
+    }
 
     require('./dashboard/server')(client);
     client.login(process.env.DISCORD_TOKEN);
   } catch (error) {
-    console.error('❌ Failed to start bot. Database connection error:', error);
+    console.error('❌ Failed to start bot:', error);
     process.exit(1);
   }
 })();

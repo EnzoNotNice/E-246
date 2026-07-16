@@ -9,14 +9,14 @@ module.exports = {
     .setDescription('عرض أوامر البوت'),
 
   async execute(interaction) {
-    const emojisJson = require('../../utils/emojis.json');
+    const emojisJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../../utils/emojis.json'), 'utf8'));
     
     function parseEmoji(emojiKey, fallbackId) {
       const emojiStr = emojisJson[emojiKey];
-      if (!emojiStr) return { id: fallbackId };
+      if (!emojiStr) return { name: '📁', id: fallbackId };
       const customMatch = emojiStr.match(/<a?:(\w+):(\d+)>/);
       if (customMatch) {
-        return { id: customMatch[2] };
+        return { name: customMatch[1], id: customMatch[2] };
       }
       return { name: emojiStr };
     }
@@ -72,7 +72,15 @@ module.exports = {
 
     const row = new ActionRowBuilder().addComponents(menu);
 
-    const dashboardEmoji = emojisJson.layoutdashboard || '{emoji:layoutdashboard}';
+    function resolveEmoji(key, fallback) {
+      const val = emojisJson[key];
+      if (!val) return fallback;
+      const m = val.match(/<a?:(\w+):(\d+)>/);
+      if (m) return `<${m[0].startsWith('<a:') ? 'a:' : ':'}${m[1]}:${m[2]}>`;
+      return val;
+    }
+
+    const dashboardEmoji = resolveEmoji('layoutdashboard', '📋');
 
     const embed = new EmbedBuilder()
       .setColor(0x2B2D31)
