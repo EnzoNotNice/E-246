@@ -162,7 +162,7 @@
 </main>
 
 <script>
-    const existingRoles = <%- settings.roles_data || '[]' %>;
+    const existingRoles = <%- JSON.stringify(settings.roles_data || []) %>;
     const serverRoles = <%- JSON.stringify(roles) %>;
 </script>
 

@@ -357,28 +357,28 @@ body {
     margin: 0 auto 12px;
 }
 
-/* Mobile Responsiveness */
+.mobile-navbar {
+    display: none;
+}
+
 @media (max-width: 768px) {
     body {
-        flex-direction: column;
-        overflow-x: hidden;
-        overflow-y: auto;
-        height: auto;
+        overflow: hidden;
+        height: 100vh;
     }
     
     .app-wrapper {
         flex-direction: column;
-        height: auto;
-        padding-top: 60px;
+        height: 100vh;
     }
 
     .mobile-navbar {
-        display: flex;
+        display: flex !important;
         justify-content: space-between;
         align-items: center;
         background: var(--bg-mid);
         border-bottom: 1px solid var(--glass-border);
-        padding: 10px 20px;
+        padding: 0 20px;
         position: fixed;
         top: 0;
         left: 0;
@@ -418,6 +418,7 @@ body {
         transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
         background: var(--bg-mid);
+        z-index: 99;
     }
 
     .app-sidebar.active {
@@ -425,9 +426,9 @@ body {
     }
 
     .app-content {
-        padding: 20px 15px;
-        height: auto;
-        overflow: visible;
+        padding: 80px 15px 20px;
+        height: 100vh;
+        overflow-y: auto;
         width: 100%;
     }
 
@@ -448,8 +449,4 @@ body {
         grid-template-columns: 1fr;
         gap: 15px;
     }
-}
-
-.mobile-navbar {
-    display: none;
 }

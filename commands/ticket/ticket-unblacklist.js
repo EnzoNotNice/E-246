@@ -21,7 +21,7 @@ module.exports = {
     const user = interaction.options.getUser('user');
     if (!user) {
       return interaction.reply({
-        content: '❌ يجب تحديد مستخدم',
+        content: '{emoji:circlex} يجب تحديد مستخدم',
         flags: ['Ephemeral']
       });
     }
@@ -33,7 +33,7 @@ module.exports = {
 
     if (!isBlacklisted) {
       return interaction.reply({
-        content: '❌ هذا المستخدم غير موجود في قائمة الحظر',
+        content: '{emoji:circlex} هذا المستخدم غير موجود في قائمة الحظر',
         flags: ['Ephemeral']
       });
     }
@@ -41,7 +41,7 @@ module.exports = {
     await db.removeTicketBlacklist(interaction.guild.id, user.id);
 
     return interaction.reply({
-      content: `✅ تم إزالة ${user.tag} من قائمة حظر التذاكر`,
+      content: `{emoji:circlecheck} تم إزالة ${user.tag} من قائمة حظر التذاكر`,
       flags: ['Ephemeral']
     });
   }

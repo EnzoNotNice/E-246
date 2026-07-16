@@ -129,6 +129,66 @@ module.exports = {
     if (interaction.isButton()) {
       const id = interaction.customId;
 
+      if (id === 'ticket_delete') {
+          const ticket = db.getTicketByChannel(interaction.channel.id);
+          if (!ticket) {
+              return interaction.reply({ content: '{emoji:circlex} لم يتم العثور على بيانات التذكرة', flags: ['Ephemeral'] });
+          }
+          
+          const settings = db.getTicketSettings(interaction.guild.id);
+          const staffRole = settings.staff_role;
+          const hasBypass = interaction.member.permissions.has('Administrator') || 
+                            (staffRole && interaction.member.roles.cache.has(staffRole));
+
+          if (!hasBypass) {
+              return interaction.reply({ content: '{emoji:circlex} هذا الإجراء مخصص لطاقم الدعم والإدارة فقط.', flags: ['Ephemeral'] });
+          }
+
+          await interaction.reply({ content: '{emoji:trash} سيتم حذف التذكرة نهائياً خلال 5 ثواني...' });
+          
+          setTimeout(async () => {
+              await interaction.channel.delete().catch(() => null);
+          }, 5000);
+          
+          await logTicket(
+              interaction.guild,
+              settings,
+              "{emoji:trash} Ticket Deleted",
+              `التذكرة: ${interaction.channel.name}\nحذفت بواسطة: ${interaction.user}`,
+              "#ef4444"
+          );
+          return;
+      }
+
+      if (id === 'ticket_reopen') {
+          const ticket = db.getTicketByChannel(interaction.channel.id);
+          if (!ticket) {
+              return interaction.reply({ content: '{emoji:circlex} لم يتم العثور على بيانات التذكرة', flags: ['Ephemeral'] });
+          }
+          
+          const settings = db.getTicketSettings(interaction.guild.id);
+          const staffRole = settings.staff_role;
+          const hasBypass = interaction.member.permissions.has('Administrator') || 
+                            (staffRole && interaction.member.roles.cache.has(staffRole));
+
+          if (!hasBypass) {
+              return interaction.reply({ content: '{emoji:circlex} هذا الإجراء مخصص لطاقم الدعم والإدارة فقط.', flags: ['Ephemeral'] });
+          }
+
+          db.updateTicketStatus(interaction.channel.id, 'open');
+          await interaction.channel.permissionOverwrites.edit(ticket.userId, { ViewChannel: true, SendMessages: true });
+
+          await interaction.reply({ content: '{emoji:tv_unlock} تم إعادة فتح التذكرة بنجاح' });
+          
+          await logTicket(
+              interaction.guild,
+              settings,
+              "{emoji:tv_unlock} Ticket Reopened",
+              `بواسطة: ${interaction.user}`
+          );
+          return;
+      }
+
       if (id.startsWith('box_')) {
         if (id === 'box_claimed') return;
 
@@ -819,7 +879,7 @@ if (blocked) {
 
     return interaction.reply({
         content:
-            "❌ أنت ممنوع من فتح التذاكر في هذا السيرفر",
+            "{emoji:circlex} أنت ممنوع من فتح التذاكر في هذا السيرفر",
         ephemeral: true
     });
 
@@ -827,7 +887,7 @@ if (blocked) {
 
 if (existing) {
     return interaction.reply({
-        content: `لديك تذكرة مفتوحة بالفعل: ${existing}`,
+        content: `{emoji:circlex} لديك تذكرة مفتوحة بالفعل: ${existing}`,
         ephemeral: true
     });
 }
@@ -1116,7 +1176,7 @@ else if(ticketStyle.type === "container") {
 
 await interaction.reply({
 
-content: `تم إنشاء التذكرة ${channel}`,
+content: `{emoji:circlecheck} تم إنشاء التذكرة ${channel}`,
 
 ephemeral: true
 
@@ -1125,7 +1185,7 @@ ephemeral: true
 await logTicket(
     interaction.guild,
     settings,
-    "📂 Ticket Opened",
+    "{emoji:folderopen} Ticket Opened",
     `المستخدم: ${interaction.user}
 القناة: ${channel}`
 );
@@ -1176,7 +1236,7 @@ if (interaction.customId === "claim_ticket") {
     await logTicket(
     interaction.guild,
     settings,
-    "📌 Ticket Claimed",
+    "{emoji:bell} Ticket Claimed",
     `الموظف: ${interaction.user}
 القناة: ${interaction.channel}`
 );
@@ -1190,12 +1250,12 @@ if (interaction.customId === "close_ticket") {
 
     if (!ticket)
         return interaction.reply({
-            content: "❌ لم يتم العثور على التذكرة",
+            content: "{emoji:circlex} لم يتم العثور على التذكرة",
             ephemeral: true
         });
 
     await interaction.reply({
-        content: "🔒 سيتم إغلاق التذكرة خلال 5 ثواني..."
+        content: "{emoji:lock} سيتم إغلاق التذكرة خلال 5 ثواني..."
     });
 
     const settings = await db.getTicketSettings(
@@ -1205,7 +1265,7 @@ if (interaction.customId === "close_ticket") {
     await logTicket(
     interaction.guild,
     settings,
-    "❌ Ticket Closed",
+    "{emoji:circlex} Ticket Closed",
     `بواسطة: ${interaction.user}`,
     "#ef4444"
 );
@@ -1233,7 +1293,7 @@ if (ticketOwner) {
 
         new ButtonBuilder()
         .setCustomId(
-            `rate_ticket_${ticket.channelId}`
+            `rate_ticket_${interaction.guild.id}_${ticket.channelId}`
         )
         .setLabel("⭐ تقييم الإدارة")
         .setStyle(ButtonStyle.Primary)
@@ -1243,7 +1303,7 @@ if (ticketOwner) {
     await ticketOwner.send({
 
         content:
-        "تم إغلاق تذكرتك، نرجو تقييم فريق الإدارة.",
+        "{emoji:star} تم إغلاق تذكرتك، نرجو تقييم فريق الإدارة.",
 
         components: [row]
 
@@ -1317,7 +1377,7 @@ if (action === "lock_ticket") {
     );
 
     return interaction.reply({
-        content: "🔒 تم قفل التذكرة",
+        content: "{emoji:lock} تم قفل التذكرة",
         ephemeral: false
     });
 }
@@ -1332,7 +1392,7 @@ if (action === "unlock_ticket") {
     );
 
     return interaction.reply({
-        content: "🔓 تم فتح التذكرة",
+        content: "{emoji:tv_unlock} تم فتح التذكرة",
         ephemeral: false
     });
 }
@@ -1368,20 +1428,20 @@ if (interaction.isModalSubmit()) {
 
         await interaction.channel.setName(newName);
 
+        const settings = await db.getTicketSettings(
+            interaction.guild.id
+        );
+        await logTicket(
+            interaction.guild,
+            settings,
+            "{emoji:tv_rename} Ticket Renamed",
+            `الاسم الجديد: ${newName}`
+        );
+
         return interaction.reply({
-            content: `✏️ تم تغيير اسم التذكرة إلى \`${newName}\``,
+            content: `{emoji:tv_rename} تم تغيير اسم التذكرة إلى \`${newName}\``,
             ephemeral: false
         });
-
-        const settings = await db.getTicketSettings(
-        interaction.guild.id
-    );
-        await logTicket(
-    interaction.guild,
-    settings,
-    "✏️ Ticket Renamed",
-    `الاسم الجديد: ${newName}`
-);
 
 
     }
@@ -1440,7 +1500,7 @@ if (interaction.customId === "add_member_modal") {
 
     if (!member) {
         return interaction.reply({
-            content: "❌ لم يتم العثور على العضو",
+            content: "{emoji:circlex} لم يتم العثور على العضو",
             ephemeral: true
         });
     }
@@ -1454,20 +1514,20 @@ if (interaction.customId === "add_member_modal") {
         }
     );
 
-    return interaction.reply({
-        content: `✅ تمت إضافة ${user.tag}`,
-        ephemeral: false
-    });
-const settings = await db.getTicketSettings(
+    const settings = await db.getTicketSettings(
         interaction.guild.id
     );
     await logTicket(
-    interaction.guild,
-    settings,
-    "👤 Member Added",
-    `العضو: @${user.tag}`
-);
+        interaction.guild,
+        settings,
+        "{emoji:user} Member Added",
+        `العضو: @${member.user.tag}`
+    );
 
+    return interaction.reply({
+        content: `{emoji:circlecheck} تمت إضافة ${member.user.tag}`,
+        ephemeral: false
+    });
 }
 
 if (interaction.customId === "remove_member_modal") {
@@ -1484,7 +1544,7 @@ if (interaction.customId === "remove_member_modal") {
 
     if (!member) {
         return interaction.reply({
-            content: "❌ لم يتم العثور على العضو",
+            content: "{emoji:circlex} لم يتم العثور على العضو",
             ephemeral: true
         });
     }
@@ -1495,7 +1555,7 @@ if (interaction.customId === "remove_member_modal") {
 
     if (ticket && ticket.userId === member.id) {
         return interaction.reply({
-            content: "❌ لا يمكن إزالة صاحب التذكرة",
+            content: "{emoji:circlex} لا يمكن إزالة صاحب التذكرة",
             ephemeral: true
         });
     }
@@ -1504,22 +1564,21 @@ if (interaction.customId === "remove_member_modal") {
         member.id
     );
 
-    return interaction.reply({
-        content: `✅ تمت إزالة ${user.tag}`,
-        ephemeral: false
-    });
-const settings = await db.getTicketSettings(
+    const settings = await db.getTicketSettings(
         interaction.guild.id
     );
     await logTicket(
-    interaction.guild,
-    settings,
-    "👤 Member Removed",
-    `العضو: @${user.tag}`,
-    "#ff9900"
-);
+        interaction.guild,
+        settings,
+        "{emoji:circlex} Member Removed",
+        `العضو: @${member.user.tag}`,
+        "#ff9900"
+    );
 
-
+    return interaction.reply({
+        content: `{emoji:circlex} تمت إزالة ${member.user.tag}`,
+        ephemeral: false
+    });
 }
 
 if (
@@ -1533,7 +1592,7 @@ if (
 
     if (!ticket)
         return interaction.reply({
-            content: "❌ لم يتم العثور على صاحب التذكرة",
+            content: "{emoji:circlex} لم يتم العثور على صاحب التذكرة",
             ephemeral: true
         });
 
@@ -1543,7 +1602,7 @@ if (
 
     if (!user)
         return interaction.reply({
-            content: "❌ تعذر الوصول للمستخدم",
+            content: "{emoji:circlex} تعذر الوصول للمستخدم",
             ephemeral: true
         });
 
@@ -1551,7 +1610,7 @@ if (
         embeds: [
             new EmbedBuilder()
             .setColor("Yellow")
-            .setTitle("📞 تم استدعاؤك")
+            .setTitle("{emoji:clock} تم استدعاؤك")
             .setDescription(
                 `يرجى التوجه إلى التذكرة:\n<#${interaction.channel.id}>`
             )
@@ -1559,7 +1618,7 @@ if (
     }).catch(() => null);
 
     return interaction.reply({
-        content: "✅ تم إرسال الاستدعاء للمستخدم",
+        content: "{emoji:circlecheck} تم إرسال الاستدعاء للمستخدم",
         ephemeral: true
     });
 }
@@ -1579,7 +1638,7 @@ if (
 
     if (!role)
         return interaction.reply({
-            content: "❌ لم يتم العثور على رتبة الدعم",
+            content: "{emoji:circlex} لم يتم العثور على رتبة الدعم",
             ephemeral: true
         });
 
@@ -1591,7 +1650,7 @@ if (
             embeds: [
                 new EmbedBuilder()
                 .setColor("Blue")
-                .setTitle("📞 استدعاء دعم")
+                .setTitle("{emoji:clock} استدعاء دعم")
                 .setDescription(
                     `تم طلب الدعم داخل:\n<#${interaction.channel.id}>`
                 )
@@ -1602,7 +1661,7 @@ if (
     }
 
     return interaction.reply({
-        content: `✅ تم استدعاء ${sent} من طاقم الدعم`,
+        content: `{emoji:circlecheck} تم استدعاء ${sent} من طاقم الدعم`,
         ephemeral: true
     });
 }
@@ -1622,7 +1681,7 @@ if (
 
     if (!role)
         return interaction.reply({
-            content: "❌ لم يتم العثور على رتبة الإدارة",
+            content: "{emoji:circlex} لم يتم العثور على رتبة الإدارة",
             ephemeral: true
         });
 
@@ -1634,7 +1693,7 @@ if (
             embeds: [
                 new EmbedBuilder()
                 .setColor("Red")
-                .setTitle("🚨 استدعاء إدارة")
+                .setTitle("{emoji:alerttriangle} استدعاء إدارة")
                 .setDescription(
                     `تم طلب الإدارة داخل:\n<#${interaction.channel.id}>`
                 )
@@ -1645,7 +1704,7 @@ if (
     }
 
     return interaction.reply({
-        content: `✅ تم استدعاء ${sent} من الإدارة`,
+        content: `{emoji:circlecheck} تم استدعاء ${sent} من الإدارة`,
         ephemeral: true
     });
 }
@@ -1694,7 +1753,7 @@ if (
 
         return interaction.reply({
             content:
-                "❌ المستخدم غير موجود",
+                "{emoji:circlex} المستخدم غير موجود",
             ephemeral: true
         });
 
@@ -1707,7 +1766,7 @@ if (
 
     await interaction.reply({
         content:
-            `🚫 تم حظر ${user.tag} من فتح التذاكر`,
+            `{emoji:circlex} تم حظر ${user.tag} من فتح التذاكر`,
         ephemeral: false
     });
 
@@ -1756,7 +1815,7 @@ if (interaction.customId === "warn_user_modal") {
 
     if (!user) {
         return interaction.reply({
-            content: "❌ المستخدم غير موجود",
+            content: "{emoji:circlex} المستخدم غير موجود",
             ephemeral: true
         });
     }
@@ -1777,7 +1836,7 @@ if (interaction.customId === "warn_user_modal") {
         embeds: [
             new EmbedBuilder()
                 .setColor("Orange")
-                .setTitle("⚠️ تحذير")
+                .setTitle("{emoji:alerttriangle} تحذير")
                 .setDescription(
                     `لقد تلقيت تحذيراً في ${interaction.guild.name}\n\nالسبب:\n${reason}`
                 )
@@ -1786,7 +1845,7 @@ if (interaction.customId === "warn_user_modal") {
 
     await interaction.reply({
         content:
-            `⚠️ تم تحذير ${user.tag}\nعدد التحذيرات: ${warnings.length}`,
+            `{emoji:alerttriangle} تم تحذير ${user.tag}\nعدد التحذيرات: ${warnings.length}`,
         ephemeral: false
     });
 
@@ -1796,7 +1855,7 @@ if (interaction.customId === "warn_user_modal") {
 await logTicket(
     interaction.guild,
     settings,
-    "⚠️ User Warned",
+    "{emoji:alerttriangle} User Warned",
     `المستخدم: @${user.tag}
 السبب: ${reason}`,
     "#f59e0b"
