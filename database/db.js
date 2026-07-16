@@ -21,6 +21,8 @@ const cache = {
   invite_logs: new Map(),
   tickets: [],
   ticket_settings: new Map(),
+  ticket_blacklist: [],
+  ticket_warnings: [],
   reaction_roles: new Map(),
   forms_settings: new Map(),
   captcha_settings: new Map(),
@@ -90,7 +92,8 @@ async function loadMongoCache() {
 
   const arrayCollections = [
     'warnings', 'automation', 'whitelist', 'blacklist', 'invite_ranks',
-    'tickets', 'auto_reply', 'reactroles', 'aliases', 'social_alerts'
+    'tickets', 'auto_reply', 'reactroles', 'aliases', 'social_alerts',
+    'ticket_blacklist', 'ticket_warnings'
   ];
 
   for (const col of mapCollections) {
@@ -232,7 +235,15 @@ function translateSql(opType, sql, args) {
 
   if (/UPDATE level_settings SET role_rewards = \? WHERE guildId = \?/i.test(cleanSql)) {
     const [role_rewards, guildId] = args;
-    const rewards = JSON.parse(role_rewards);
+    let rewards = role_rewards;
+    if (typeof role_rewards === 'string') {
+      try {
+        rewards = JSON.parse(role_rewards);
+      } catch {
+        rewards = [];
+      }
+    }
+    if (!Array.isArray(rewards)) rewards = [];
     let doc = cache.level_settings.get(guildId) || { guildId };
     doc.role_rewards = rewards;
     cache.level_settings.set(guildId, doc);
@@ -1267,4 +1278,5 @@ getTicketWarnings(guildId, userId) {
 
 helpers.stripId = stripId;
 helpers.safeSet = safeSet;
+helpers.prepare = (sql) => helpers.db.prepare(sql);
 module.exports = helpers;

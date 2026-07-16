@@ -1,6 +1,6 @@
 const locale = require('../../utils/locale');
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
-const { success, error } = require('../../utils/embeds');
+const { success } = require('../../utils/embeds');
 const db = require('../../database/db');
 
 module.exports = {
@@ -21,20 +21,22 @@ module.exports = {
     const feedbacksChannel = interaction.options.getChannel('feedbacks_channel');
     const ticketMsg = interaction.options.getString('ticket_message');
 
-    db.db.prepare(`
-      INSERT INTO ticket_settings (guildId, category_id, staff_role, log_channel, feedbacks_channel, ticket_message)
-      VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(guildId) DO UPDATE SET
-        category_id = ?, staff_role = ?,
-        log_channel = COALESCE(?, log_channel),
-        ticket_message = COALESCE(?, ticket_message)
-    `).run(
-      interaction.guildId, category.id, staffRole.id, logChannel?.id || null, feedbacksChannel?.id || null, ticketMsg || null,
-      category.id, staffRole.id, logChannel?.id || null, ticketMsg || null
-    );
+    const data = {
+      category_id: category.id,
+      staff_role: staffRole.id,
+    };
+    if (logChannel) data.log_channel = logChannel.id;
+    if (feedbacksChannel) data.feedbacks_channel = feedbacksChannel.id;
+    if (ticketMsg) data.ticket_message = ticketMsg;
+
+    await db.updateTicketSettings(interaction.guildId, data);
 
     return interaction.reply({
-      embeds: [success(locale.get('tickets.setupSuccess', { category: category.name, staffRole, logChannel: logChannel || 'غير محدد' }))]
+      embeds: [success(locale.get('tickets.setupSuccess', {
+        category: category.name,
+        staffRole,
+        logChannel: logChannel || 'غير محدد'
+      }))]
     });
   }
 };

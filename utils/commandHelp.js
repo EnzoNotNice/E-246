@@ -108,7 +108,6 @@ function buildCommandHelpEmbed(cmd, guildId, prefix = '#') {
         inline: false
       }
     )
-    .setFooter({ text: `اختصار أو ${prefix}${name} مع الوسائط لتشغيل الأمر` })
     .setTimestamp();
 
   return embed;

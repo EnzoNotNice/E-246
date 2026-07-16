@@ -27,8 +27,22 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
     const settings = db.getLevelSettings(interaction.guildId);
 
+    const parseRewards = (raw) => {
+      if (Array.isArray(raw)) return raw;
+      if (!raw) return [];
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
     if (sub === 'show') {
-      const rewards = JSON.parse(settings.role_rewards || '[]');
+      const rewards = parseRewards(settings.role_rewards);
       const rewardStr = rewards.length ? rewards.map(r => `المستوى **${r.level}** → <@&${r.roleId}>`).join('\n') : 'لا يوجد';
       const embed = new EmbedBuilder()
         .setColor(0xFFD700)
@@ -73,7 +87,10 @@ module.exports = {
     if (sub === 'reward') {
       const level = interaction.options.getInteger('level');
       const role = interaction.options.getRole('role');
-      const rewards = JSON.parse(settings.role_rewards || '[]').filter(r => r.level !== level);
+      if (!role) {
+        return interaction.reply({ embeds: [error(locale.get('general.noTarget') || 'الرتبة غير موجودة')], flags: ['Ephemeral'] });
+      }
+      const rewards = parseRewards(settings.role_rewards).filter(r => r.level !== level);
       rewards.push({ level, roleId: role.id });
       rewards.sort((a, b) => a.level - b.level);
       db.db.prepare('UPDATE level_settings SET role_rewards = ? WHERE guildId = ?').run(JSON.stringify(rewards), interaction.guildId);
@@ -82,7 +99,7 @@ module.exports = {
 
     if (sub === 'removereward') {
       const level = interaction.options.getInteger('level');
-      const rewards = JSON.parse(settings.role_rewards || '[]').filter(r => r.level !== level);
+      const rewards = parseRewards(settings.role_rewards).filter(r => r.level !== level);
       db.db.prepare('UPDATE level_settings SET role_rewards = ? WHERE guildId = ?').run(JSON.stringify(rewards), interaction.guildId);
       return interaction.reply({ embeds: [success(locale.get('levels.rewardRemoved', { level }))] });
     }

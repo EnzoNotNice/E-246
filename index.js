@@ -84,9 +84,17 @@ for (const dir of ACTIVE_COMMAND_DIRS) {
   for (const file of files) {
     const cmd = require(path.join(dirPath, file));
     if (cmd.data && cmd.execute) {
+      const name = cmd.data.name;
+      if (client.commands.has(name)) {
+        const existing = client.commands.get(name);
+        console.warn(
+          `[Commands] Duplicate slash name "/${name}" — skipping ${dir}/${file} (kept ${existing.category || '?'})`
+        );
+        continue;
+      }
       cmd.category = dir;
-      client.commands.set(cmd.data.name, cmd);
-      console.log(`Loaded slash: ${cmd.data.name} (${dir})`);
+      client.commands.set(name, cmd);
+      console.log(`Loaded slash: ${name} (${dir})`);
     }
   }
 }
@@ -95,7 +103,10 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 
 const commandsJson = [];
-for (const [_, cmd] of client.commands) {
+const seenDeployNames = new Set();
+for (const [name, cmd] of client.commands) {
+  if (seenDeployNames.has(name)) continue;
+  seenDeployNames.add(name);
   commandsJson.push(cmd.data.toJSON());
 }
 
@@ -110,14 +121,32 @@ async function deploySlashCommands(client) {
   const rest = new REST({ version: '10' }).setToken(token);
   const guildId = process.env.GUILD_ID?.trim();
 
-  const putGlobal = async () => {
-    await rest.put(Routes.applicationCommands(clientId), { body: commandsJson });
-    console.log(`[Deploy] Auto-deployed ${commandsJson.length} commands globally`);
+  const putGlobal = async (body) => {
+    await rest.put(Routes.applicationCommands(clientId), { body });
+    console.log(`[Deploy] Set ${body.length} global commands`);
   };
 
-  const putGuild = async (id) => {
-    await rest.put(Routes.applicationGuildCommands(clientId, id), { body: commandsJson });
-    console.log(`[Deploy] Auto-deployed ${commandsJson.length} commands to guild ${id}`);
+  const putGuild = async (id, body) => {
+    await rest.put(Routes.applicationGuildCommands(clientId, id), { body });
+    console.log(`[Deploy] Set ${body.length} guild commands for ${id}`);
+  };
+
+  const clearGuildCommands = async (id) => {
+    try {
+      await putGuild(id, []);
+    } catch (e) {
+      if (e.code !== 50001 && e.status !== 403) {
+        console.warn(`[Deploy] Could not clear guild ${id} commands:`, e.message || e);
+      }
+    }
+  };
+
+  const clearAllGuildCommands = async () => {
+    const guilds = client?.guilds?.cache;
+    if (!guilds?.size) return;
+    for (const id of guilds.keys()) {
+      await clearGuildCommands(id);
+    }
   };
 
   try {
@@ -125,23 +154,32 @@ async function deploySlashCommands(client) {
       const inGuild = client?.guilds?.cache?.has(guildId);
       if (!inGuild) {
         console.warn(`[Deploy] GUILD_ID=${guildId} is not a guild this bot is in — using global deploy`);
-        await putGlobal();
+        await putGlobal(commandsJson);
+        await clearAllGuildCommands();
         return;
       }
       try {
-        await putGuild(guildId);
+        await putGuild(guildId, commandsJson);
+        // Clear global so Discord does not show each command twice (guild + global)
+        await putGlobal([]);
+        for (const id of client.guilds.cache.keys()) {
+          if (id !== guildId) await clearGuildCommands(id);
+        }
       } catch (guildErr) {
         if (guildErr.code === 50001 || guildErr.status === 403) {
           console.warn(
             `[Deploy] Missing Access for guild ${guildId} (re-invite bot with scope applications.commands). Falling back to global.`
           );
-          await putGlobal();
+          await putGlobal(commandsJson);
+          await clearAllGuildCommands();
           return;
         }
         throw guildErr;
       }
     } else {
-      await putGlobal();
+      await putGlobal(commandsJson);
+      // Clear any leftover guild-scoped commands that cause duplicates in /
+      await clearAllGuildCommands();
     }
   } catch (error) {
     console.error('[Deploy] Failed to auto-deploy commands:', error.code || '', error.message || error);

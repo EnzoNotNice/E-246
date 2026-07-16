@@ -95,25 +95,27 @@ module.exports = {
         } catch (e) {
           console.error(e);
         }
-      } else {
-        let slashCmd = client.commands.get(commandName);
-        let runArgs = args;
+        return;
+      }
 
-        if (!slashCmd) {
-          const alias =
-            resolvedAlias ||
-            customAliases.find((a) => normalizeShort(a.shortcut) === commandName);
-          if (alias) {
-            const aliasParts = String(alias.command || '').replace(/^\//, '').trim().split(/ +/).filter(Boolean);
-            const mappedName = (aliasParts.shift() || '').toLowerCase();
-            slashCmd = client.commands.get(mappedName);
-            runArgs = [...aliasParts, ...args];
-          }
-        }
+      let slashCmd = client.commands.get(commandName);
+      let runArgs = args;
 
-        if (slashCmd) {
-          await runSlash(slashCmd, runArgs);
+      if (!slashCmd) {
+        const alias =
+          resolvedAlias ||
+          customAliases.find((a) => normalizeShort(a.shortcut) === commandName);
+        if (alias) {
+          const aliasParts = String(alias.command || '').replace(/^\//, '').trim().split(/ +/).filter(Boolean);
+          const mappedName = (aliasParts.shift() || '').toLowerCase();
+          slashCmd = client.commands.get(mappedName);
+          runArgs = [...aliasParts, ...args];
         }
+      }
+
+      if (slashCmd) {
+        await runSlash(slashCmd, runArgs);
+        return;
       }
     }
 
