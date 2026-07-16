@@ -8,3 +8,4 @@ database/*.db-shm
 npm-debug.log*
 .DS_Store
 enzo.txt
+scratch/
