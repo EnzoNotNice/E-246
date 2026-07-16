@@ -1,4 +1,16 @@
-const { EmbedBuilder, PermissionsBitField, ChannelType } = require('discord.js');
+const {
+    EmbedBuilder,
+    PermissionsBitField,
+    ChannelType,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    StringSelectMenuBuilder,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    UserSelectMenuBuilder
+} = require('discord.js');
 const locale = require('../utils/locale');
 const db = require('../database/db');
 const { error } = require('../utils/embeds');
@@ -840,19 +852,7 @@ async function replyError(interaction, msg) {
 
 
 
-const {
-    ChannelType,
-    PermissionsBitField,
-    EmbedBuilder,
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle,
-    StringSelectMenuBuilder,
-    ModalBuilder,
-    TextInputBuilder,
-    TextInputStyle,
-    UserSelectMenuBuilder
-} = require("discord.js");
+
 
 if (
     !interaction.isButton() &&
