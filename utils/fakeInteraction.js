@@ -6,9 +6,9 @@ async function createFakeInteraction(message, cmd, args) {
   
   const optionValues = {};
   let subcommandName = null;
-  let optionDefs = cmd.data.options || [];
+  const serialized = cmd.data.toJSON ? cmd.data.toJSON() : cmd.data;
+  let optionDefs = serialized.options || [];
 
-  
   if (args.length > 0) {
     const firstArg = args[0].toLowerCase();
     const subcommandOpt = optionDefs.find(opt => opt.type === 1 && opt.name.toLowerCase() === firstArg);

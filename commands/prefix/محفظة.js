@@ -3,7 +3,7 @@ const db = require('../../database/db');
 
 module.exports = {
   name: 'محفظة',
-  aliases: ['wallet'],
+  aliases: ['wallet', 'فلوس', 'balance', 'money'],
   async execute(message, args) {
     const guildSettings = db.getGuildSettings(message.guild.id);
     const bankChannelId = guildSettings ? guildSettings.bank_channel : null;
