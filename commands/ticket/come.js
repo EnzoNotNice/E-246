@@ -31,12 +31,13 @@ module.exports = {
       )
       .setTimestamp();
 
+    const emojis = require('../../utils/emojis.json');
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setLabel('الدخول السريع')
         .setStyle(ButtonStyle.Link)
         .setURL(channelLink)
-        .setEmoji({ id: '1519212195945119814', name: 'ticket' })
+        .setEmoji(emojis.ticket || '<:ticket:1525592573039743097>')
     );
 
     const dmEmbed = new EmbedBuilder()

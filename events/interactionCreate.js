@@ -9,12 +9,14 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
-    UserSelectMenuBuilder
+    UserSelectMenuBuilder,
+    AttachmentBuilder
 } = require('discord.js');
 const locale = require('../utils/locale');
 const db = require('../database/db');
 const { error } = require('../utils/embeds');
-const discordTranscripts = require("discord-html-transcripts")
+const discordTranscripts = require("discord-html-transcripts");
+const logTicket = require("../utils/ticketlogger");
 
 module.exports = {
   name: 'interactionCreate',
@@ -225,7 +227,7 @@ module.exports = {
         const hostId = parts[1];
         const prize = decodeURIComponent(parts.slice(3).join('_'));
 
-        const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        
         const disabledRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId('box_claimed').setLabel('تم الاستلام').setEmoji('1519212237317865553').setStyle(ButtonStyle.Secondary).setDisabled(true)
         );
@@ -282,7 +284,7 @@ module.exports = {
             return interaction.reply({ content: locale.get('forms.noQuestions'), flags: ['Ephemeral'] });
         }
 
-        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+        
         const modal = new ModalBuilder()
             .setCustomId('form_submit')
             .setTitle(locale.get('forms.modalTitle').substring(0, 45));
@@ -313,7 +315,7 @@ module.exports = {
         embed.setColor(isAccept ? 0x57F287 : 0xED4245);
         embed.setFooter({ text: isAccept ? locale.get('forms.panelAccepted', { user: interaction.user.tag }) : locale.get('forms.panelRejected', { user: interaction.user.tag }) });
 
-        const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        
         const acceptBtn = locale.getButton('buttons.formAccept');
         const rejectBtn = locale.getButton('buttons.formReject');
 
@@ -353,8 +355,8 @@ module.exports = {
         await interaction.deferUpdate();
 
         const row = interaction.message.components[0];
-        const newComponents = row.components.map(c => require('discord.js').ButtonBuilder.from(c).setDisabled(true));
-        const disabledRow = new (require('discord.js').ActionRowBuilder)().addComponents(newComponents);
+        const newComponents = row.components.map(c => ButtonBuilder.from(c).setDisabled(true));
+        const disabledRow = new ActionRowBuilder().addComponents(newComponents);
         await interaction.editReply({ content: locale.get('broadcast.starting'), components: [disabledRow] });
 
         let members = await interaction.guild.members.fetch({ withPresences: true }).catch(() => null);
@@ -475,7 +477,7 @@ module.exports = {
             ctx.restore();
         }
 
-        const { AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        
         const attachment = new AttachmentBuilder(canvas.toBuffer(), { name: 'captcha.png' });
 
         const ansBtn = locale.getButton('buttons.captchaAnswer');
@@ -496,7 +498,7 @@ module.exports = {
       /*9*/
 
       if (id === 'verify_answer') {
-        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+        
         const modal = new ModalBuilder()
             .setCustomId('verify_submit')
             .setTitle(locale.get('captcha.modalTitle').substring(0, 45));
@@ -572,7 +574,7 @@ module.exports = {
         }
 
         if (id === 'tv_limit') {
-          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+          
           const modal = new ModalBuilder().setCustomId(`tv_modal_limit_${channelId}`).setTitle('تحديد عدد الأشخاص');
           const input = new TextInputBuilder().setCustomId('limit_input').setLabel('العدد (0 مفتوح، الحد الأقصى 99)').setStyle(TextInputStyle.Short).setRequired(true);
           modal.addComponents(new ActionRowBuilder().addComponents(input));
@@ -580,7 +582,7 @@ module.exports = {
         }
 
         if (id === 'tv_rename') {
-          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+          
           const modal = new ModalBuilder().setCustomId(`tv_modal_rename_${channelId}`).setTitle('تغيير اسم الغرفة');
           const input = new TextInputBuilder().setCustomId('rename_input').setLabel('الاسم الجديد').setStyle(TextInputStyle.Short).setRequired(true);
           modal.addComponents(new ActionRowBuilder().addComponents(input));
@@ -588,7 +590,7 @@ module.exports = {
         }
 
         if (id === 'tv_kick') {
-          const { UserSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+          
           const select = new UserSelectMenuBuilder()
             .setCustomId(`tv_select_kick_${channelId}`)
             .setPlaceholder('اختر الشخص لطرده من الروم')
@@ -598,7 +600,7 @@ module.exports = {
         }
 
         if (id === 'tv_trust') {
-          const { UserSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+          
           const select = new UserSelectMenuBuilder()
             .setCustomId(`tv_select_trust_${channelId}`)
             .setPlaceholder('اختر الشخص لإضافته أو إزالته كمسؤول مساعد')
@@ -608,7 +610,7 @@ module.exports = {
         }
 
         if (id === 'tv_ban') {
-          const { UserSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+          
           const select = new UserSelectMenuBuilder()
             .setCustomId(`tv_select_ban_${channelId}`)
             .setPlaceholder('اختر الشخص لحظره أو إلغاء حظره')
@@ -676,7 +678,7 @@ module.exports = {
                 embed.addFields({ name: field.customId.replace('question_', 'س '), value: field.value || 'لا يوجد' });
             });
 
-            const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+            
             const acceptBtn = locale.getButton('buttons.formAccept');
             const rejectBtn = locale.getButton('buttons.formReject');
 
@@ -696,7 +698,7 @@ module.exports = {
             if (!global.bcCache) global.bcCache = new Map();
             global.bcCache.set(bcKey, message);
 
-            const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+            
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId('bc_send_online').setLabel(locale.get('broadcast.btnOnline')).setEmoji('1519212246876557413').setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder().setCustomId('bc_send_offline').setLabel(locale.get('broadcast.btnOffline')).setEmoji('1519212245559672914').setStyle(ButtonStyle.Secondary),
@@ -838,7 +840,7 @@ module.exports = {
    //-------------------------------//
 
 
-   const logTicket = require("../utils/ticketlogger");
+   // logTicket is imported at top of file
 
 
    function getTicket(interaction) {
@@ -1084,28 +1086,7 @@ for (const menu of panelData.custom_menus || []) {
     );
 }
 
-for (const menu of panelData.custom_menus || []) {
 
-    if (!menu.options?.length) continue;
-
-    rows.push(
-        new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId(`custom_menu_${rows.length}`)
-                .setPlaceholder(
-                    menu.placeholder || "اختر"
-                )
-                .addOptions(
-                    menu.options.map((o, i) => ({
-                        label: o.label || `Option ${i + 1}`,
-                        value: `custom_option_${i}`,
-                        description: o.description || undefined,
-                        emoji: o.emoji || undefined
-                    }))
-                )
-        )
-    );
-}
 
 
 
@@ -1189,6 +1170,24 @@ else if(ticketStyle.type === "container") {
 
 }
 
+else {
+    const content = (settings.ticket_message || 'شكراً لفتح تذكرة! سيقوم الدعم بمساعدتك قريباً.')
+        .replaceAll("{user}", `<@${interaction.user.id}>`)
+        .replaceAll("{user_tag}", interaction.user.tag)
+        .replaceAll("{server}", interaction.guild.name)
+        .replaceAll("{ticket}", channel.name);
+
+    const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle("تذكرة جديدة")
+        .setDescription(content);
+
+    await channel.send({
+        content: `<@${interaction.user.id}> - <@&${settings.staff_role}>`,
+        embeds: [embed],
+        components: rows
+    });
+}
 
 
 await interaction.reply({
@@ -1297,6 +1296,14 @@ await discordTranscripts.createTranscript(
     }
 );
 
+const logCh = interaction.guild.channels.cache.get(settings.log_channel);
+if (logCh) {
+    await logCh.send({
+        content: `📂 **سجل التذكرة المغلقة:** \`${interaction.channel.name}\``,
+        files: [attachment]
+    }).catch(console.error);
+}
+
 const ticketOwner =
 await interaction.client.users
 .fetch(ticket.userId)
@@ -1371,6 +1378,12 @@ const ticket = db.getTicketByChannel(interaction.channel.id);
 
 const ticketActions = ["lock_ticket", "unlock_ticket", "rename_ticket", "add_member", "remove_member", "blacklist_user", "warn_user"];
 if (action && ticketActions.includes(action)) {
+    if (!ticket) {
+        return interaction.reply({
+            content: "{emoji:circlex} لم يتم العثور على بيانات التذكرة.",
+            ephemeral: true
+        });
+    }
     const settings = db.getTicketSettings(interaction.guild.id);
     const staffRole = settings.staff_role;
     const hasBypass = interaction.member.permissions.has('Administrator') || 
@@ -1391,7 +1404,7 @@ if (action === "lock_ticket") {
         {
             SendMessages: false
         }
-    );
+    ).catch(() => null);
 
     return interaction.reply({
         content: "{emoji:lock} تم قفل التذكرة",
@@ -1406,7 +1419,7 @@ if (action === "unlock_ticket") {
         {
             SendMessages: true
         }
-    );
+    ).catch(() => null);
 
     return interaction.reply({
         content: "{emoji:tv_unlock} تم فتح التذكرة",
@@ -1886,12 +1899,7 @@ if (
     interaction.customId.startsWith("rate_ticket_")
 ) {
 
-    const {
-        ModalBuilder,
-        TextInputBuilder,
-        TextInputStyle,
-        ActionRowBuilder
-    } = require("discord.js");
+    
 
     const modal = new ModalBuilder()
         .setCustomId(interaction.customId)

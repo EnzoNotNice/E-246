@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { PermissionsBitField, EmbedBuilder } = require('discord.js');
+const { PermissionsBitField, EmbedBuilder, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 const db = require('../../database/db');
 const os = require('os');
 const fs = require('fs');
@@ -136,7 +136,6 @@ module.exports = (client) => {
         const emojiSetup = require('../../utils/emojiSetup');
         emojiSetup(client).catch(console.error);
         
-        const { ActivityType } = require('discord.js');
         const actType = ActivityType[activity_type] || ActivityType.Playing;
 
         client.user.setPresence({
@@ -446,50 +445,56 @@ console.log("PANEL:", panelData);
             panel_data: panelData
         });
 
-        try {
+        if (b.send_panel === 'yes' && b.panel_channel) {
+            try {
+                const pChannel = req.guild.channels.cache.get(b.panel_channel);
+                if (pChannel) {
+                    const hexColor = panelData.color ? panelData.color.replace('#', '') : '5865F2';
+                    const colorInt = parseInt(hexColor, 16) || 0x5865F2;
 
-    if (b.panel_channel) {
+                    const embed = new EmbedBuilder()
+                        .setColor(colorInt)
+                        .setTitle(panelData.title || "تذاكر الدعم")
+                        .setDescription(
+                            panelData.description ||
+                            "اضغط أدناه لفتح تذكرة"
+                        );
 
-        const pChannel = req.guild.channels.cache.get(b.panel_channel);
+                    if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
+                    if (panelData.image) embed.setImage(panelData.image);
 
-        if (pChannel) {
+                    const row = new ActionRowBuilder();
+                    
+                    if (panelData.comp_type === 'select') {
+                        row.addComponents(
+                            new StringSelectMenuBuilder()
+                                .setCustomId("ticket_create_select")
+                                .setPlaceholder(panelData.label || "افتح تذكرة")
+                                .addOptions({
+                                    label: panelData.label || "افتح تذكرة",
+                                    value: "create_ticket",
+                                    emoji: panelData.emoji || "🎫"
+                                })
+                        );
+                    } else {
+                        row.addComponents(
+                            new ButtonBuilder()
+                                .setCustomId("ticket_create_btn")
+                                .setLabel(panelData.label || "فتح تذكرة")
+                                .setEmoji(panelData.emoji || "🎫")
+                                .setStyle(ButtonStyle.Primary)
+                        );
+                    }
 
-            const {
-                EmbedBuilder,
-                ActionRowBuilder,
-                ButtonBuilder,
-                ButtonStyle
-            } = require("discord.js");
-
-            const embed = new EmbedBuilder()
-                .setColor(0x5865F2)
-                .setTitle(panelData.title || "تذاكر الدعم")
-                .setDescription(
-                    panelData.description ||
-                    "اضغط على الزر أدناه لفتح تذكرة"
-                );
-
-            const row = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId("ticket_create_btn")
-                        .setLabel(panelData.label || "فتح تذكرة")
-                        .setEmoji(panelData.emoji || "🎫")
-                        .setStyle(ButtonStyle.Primary)
-                );
-
-            await pChannel.send({
-                embeds: [embed],
-                components: [row]
-            });
-
+                    await pChannel.send({
+                        embeds: [embed],
+                        components: [row]
+                    });
+                }
+            } catch(err) {
+                console.error("Ticket Panel Error:", err);
+            }
         }
-
-    }
-
-} catch(err) {
-    console.error("Ticket Panel Error:", err);
-}
 
         res.redirect(
             `/dashboard/${req.guild.id}/tickets?success=تم+حفظ+الإعدادات`
@@ -596,7 +601,6 @@ console.log("PANEL:", panelData);
                     if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
                     if (panelData.image) embed.setImage(panelData.image);
 
-                    const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
                     const parsedRoles = JSON.parse(rolesData);
                     const components = [];
 
@@ -694,7 +698,6 @@ console.log("PANEL:", panelData);
                     if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
                     if (panelData.image) embed.setImage(panelData.image);
 
-                    const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
                     const row = new ActionRowBuilder().addComponents(
                         new ButtonBuilder()
                             .setCustomId('form_apply_btn')
@@ -759,8 +762,6 @@ console.log("PANEL:", panelData);
                         .setColor(parseInt(panelData.color.replace('#', ''), 16))
                         .setTitle(panelData.title.substring(0, 256))
                         .setDescription(panelData.description.substring(0, 4096));
-
-                    const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
                     const btn = new ButtonBuilder()
                         .setCustomId('verify_start')

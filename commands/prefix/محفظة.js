@@ -16,7 +16,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setTitle('{emoji:briefcase} الحساب البنكي')
-      .setDescription(`مرحباً <@${userId}>، إليك رصيدك المالي الحالي:\n\n💸 **الرصيد الكلي:** \`$${userBalance.toLocaleString()}\``)
+      .setDescription(`مرحباً <@${userId}>، إليك رصيدك المالي الحالي:\n\n{emoji:gift} **الرصيد الكلي:** \`$${userBalance.toLocaleString()}\``)
       .setColor(0x8C52FF)
       .setTimestamp();
 

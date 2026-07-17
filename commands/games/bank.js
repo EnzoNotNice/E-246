@@ -152,8 +152,8 @@ module.exports = {
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
-            .setTitle('💳 الحساب البنكي')
-            .setDescription(`مرحباً <@${userId}>، إليك رصيدك المالي الحالي:\n\n💸 **الرصيد الكلي:** \`$${userBalance.toLocaleString()}\``)
+            .setTitle('{emoji:briefcase} الحساب البنكي')
+            .setDescription(`مرحباً <@${userId}>، إليك رصيدك المالي الحالي:\n\n{emoji:gift} **الرصيد الكلي:** \`$${userBalance.toLocaleString()}\``)
             .setColor(0x8C52FF)
             .setTimestamp()
         ]
@@ -212,7 +212,7 @@ module.exports = {
       await db.setKV(`balance_${targetUser.id}`, targetBalance);
 
       return interaction.reply({
-        content: `💸 تم تحويل **$${netAmount.toLocaleString()}** إلى <@${targetUser.id}> بعد خصم ضريبة تحويل 20% بقيمة **$${tax.toLocaleString()}**.`
+        content: `{emoji:gift} تم تحويل **$${netAmount.toLocaleString()}** إلى <@${targetUser.id}> بعد خصم ضريبة تحويل 20% بقيمة **$${tax.toLocaleString()}**.`
       });
     }
 
@@ -275,12 +275,12 @@ module.exports = {
 
       if (action === 'list') {
         const embed = new EmbedBuilder()
-          .setTitle('💼 قائمة الوظائف المتاحة')
+          .setTitle('{emoji:briefcase} قائمة الوظائف المتاحة')
           .setDescription('شراء الوظائف ذات التكلفة الأعلى يمنحك راتباً يومياً أكبر!')
           .setColor(0x8C52FF);
 
         for (const job of jobTitles) {
-          embed.addFields({ name: `💼 وظيفة: ${job.name}`, value: `💵 التكلفة: **$${job.cost.toLocaleString()}** | 📈 الراتب اليومي: **$${job.salary.toLocaleString()}**` });
+          embed.addFields({ name: `{emoji:briefcase} وظيفة: ${job.name}`, value: `{emoji:gift} التكلفة: **$${job.cost.toLocaleString()}** | {emoji:chartpie} الراتب اليومي: **$${job.salary.toLocaleString()}**` });
         }
 
         return interaction.reply({ embeds: [embed] });
@@ -325,7 +325,7 @@ module.exports = {
       await db.setKV(`loan_repay_${userId}`, Date.now() + 3600000);
 
       return interaction.reply({
-        content: `🏦 تم منحك قرض بقيمة **$${loanAmount.toLocaleString()}** وتم إيداع المبلغ بحسابك.\nيجب عليك سداد القرض قبل انقضاء ساعة واحدة لتفادي الخصم التلقائي.`
+        content: `{emoji:briefcase} تم منحك قرض بقيمة **$${loanAmount.toLocaleString()}** وتم إيداع المبلغ بحسابك.\nيجب عليك سداد القرض قبل انقضاء ساعة واحدة لتفادي الخصم التلقائي.`
       });
     }
 
@@ -345,7 +345,7 @@ module.exports = {
       await db.deleteKV(`loan_repay_${userId}`);
 
       return interaction.reply({
-        content: `🏦 تم تسديد القرض البنكي بقيمة **$${outstandingLoan.toLocaleString()}** بالكامل بنجاح.`
+        content: `{emoji:circlecheck} تم تسديد القرض البنكي بقيمة **$${outstandingLoan.toLocaleString()}** بالكامل بنجاح.`
       });
     }
 
@@ -383,8 +383,8 @@ module.exports = {
 
       return interaction.reply({
         content: isWin
-          ? `📈 استثمار ناجح! لقد ربحت **$${diff.toLocaleString()}** من استثمارات البورصة اليوم.`
-          : `📉 استثمار خاسر! فقدت **$${diff.toLocaleString()}** من استثمارات البورصة اليوم.`
+          ? `{emoji:chartpie} استثمار ناجح! لقد ربحت **$${diff.toLocaleString()}** من استثمارات البورصة اليوم.`
+          : `{emoji:circlex} استثمار خاسر! فقدت **$${diff.toLocaleString()}** من استثمارات البورصة اليوم.`
       });
     }
 
@@ -422,8 +422,8 @@ module.exports = {
 
       return interaction.reply({
         content: isWin
-          ? `📈 تداول ناجح! حققت ربح تداول بقيمة **$${diff.toLocaleString()}**.`
-          : `📉 تداول خاسر! خسرت من التداولات بقيمة **$${diff.toLocaleString()}**.`
+          ? `{emoji:chartpie} تداول ناجح! حققت ربح تداول بقيمة **$${diff.toLocaleString()}**.`
+          : `{emoji:circlex} تداول خاسر! خسرت من التداولات بقيمة **$${diff.toLocaleString()}**.`
       });
     }
 
@@ -447,7 +447,7 @@ module.exports = {
         await db.setKV(`user_houses_${userId}`, userHouses + 1);
 
         return interaction.reply({
-          content: `🏠 مبروك! لقد اشتريت منزلاً جديداً بنجاح.\nعدد منازلك الحالية: **${userHouses + 1}/5** (تمنحك المنازل دخلاً إضافياً مع كل راتب).`
+          content: `{emoji:circlecheck} مبروك! لقد اشتريت منزلاً جديداً بنجاح.\nعدد منازلك الحالية: **${userHouses + 1}/5** (تمنحك المنازل دخلاً إضافياً مع كل راتب).`
         });
       }
 
@@ -476,14 +476,14 @@ module.exports = {
         await db.setKV(`company_${compId}_owner`, userId);
 
         return interaction.reply({
-          content: `🏢 مبروك! لقد اشتريت شركة **${comp.name}** بنجاح.\nستحصد أرباح هذه الشركة يومياً مع كشف الراتب.`
+          content: `{emoji:circlecheck} مبروك! لقد اشتريت شركة **${comp.name}** بنجاح.\nستحصد أرباح هذه الشركة يومياً مع كشف الراتب.`
         });
       }
     }
 
     if (subcommand === 'companies') {
       const embed = new EmbedBuilder()
-        .setTitle('🏢 دليل الشركات الاستثمارية')
+        .setTitle('{emoji:briefcase} دليل الشركات الاستثمارية')
         .setDescription('تمنحك الشركات دخلاً هائلاً ولكن بتكلفة شراء عالية!')
         .setColor(0x8C52FF);
 
@@ -492,7 +492,7 @@ module.exports = {
         const ownerMention = owner ? `<@${owner}>` : 'لا يوجد مالك';
         embed.addFields({
           name: `${comp.id}. ${comp.name}`,
-          value: `💰 السعر: **$${comp.price.toLocaleString()}** | 📈 الدخل اليومي: **$${comp.rent.toLocaleString()}**\n👑 المالك الحالي: ${ownerMention}`
+          value: `{emoji:gift} السعر: **$${comp.price.toLocaleString()}** | {emoji:chartpie} الدخل اليومي: **$${comp.rent.toLocaleString()}**\n{emoji:crown} المالك الحالي: ${ownerMention}`
         });
       }
 
@@ -533,8 +533,8 @@ module.exports = {
 
       return interaction.reply({
         content: isWin
-          ? `🎉 مبروك! فزت بالمقامرة وربحت **$${diff.toLocaleString()}**.\nرصيدك الحالي هو **$${userBalance.toLocaleString()}**.`
-          : `💀 للأسف! خسرت المقامرة وفقدت مبلغ الرهان بالكامل **$${diff.toLocaleString()}**.\nرصيدك الحالي هو **$${userBalance.toLocaleString()}**.`
+          ? `{emoji:confetti} مبروك! فزت بالمقامرة وربحت **$${diff.toLocaleString()}**.\nرصيدك الحالي هو **$${userBalance.toLocaleString()}**.`
+          : `{emoji:circlex} للأسف! خسرت المقامرة وفقدت مبلغ الرهان بالكامل **$${diff.toLocaleString()}**.\nرصيدك الحالي هو **$${userBalance.toLocaleString()}**.`
       });
     }
 
@@ -572,7 +572,7 @@ module.exports = {
       await db.setKV(cooldownKey, now);
 
       return interaction.reply({
-        content: `🎲 رميت النرد وحصلت على الرقم **${roll}**!\n\n${isWin ? `🎉 فزت! ربحت **$${diff.toLocaleString()}**.` : `💀 خسرت! فقدت **$${diff.toLocaleString()}**.`}\nرصيدك الحالي هو **$${userBalance.toLocaleString()}**.`
+        content: `{emoji:playerplay} رميت النرد وحصلت على الرقم **${roll}**!\n\n${isWin ? `{emoji:confetti} فزت! ربحت **$${diff.toLocaleString()}**.` : `{emoji:circlex} خسرت! فقدت **$${diff.toLocaleString()}**.`}\nرصيدك الحالي هو **$${userBalance.toLocaleString()}**.`
       });
     }
 
@@ -610,7 +610,7 @@ module.exports = {
       await db.setKV(cooldownKey, now);
 
       return interaction.reply({
-        content: `🪙 رميت العملة المعدنية واستقرت على الـ **${side}**!\n\n${isWin ? `🎉 فزت! ربحت **$${diff.toLocaleString()}**.` : `💀 خسرت! فقدت **$${diff.toLocaleString()}**.`}\nرصيدك الحالي هو **$${userBalance.toLocaleString()}**.`
+        content: `{emoji:playerplay} رميت العملة المعدنية واستقرت على الـ **${side}**!\n\n${isWin ? `{emoji:confetti} فزت! ربحت **$${diff.toLocaleString()}**.` : `{emoji:circlex} خسرت! فقدت **$${diff.toLocaleString()}**.`}\nرصيدك الحالي هو **$${userBalance.toLocaleString()}**.`
       });
     }
 
@@ -655,7 +655,7 @@ module.exports = {
         await db.setKV(cooldownKey, now);
 
         return interaction.reply({
-          content: `💰 نجحت محاولة السرقة! لقد نهبت **$${stolen.toLocaleString()}** من حساب <@${targetUser.id}>.`
+          content: `{emoji:gift} نجحت محاولة السرقة! لقد نهبت **$${stolen.toLocaleString()}** من حساب <@${targetUser.id}>.`
         });
       } else {
         const fine = Math.min(5000, Math.floor(userBalance * 0.10));
@@ -665,7 +665,7 @@ module.exports = {
         await db.setKV(cooldownKey, now);
 
         return interaction.reply({
-          content: `🚨 تم القبض عليك أثناء محاولة السرقة! وقامت الشرطة بفرض غرامة عليك بقيمة **$${fine.toLocaleString()}**.`
+          content: `{emoji:alerttriangle} تم القبض عليك أثناء محاولة السرقة! وقامت الشرطة بفرض غرامة عليك بقيمة **$${fine.toLocaleString()}**.`
         });
       }
     }
@@ -711,7 +711,7 @@ module.exports = {
         .setTimestamp();
 
       topUsers.forEach((user, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '👤';
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '{emoji:user}';
         embed.addFields({ name: `${medal} المركز ${index + 1}`, value: `<@${user.userId}> - **$${user.balance.toLocaleString()}**` });
       });
 

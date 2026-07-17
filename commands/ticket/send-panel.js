@@ -31,8 +31,8 @@ module.exports = {
 
     const emojis = require('../../utils/emojis.json');
     const button = new ButtonBuilder()
-      .setCustomId('ticket_create')
-      .setLabel('افتح تذكرة').setEmoji(emojis.mail || '1519212229445029971')
+      .setCustomId('ticket_create_btn')
+      .setLabel('افتح تذكرة').setEmoji(emojis.mail || '<:mail:1525592275218731059>')
       .setStyle(ButtonStyle.Primary);
 
     const row = new ActionRowBuilder().addComponents(button);

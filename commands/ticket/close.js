@@ -22,8 +22,8 @@ module.exports = {
 
     const emojis = require('../../utils/emojis.json');
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('ticket_delete').setLabel('حذف').setEmoji(emojis.trash || '1519212192912637962').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId('ticket_reopen').setLabel('إعادة فتح').setEmoji(emojis.lock || '1519212231332593785').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('ticket_delete').setLabel('حذف').setEmoji(emojis.trash || '<:trash:1525592579427795145>').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId('ticket_reopen').setLabel('إعادة فتح').setEmoji(emojis.lock || '<:lock:1525592267488759909>').setStyle(ButtonStyle.Secondary),
     );
 
     const embed = new EmbedBuilder()
