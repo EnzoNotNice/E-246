@@ -117,7 +117,9 @@ async function loadMongoCache() {
 
 async function connect() {
   await client.connect();
-  mongoDb = client.db();
+  const dbName = client.options?.dbName || client.options?.databaseName || mongoUri.split('/').pop().split('?')[0] || 'e246';
+  mongoDb = client.db(dbName);
+  if (!mongoDb) throw new Error('MongoDB client.db() returned null — check your connection string');
   console.log('✅ [MongoDB] Connected successfully to database');
   
   // Auto-delete message cache entries after 3 days (259200 seconds) to save database space
@@ -127,6 +129,7 @@ async function connect() {
 }
 
 function translateSql(opType, sql, args) {
+  if (!mongoDb) { console.error('[DB] translateSql called before MongoDB was connected'); return opType === 'get' ? null : { changes: 0 }; }
   const cleanSql = sql.replace(/\s+/g, ' ').trim();
 
   if (/UPDATE log_settings SET (\w+) = \? WHERE guildId = \?/i.test(cleanSql)) {
