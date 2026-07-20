@@ -1,79 +1,139 @@
 <%- include('partials/header') %>
-
 <%- include('partials/sidebar', { guild, activeTab: 'stats' }) %>
 
 <main class="app-content">
     <div class="content-header">
-        <h1><i class="fa-solid fa-chart-column"></i> الإحصائيات (Leaderboard)</h1>
-        <p>استعرض أكثر الأعضاء تفاعلاً بالرسائل الصوت والريأكشن في سيرفرك</p>
+        <h1><i class="fa-solid fa-chart-column"></i> إحصائيات التفاعل (Leaderboard)</h1>
+        <p>استعرض متصدري التفاعل بالرسائل، التواجد الصوتي، والريأكشن في سيرفرك</p>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
-        
+    <!-- Overview Counters -->
+    <div class="bento-grid cols-4 reveal">
+        <div class="metric-card">
+            <div class="metric-icon"><i class="fa-solid fa-message text-primary"></i></div>
+            <div class="metric-value" data-count="<%= (topMessages && topMessages.length) || 0 %>"><%= (topMessages && topMessages.length) || 0 %></div>
+            <div class="metric-label">المتفاعلون بالرسائل</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon"><i class="fa-solid fa-microphone-lines text-success"></i></div>
+            <div class="metric-value" data-count="<%= (topVoice && topVoice.length) || 0 %>"><%= (topVoice && topVoice.length) || 0 %></div>
+            <div class="metric-label">المتفاعلون بالصوت</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon"><i class="fa-solid fa-face-smile text-warning"></i></div>
+            <div class="metric-value" data-count="<%= (topReactions && topReactions.length) || 0 %>"><%= (topReactions && topReactions.length) || 0 %></div>
+            <div class="metric-label">المتفاعلون بالريأكشن</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-icon"><i class="fa-solid fa-users text-muted"></i></div>
+            <div class="metric-value" data-count="<%= (topMessages && topMessages.length) || 0 %>"><%= (topMessages && topMessages.length) || 0 %></div>
+            <div class="metric-label">إجمالي المسجلين باللوحة</div>
+        </div>
+    </div>
+
+    <div class="grid-3col reveal" style="animation-delay: 0.1s;">
+
         <!-- Messages Leaderboard -->
         <div class="glass-panel">
-            <h3 style="color: var(--primary); margin-bottom: 15px;"><i class="fa-solid fa-message"></i> أكثر الأعضاء إرسالاً للرسائل</h3>
-            <ul style="list-style: none; padding: 0;">
+            <div class="section-title"><i class="fa-solid fa-message text-primary"></i> متصدرو الكتابة</div>
+            <div class="leaderboard-list">
                 <% if (topMessages && topMessages.length > 0) { %>
                     <% topMessages.forEach((user, index) => { %>
-                        <li style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.05); margin-bottom: 8px; border-radius: 8px;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span style="font-weight: bold; color: var(--primary);"><%= index + 1 %>.</span>
-                                <span><i class="fa-solid fa-user"></i> ID: <%= user.userId %></span>
+                        <div class="list-item">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="leader-rank"><%= index + 1 %></span>
+                                <span class="leader-user"><i class="fa-solid fa-user"></i> ID: <%= user.userId %></span>
                             </div>
-                            <span style="font-weight: bold; color: #00BFFF;"><%= user.messages %> رسالة</span>
-                        </li>
+                            <strong class="text-main"><%= user.messages %> رسالة</strong>
+                        </div>
                     <% }) %>
                 <% } else { %>
-                    <li style="padding: 10px; text-align: center; color: rgba(255,255,255,0.5);">لا توجد إحصائيات بعد</li>
+                    <div class="empty-state-simple">
+                        <p>لا توجد بيانات تفاعل بعد</p>
+                    </div>
                 <% } %>
-            </ul>
+            </div>
         </div>
 
         <!-- Voice Leaderboard -->
         <div class="glass-panel">
-            <h3 style="color: var(--primary); margin-bottom: 15px;"><i class="fa-solid fa-microphone"></i> أكثر الأعضاء تواجداً بالصوت</h3>
-            <ul style="list-style: none; padding: 0;">
+            <div class="section-title"><i class="fa-solid fa-microphone-lines text-success"></i> متصدرو الصوت</div>
+            <div class="leaderboard-list">
                 <% if (topVoice && topVoice.length > 0) { %>
                     <% topVoice.forEach((user, index) => { 
                         const hours = Math.floor(user.voice_xp / 60);
                         const mins = user.voice_xp % 60;
                     %>
-                        <li style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.05); margin-bottom: 8px; border-radius: 8px;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span style="font-weight: bold; color: var(--primary);"><%= index + 1 %>.</span>
-                                <span><i class="fa-solid fa-user"></i> ID: <%= user.userId %></span>
+                        <div class="list-item">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="leader-rank"><%= index + 1 %></span>
+                                <span class="leader-user"><i class="fa-solid fa-user"></i> ID: <%= user.userId %></span>
                             </div>
-                            <span style="font-weight: bold; color: #00FF00;"><%= hours %>س <%= mins %>د</span>
-                        </li>
+                            <strong class="text-success"><%= hours %>س <%= mins %>د</strong>
+                        </div>
                     <% }) %>
                 <% } else { %>
-                    <li style="padding: 10px; text-align: center; color: rgba(255,255,255,0.5);">لا توجد إحصائيات بعد</li>
+                    <div class="empty-state-simple">
+                        <p>لا توجد بيانات تفاعل بعد</p>
+                    </div>
                 <% } %>
-            </ul>
+            </div>
         </div>
 
         <!-- Reactions Leaderboard -->
         <div class="glass-panel">
-            <h3 style="color: var(--primary); margin-bottom: 15px;"><i class="fa-solid fa-face-smile"></i> أكثر الأعضاء استخداماً للريأكشن</h3>
-            <ul style="list-style: none; padding: 0;">
+            <div class="section-title"><i class="fa-solid fa-face-smile text-warning"></i> متصدرو التفاعل</div>
+            <div class="leaderboard-list">
                 <% if (topReactions && topReactions.length > 0) { %>
                     <% topReactions.forEach((user, index) => { %>
-                        <li style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.05); margin-bottom: 8px; border-radius: 8px;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span style="font-weight: bold; color: var(--primary);"><%= index + 1 %>.</span>
-                                <span><i class="fa-solid fa-user"></i> ID: <%= user.userId %></span>
+                        <div class="list-item">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="leader-rank"><%= index + 1 %></span>
+                                <span class="leader-user"><i class="fa-solid fa-user"></i> ID: <%= user.userId %></span>
                             </div>
-                            <span style="font-weight: bold; color: #FFFF00;"><%= user.reactionsCount || 0 %> تفاعل</span>
-                        </li>
+                            <strong class="text-warning"><%= user.reactionsCount || 0 %> تفاعل</strong>
+                        </div>
                     <% }) %>
                 <% } else { %>
-                    <li style="padding: 10px; text-align: center; color: rgba(255,255,255,0.5);">لا توجد إحصائيات بعد</li>
+                    <div class="empty-state-simple">
+                        <p>لا توجد بيانات تفاعل بعد</p>
+                    </div>
                 <% } %>
-            </ul>
+            </div>
         </div>
 
     </div>
 </main>
+
+<style>
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+.leader-rank {
+    font-size: 0.85rem;
+    font-weight: 700;
+    width: 20px;
+    height: 20px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-2);
+}
+.leader-user {
+    font-size: 0.8rem;
+    color: var(--text-2);
+}
+.empty-state-simple {
+    text-align: center;
+    padding: 20px 0;
+    color: var(--text-3);
+    font-size: 0.875rem;
+}
+</style>
 
 <%- include('partials/footer') %>

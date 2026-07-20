@@ -1,74 +1,130 @@
 <%- include('partials/header') %>
-
 <%- include('partials/sidebar', { activeTab: 'autoreplies' }) %>
 
 <main class="app-content">
     <div class="content-header">
         <h1><i class="fa-solid fa-reply-all"></i> الردود التلقائية</h1>
-        <p>اجعل البوت يرد تلقائياً على عبارات أو كلمات معينة</p>
+        <p>اجعل البوت يرد تلقائياً بعبارات معينة فور كتابة الكلمة المحفزة من الأعضاء</p>
     </div>
 
-    <div class="glass-panel">
+    <!-- Active Autoreplies -->
+    <div class="glass-panel reveal">
+        <div class="section-title"><i class="fa-solid fa-inbox"></i> قائمة الردود النشطة</div>
+
         <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
-            <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= req.query.success %></div>
+            <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
         <% } %>
 
         <% if (replies && replies.length > 0) { %>
-            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px;">
+            <div class="replies-list">
                 <% replies.forEach(reply => { %>
-                    <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 18px 22px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="margin-bottom: 6px;">
-                                <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">المحفّز</span>
-                                <span style="margin-right: 8px; font-weight: 700; color: var(--primary);"><%= reply.trigger %></span>
+                    <div class="list-item reveal">
+                        <div class="reply-item-details">
+                            <div class="rid-row">
+                                <span class="text-muted">الكلمة/المحفز:</span>
+                                <strong class="text-main" style="margin-right: 8px;">« <%= reply.trigger %> »</strong>
                             </div>
-                            <div style="margin-bottom: 6px;">
-                                <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">الرد</span>
-                                <span style="margin-right: 8px; color: #d0d0d0;"><%= reply.response %></span>
+                            <div class="rid-row">
+                                <span class="text-muted">الرد:</span>
+                                <strong class="text-main" style="margin-right: 8px;"><%= reply.response %></strong>
                             </div>
-                            <div>
-                                <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">مسح الرسالة بعد الرد</span>
-                                <span style="margin-right: 8px; font-weight: 600; color: <%= reply.deleteTrigger ? '#57F287' : '#ED4245' %>;">
+                            <div class="rid-row">
+                                <span class="text-muted">حذف رسالة العضو:</span>
+                                <span class="badge-status <%= reply.deleteTrigger ? 'bs-active' : 'bs-inactive' %>" style="margin-right: 8px;">
                                     <%= reply.deleteTrigger ? 'مفعّل' : 'معطّل' %>
                                 </span>
                             </div>
                         </div>
                         <form action="/dashboard/<%= guild.id %>/autoreplies/delete" method="POST" style="margin:0;">
                             <input type="hidden" name="trigger" value="<%= reply.trigger %>">
-                            <button type="submit" class="btn btn-danger" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                            <button type="submit" class="btn btn-danger btn-sm" title="حذف الرد">
+                                <i class="fa-solid fa-trash"></i> حذف
+                            </button>
                         </form>
                     </div>
                 <% }) %>
             </div>
         <% } else { %>
-            <div style="text-align: center; padding: 40px; color: var(--text-muted); margin-bottom: 20px;">
-                <i class="fa-solid fa-inbox" style="font-size: 2.5rem; margin-bottom: 15px; display: block; opacity: 0.4;"></i>
-                لا توجد ردود تلقائية مضافة حتى الآن
+            <div class="empty-state-simple">
+                <i class="fa-solid fa-inbox"></i>
+                <p>لا توجد ردود تلقائية مضافة بعد في هذا السيرفر.</p>
             </div>
         <% } %>
+    </div>
 
-        <hr style="border-color: var(--glass-border); margin: 25px 0;">
-
-        <h3 style="margin-bottom: 20px; color: var(--primary);">إضافة رد تلقائي جديد</h3>
+    <!-- Add Autoreply Form -->
+    <div class="glass-panel reveal" style="animation-delay: 0.1s;">
+        <div class="section-title"><i class="fa-solid fa-plus"></i> إضافة رد تلقائي جديد</div>
         <form action="/dashboard/<%= guild.id %>/autoreplies" method="POST" class="settings-form">
-            <div class="form-group">
-                <label for="trigger">عبارة المحفّز</label>
-                <input type="text" id="trigger" name="trigger" class="glass-input" required placeholder="مثال السلام عليكم">
+            <div class="grid-form-2">
+                <div class="form-group">
+                    <label for="trigger">عبارة المحفّز (Trigger Phrase)</label>
+                    <input type="text" id="trigger" name="trigger" class="glass-input" required placeholder="مثال: السلام عليكم">
+                    <small>الكلمة أو العبارة التي سيبحث البوت عنها في الرسالة</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="response">رد البوت (Response Text)</label>
+                    <input type="text" id="response" name="response" class="glass-input" required placeholder="مثال: وعليكم السلام ورحمة الله">
+                    <small>الرسالة التي سيرسلها البوت كرد على المحفّز</small>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="response">رد البوت</label>
-                <input type="text" id="response" name="response" class="glass-input" required placeholder="مثال وعليكم السلام ورحمة الله">
+            <div class="form-group d-flex align-items-center gap-2 mt-2">
+                <input type="checkbox" id="deleteTrigger" name="deleteTrigger" style="width: 18px; height: 18px; accent-color: #fff; cursor: pointer;">
+                <label for="deleteTrigger" class="cursor-pointer" style="margin:0; font-weight:500; font-size:0.85rem;">مسح رسالة العضو الأصلية بعد الرد تلقائياً</label>
             </div>
 
-            <div class="form-group" style="display:flex; align-items:center; gap:12px;">
-                <input type="checkbox" id="deleteTrigger" name="deleteTrigger" style="width:18px; height:18px; accent-color: var(--primary);">
-                <label for="deleteTrigger" style="margin:0; cursor:pointer;">مسح رسالة العضو بعد الرد</label>
-            </div>
-
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> إضافة الرد</button>
+            <button type="submit" class="btn btn-primary mt-2"><i class="fa-solid fa-plus"></i> إضافة الرد التلقائي</button>
         </form>
     </div>
 </main>
+
+<style>
+.replies-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.reply-item-details {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+}
+.rid-row {
+    display: flex;
+    align-items: center;
+}
+.badge-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.bs-active {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+}
+.bs-inactive {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+}
+.empty-state-simple {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-2);
+    border: 1px dashed var(--border);
+    border-radius: var(--r-md);
+}
+.empty-state-simple i {
+    font-size: 2rem;
+    color: var(--text-3);
+    margin-bottom: 12px;
+    display: block;
+}
+</style>
 
 <%- include('partials/footer') %>

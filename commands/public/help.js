@@ -9,7 +9,12 @@ module.exports = {
     .setDescription('عرض أوامر البوت'),
 
   async execute(interaction) {
-    const emojisJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../../utils/emojis.json'), 'utf8'));
+    let emojisJson = {};
+    try {
+      emojisJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../../utils/emojis.json'), 'utf8'));
+    } catch (e) {
+      console.error('[help] Failed to parse emojis.json, falling back to empty:', e);
+    }
     
     function parseEmoji(emojiKey, fallbackId) {
       const emojiStr = emojisJson[emojiKey];

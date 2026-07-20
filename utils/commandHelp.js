@@ -4,7 +4,12 @@ const fs = require('fs');
 const path = require('path');
 
 function getEmojisJson() {
-  return JSON.parse(fs.readFileSync(path.join(__dirname, 'emojis.json'), 'utf8'));
+  try {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, 'emojis.json'), 'utf8'));
+  } catch (e) {
+    console.error('[commandHelp] Failed to parse emojis.json, falling back to empty:', e);
+    return {};
+  }
 }
 
 function resolveEmoji(key, fallback) {

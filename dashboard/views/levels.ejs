@@ -1,5 +1,4 @@
 <%- include('partials/header') %>
-
 <%- include('partials/sidebar', { activeTab: 'levels' }) %>
 
 <main class="app-content">
@@ -8,38 +7,49 @@
         <p>اضبط نظام الـ XP والمستويات لأعضاء سيرفرك</p>
     </div>
 
-    <div class="glass-panel">
+    <div class="glass-panel reveal">
         <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
-            <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= req.query.success %></div>
+            <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
         <% } %>
 
         <form action="/dashboard/<%= guild.id %>/levels" method="POST" class="settings-form">
+            <div class="section-title"><i class="fa-solid fa-sliders"></i> إعدادات الـ XP</div>
+
             <div class="form-group">
                 <label for="enabled">حالة نظام المستويات</label>
                 <select id="enabled" name="enabled" class="glass-input">
                     <option value="1" <%= settings.enabled === 1 ? 'selected' : '' %>>مفعّل</option>
                     <option value="0" <%= settings.enabled === 0 ? 'selected' : '' %>>معطّل</option>
                 </select>
+                <small>قم بتفعيل أو تعطيل كسب الخبرة (XP) والترقيات في السيرفر بالكامل</small>
             </div>
 
             <div class="form-group">
-                <label for="channel">قناة إعلانات الترقية (معرّف القناة)</label>
-                <input type="text" id="channel" name="channel" class="glass-input" value="<%= settings.channel || '' %>" placeholder="مثال 1234567890">
-                <small>اتركه فارغاً لإرسال إعلان الترقية في نفس القناة التي كتب بها العضو</small>
+                <label for="channel">قناة إعلانات الترقية</label>
+                <select id="channel" name="channel" class="glass-input">
+                    <option value="" <%= !settings.channel ? 'selected' : '' %>>نفس القناة التي يكتب فيها العضو</option>
+                    <% textChannels.forEach(c => { %>
+                        <option value="<%= c.id %>" <%= settings.channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
+                    <% }) %>
+                </select>
+                <small>القناة التي سيرسل البوت فيها تهنئة ترقية المستوى للأعضاء</small>
             </div>
 
-            <div class="form-group" style="display: flex; gap: 20px;">
-                <div style="flex: 1;">
+
+            <div class="grid-form-2">
+                <div class="form-group">
                     <label for="xp_min">الحد الأدنى من الـ XP لكل رسالة</label>
                     <input type="number" id="xp_min" name="xp_min" class="glass-input" value="<%= settings.xp_min %>" required>
+                    <small>أقل كمية نقاط يحصل عليها العضو عند إرسال رسالة</small>
                 </div>
-                <div style="flex: 1;">
+                <div class="form-group">
                     <label for="xp_max">الحد الأقصى من الـ XP لكل رسالة</label>
                     <input type="number" id="xp_max" name="xp_max" class="glass-input" value="<%= settings.xp_max %>" required>
+                    <small>أقصى كمية نقاط يحصل عليها العضو عند إرسال رسالة</small>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> حفظ التغييرات</button>
+            <button type="submit" class="btn btn-primary mt-2"><i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات</button>
         </form>
     </div>
 </main>

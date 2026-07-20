@@ -1,170 +1,129 @@
 <%- include('partials/header') %>
-
-<style>
-.discord-preview-container {
-    background-color: #313338;
-    border-radius: 8px;
-    padding: 16px;
-    font-family: 'gg sans', 'Inter', sans-serif;
-    color: #dbdee1;
-    margin-top: 20px;
-    display: flex;
-}
-.discord-embed {
-    background-color: #2b2d31;
-    border-radius: 4px;
-    border-left: 4px solid #5865F2;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    max-width: 520px;
-    width: 100%;
-}
-.embed-author {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffffff;
-}
-.embed-author img {
-    width: 24px; height: 24px; border-radius: 50%;
-    margin-left: 8px; display: none;
-}
-.embed-title { font-size: 16px; font-weight: 600; color: #00A8FC; margin-bottom: 8px; display: none; }
-.embed-description { font-size: 14px; line-height: 1.375; white-space: pre-wrap; display: none; }
-.embed-thumbnail { max-width: 80px; max-height: 80px; border-radius: 4px; margin-right: 16px; display: none; }
-.embed-image { max-width: 100%; border-radius: 4px; margin-top: 16px; display: none; }
-.embed-footer { display: flex; align-items: center; margin-top: 8px; font-size: 12px; color: #949ba4; }
-.embed-footer img { width: 20px; height: 20px; border-radius: 50%; margin-left: 8px; display: none; }
-.embed-footer span { display: none; }
-.embed-content-wrapper { display: flex; justify-content: space-between; }
-</style>
-
 <%- include('partials/sidebar', { activeTab: 'embed' }) %>
 
 <main class="app-content">
     <div class="content-header">
         <h1><i class="fa-solid fa-paintbrush"></i> صانع الإمبيد المتقدم</h1>
-        <p>صمّم إمبيداً مخصصاً مع معاينة مباشرة وتحكم كامل في التصميم</p>
+        <p>صمّم بطاقات ديسكورد (Embeds) مخصصة مع معاينة حية قبل النشر في السيرفر</p>
     </div>
 
-    <div class="glass-panel">
-        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
-            <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= req.query.success %></div>
-        <% } %>
-        <% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
-            <div class="alert alert-success" style="background: rgba(237, 66, 69, 0.1); border-color: rgba(237,66,69,0.3); color: #ED4245;"><i class="fa-solid fa-triangle-exclamation"></i> <%= req.query.error %></div>
-        <% } %>
+    <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
+    <% } %>
+    <% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
+        <div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <%= req.query.error %></div>
+    <% } %>
 
-        <div class="grid-2col" style="margin-top: 20px;">
-            <!-- قسم النموذج -->
-            <div>
-                <form action="/dashboard/<%= guild.id %>/embed" method="POST" class="settings-form">
+    <div class="tickets-layout reveal">
+        <!-- Settings Form -->
+        <div class="glass-panel">
+            <form action="/dashboard/<%= guild.id %>/embed" method="POST" class="settings-form">
+                <div class="section-title"><i class="fa-solid fa-paper-plane"></i> إعدادات الإرسال</div>
+                
+                <div class="form-group mt-2">
+                    <label for="channel">قناة الإرسال المستهدفة</label>
+                    <select id="channel" name="channel" class="glass-input" required>
+                        <option value="">-- اختر القناة --</option>
+                        <% channels.forEach(c => { %>
+                            <option value="<%= c.id %>"># <%= c.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
 
+                <hr class="divider">
+                <div class="section-title"><i class="fa-solid fa-sliders"></i> تفاصيل محتوى الإمبيد</div>
+
+                <div class="grid-form-2 mt-2">
                     <div class="form-group">
-                        <label for="channel">قناة الإرسال (مطلوب)</label>
-                        <select id="channel" name="channel" class="glass-input" required>
-                            <option value="">-- اختر القناة --</option>
-                            <% channels.forEach(c => { %>
-                                <option value="<%= c.id %>"><%= c.name %></option>
-                            <% }) %>
-                        </select>
+                        <label for="author_name">اسم المؤلف (Author Name)</label>
+                        <input type="text" id="author_name" name="author_name" class="glass-input" placeholder="مثال: نظام الإعلانات">
                     </div>
-
-                    <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
-
-                    <div class="grid-2col-sm">
-                        <div class="form-group">
-                            <label for="author_name">اسم المؤلف</label>
-                            <input type="text" id="author_name" name="author_name" class="glass-input" placeholder="مثال النظام">
-                        </div>
-                        <div class="form-group">
-                            <label for="author_icon">رابط أيقونة المؤلف</label>
-                            <input type="url" id="author_icon" name="author_icon" class="glass-input" placeholder="https://...">
-                        </div>
+                    <div class="form-group">
+                        <label for="author_icon">رابط أيقونة المؤلف (Author Icon URL)</label>
+                        <input type="url" id="author_icon" name="author_icon" class="glass-input" placeholder="https://example.com/icon.png">
                     </div>
+                </div>
 
-                    <div class="grid-form-2-1">
-                        <div class="form-group">
-                            <label for="title">عنوان الإمبيد</label>
-                            <input type="text" id="title" name="title" class="glass-input" placeholder="النص الرئيسي للعنوان">
-                        </div>
-                        <div class="form-group">
-                            <label for="color">اللون</label>
-                            <input type="color" id="color" name="color" class="glass-input" value="#5865F2" style="height: 48px; padding: 0 10px; cursor: pointer;">
-                        </div>
+                <div class="grid-form-2">
+                    <div class="form-group">
+                        <label for="title">عنوان الإمبيد الرئيسي</label>
+                        <input type="text" id="title" name="title" class="glass-input" placeholder="اكتب العنوان هنا...">
                     </div>
-
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label for="description">وصف الإمبيد</label>
-                        <textarea id="description" name="description" class="glass-input" rows="5" placeholder="محتوى النص الرئيسي (يدعم Markdown)"></textarea>
+                    <div class="form-group">
+                        <label for="color">لون الشريط الجانبي</label>
+                        <input type="color" id="color" name="color" class="glass-input" value="#5865F2" style="height: 40px; padding: 4px; cursor: pointer;">
                     </div>
+                </div>
 
-                    <div class="grid-2col-sm" style="margin-top: 15px;">
-                        <div class="form-group">
-                            <label for="thumbnail">رابط الصورة المصغرة (أعلى اليمين)</label>
-                            <input type="url" id="thumbnail" name="thumbnail" class="glass-input" placeholder="https://...">
-                        </div>
-                        <div class="form-group">
-                            <label for="image">رابط الصورة الكبيرة (الأسفل)</label>
-                            <input type="url" id="image" name="image" class="glass-input" placeholder="https://...">
-                        </div>
+                <div class="form-group">
+                    <label for="description">وصف الإمبيد (الوصف الأساسي)</label>
+                    <textarea id="description" name="description" class="glass-input" rows="5" placeholder="محتوى النص الرئيسي (يدعم أكواد التنسيق Markdown)"></textarea>
+                </div>
+
+                <div class="grid-form-2">
+                    <div class="form-group">
+                        <label for="thumbnail">رابط الصورة المصغرة (Thumbnail)</label>
+                        <input type="url" id="thumbnail" name="thumbnail" class="glass-input" placeholder="https://example.com/thumbnail.png">
                     </div>
-
-                    <div class="grid-2col-sm" style="margin-top: 15px;">
-                        <div class="form-group">
-                            <label for="footer_text">نص الفوتر</label>
-                            <input type="text" id="footer_text" name="footer_text" class="glass-input" placeholder="مثال مشغّل بواسطة E-246">
-                        </div>
-                        <div class="form-group">
-                            <label for="footer_icon">رابط أيقونة الفوتر</label>
-                            <input type="url" id="footer_icon" name="footer_icon" class="glass-input" placeholder="https://...">
-                        </div>
+                    <div class="form-group">
+                        <label for="image">رابط الصورة الكبيرة (Big Image)</label>
+                        <input type="url" id="image" name="image" class="glass-input" placeholder="https://example.com/banner.png">
                     </div>
+                </div>
 
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label>
-                            <input type="checkbox" id="timestamp" name="timestamp" value="true"> إضافة التوقيت (التاريخ والوقت الحالي)
-                        </label>
+                <div class="grid-form-2">
+                    <div class="form-group">
+                        <label for="footer_text">نص التذييل (Footer Text)</label>
+                        <input type="text" id="footer_text" name="footer_text" class="glass-input" placeholder="مثال: مشغّل بواسطة E-246">
                     </div>
+                    <div class="form-group">
+                        <label for="footer_icon">رابط أيقونة التذييل</label>
+                        <input type="url" id="footer_icon" name="footer_icon" class="glass-input" placeholder="https://example.com/footer.png">
+                    </div>
+                </div>
 
-                    <button type="submit" class="btn btn-primary" style="margin-top: 25px; width: 100%;">
-                        <i class="fa-solid fa-paper-plane"></i> إرسال الإمبيد
-                    </button>
-                </form>
-            </div>
+                <div class="form-group d-flex align-items-center gap-2 mt-2 mb-3">
+                    <input type="checkbox" id="timestamp" name="timestamp" value="true" style="width:18px;height:18px;accent-color:#fff;cursor:pointer;">
+                    <label for="timestamp" class="cursor-pointer" style="margin:0; font-weight:500; font-size:0.85rem;">إضافة التوقيت الزمني التلقائي (Timestamp)</label>
+                </div>
 
-            <!-- قسم المعاينة -->
-            <div>
-                <h3 style="margin-bottom: 15px; color: var(--primary);">معاينة مباشرة</h3>
-                <div class="discord-preview-container">
-                    <div class="discord-embed" id="preview_embed">
-                        <div class="embed-author" id="preview_author_container">
-                            <img id="preview_author_icon" src="" alt="">
-                            <span id="preview_author_name"></span>
+                <button type="submit" class="btn btn-primary btn-large btn-block">
+                    <i class="fa-solid fa-paper-plane"></i> إرسال البطاقة الآن
+                </button>
+            </form>
+        </div>
+
+        <!-- Live Preview -->
+        <div class="sticky-preview">
+            <div class="glass-panel">
+                <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة</div>
+
+                <div class="discord-preview-container" style="background:#0c0c0c; border: 1px solid var(--border); border-radius: var(--r-md); padding:16px;">
+                    <div class="discord-embed" id="preview_embed" style="background-color:#141414; max-width:100%; border-radius:var(--r-sm); border:1px solid var(--border); border-right: 4px solid #5865F2; border-left: none; padding:16px;">
+                        
+                        <div class="embed-author" id="preview_author_container" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <img id="preview_author_icon" src="" alt="" style="width:20px; height:20px; border-radius:50%; display:none;">
+                            <span id="preview_author_name" style="font-weight:600; font-size:0.85rem; color:#fff; display:none;"></span>
                         </div>
 
-                        <div class="embed-content-wrapper">
-                            <div style="flex-grow: 1;">
-                                <div class="embed-title" id="preview_title"></div>
-                                <div class="embed-description" id="preview_description"></div>
+                        <div class="embed-content-wrapper" style="display:flex; justify-content:space-between; gap:16px;">
+                            <div class="flex-grow-1" style="min-width:0;">
+                                <div class="embed-title" id="preview_title" style="font-weight:700; font-size:0.95rem; color:#fff; margin-bottom:6px; display:none;"></div>
+                                <div class="embed-description" id="preview_description" style="font-size:0.85rem; color:var(--text-2); line-height:1.5; white-space:pre-wrap; display:none;"></div>
                             </div>
-                            <img class="embed-thumbnail" id="preview_thumbnail" src="" alt="">
+                            <img class="embed-thumbnail" id="preview_thumbnail" src="" alt="" style="width:60px; height:60px; border-radius:4px; object-fit:contain; display:none; flex-shrink:0;">
                         </div>
 
-                        <img class="embed-image" id="preview_image" src="" alt="">
+                        <img class="embed-image" id="preview_image" src="" alt="" style="max-width:100%; max-height:280px; border-radius:4px; margin-top:10px; object-fit:cover; display:none;">
 
-                        <div class="embed-footer" id="preview_footer_container">
-                            <img id="preview_footer_icon" src="" alt="">
-                            <span id="preview_footer_text"></span>
-                            <span id="preview_timestamp" style="margin-right: 5px; color: #949ba4; display: none;"></span>
+                        <div class="embed-footer" id="preview_footer_container" style="display:flex; align-items:center; gap:6px; margin-top:10px; font-size:0.75rem; color:var(--text-3);">
+                            <img id="preview_footer_icon" src="" alt="" style="width:16px; height:16px; border-radius:50%; display:none;">
+                            <span id="preview_footer_text" style="display:none;"></span>
+                            <span id="preview_timestamp" style="display: none;"></span>
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </main>
@@ -172,17 +131,17 @@
 <script>
     function updatePreview() {
         const color = document.getElementById('color').value;
-        const authorName = document.getElementById('author_name').value;
-        const authorIcon = document.getElementById('author_icon').value;
-        const title = document.getElementById('title').value;
-        const description = document.getElementById('description').value;
-        const thumbnail = document.getElementById('thumbnail').value;
-        const image = document.getElementById('image').value;
-        const footerText = document.getElementById('footer_text').value;
-        const footerIcon = document.getElementById('footer_icon').value;
+        const authorName = document.getElementById('author_name').value.trim();
+        const authorIcon = document.getElementById('author_icon').value.trim();
+        const title = document.getElementById('title').value.trim();
+        const description = document.getElementById('description').value.trim();
+        const thumbnail = document.getElementById('thumbnail').value.trim();
+        const image = document.getElementById('image').value.trim();
+        const footerText = document.getElementById('footer_text').value.trim();
+        const footerIcon = document.getElementById('footer_icon').value.trim();
         const timestamp = document.getElementById('timestamp').checked;
 
-        document.getElementById('preview_embed').style.borderLeftColor = color;
+        document.getElementById('preview_embed').style.borderRightColor = color;
 
         const authorNameEl = document.getElementById('preview_author_name');
         const authorIconEl = document.getElementById('preview_author_icon');

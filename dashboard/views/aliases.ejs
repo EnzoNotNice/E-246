@@ -1,64 +1,111 @@
 <%- include('partials/header') %>
-
 <%- include('partials/sidebar', { activeTab: 'aliases' }) %>
 
-    <main class="app-content">
-        <div class="glass-panel">
-            <h2><i class="fa-solid fa-link"></i> الاختصارات المخصصة للأوامر</h2>
-            <p>قم بإنشاء اختصارات لتنفيذ أوامر البوت بكلماتك الخاصة (eg typing <code>باند</code> to execute the <code>ban</code> command).</p>
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-link"></i> اختصارات الأوامر</h1>
+        <p>قم بإنشاء كلمات مختصرة وسهلة لتنفيذ أوامر البوت الطويلة (مثال كتابة <code>باند</code> لتنفيذ <code>/ban</code>)</p>
+    </div>
 
-            <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
-                <div class="alert alert-success">
-                    <%= req.query.success %>
-                </div>
-            <% } %>
+    <!-- Existing Aliases -->
+    <div class="glass-panel reveal">
+        <div class="section-title"><i class="fa-solid fa-link"></i> الاختصارات المفعّلة حالياً</div>
 
-            <div class="guild-grid" style="grid-template-columns: 1fr;">
-                <% if (aliases && aliases.length > 0) { %>
-                    <% aliases.forEach(alias => { %>
-                        <div class="glass" style="padding: 15px 25px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <strong>الاختصار</strong> <span style="color: var(--primary);"><%= alias.shortcut %></span><br>
-                                <span style="color: var(--text-muted);"><strong>ينفذ الأمر</strong> <%= alias.command %></span>
+        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+            <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
+        <% } %>
+
+        <% if (aliases && aliases.length > 0) { %>
+            <div class="aliases-list">
+                <% aliases.forEach(alias => { %>
+                    <div class="list-item reveal">
+                        <div class="alias-item-details">
+                            <div class="aid-row">
+                                <span class="text-muted">كلمة الاختصار:</span>
+                                <strong class="text-main" style="margin-right: 8px;">« <%= alias.shortcut %> »</strong>
                             </div>
-                            <form action="/dashboard/<%= guild.id %>/aliases/delete" method="POST" style="margin:0;">
-                                <input type="hidden" name="shortcut" value="<%= alias.shortcut %>">
-                                <button type="submit" class="btn btn-danger" title="حذف"><i class="fa-solid fa-trash"></i></button>
-                            </form>
+                            <div class="aid-row">
+                                <span class="text-muted">ينفّذ أمر:</span>
+                                <strong class="text-main" style="margin-right: 8px;">/<%= alias.command %></strong>
+                            </div>
                         </div>
-                    <% }) %>
-                <% } else { %>
-                    <p class="text-center" style="color: var(--text-muted); padding: 20px;">لم يتم تعيين أي اختصارات بعد</p>
-                <% } %>
+                        <form action="/dashboard/<%= guild.id %>/aliases/delete" method="POST" style="margin:0;">
+                            <input type="hidden" name="shortcut" value="<%= alias.shortcut %>">
+                            <button type="submit" class="btn btn-danger btn-sm" title="حذف الاختصار">
+                                <i class="fa-solid fa-trash"></i> حذف
+                            </button>
+                        </form>
+                    </div>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <div class="empty-state-simple">
+                <i class="fa-solid fa-link"></i>
+                <p>لم يتم تعيين أي اختصارات مخصصة بعد.</p>
+            </div>
+        <% } %>
+    </div>
+
+    <!-- Add Alias Form -->
+    <div class="glass-panel reveal" style="animation-delay: 0.1s;">
+        <div class="section-title"><i class="fa-solid fa-plus"></i> إضافة اختصار جديد</div>
+        <form action="/dashboard/<%= guild.id %>/aliases" method="POST" class="settings-form">
+            <div class="grid-form-2">
+                <div class="form-group">
+                    <label for="shortcut">كلمة الاختصار (Shortcut Word)</label>
+                    <input type="text" id="shortcut" name="shortcut" class="glass-input" required placeholder="مثال: باند أو b">
+                    <small>الكلمة السريعة التي سيكتبها الأعضاء لتشغيل الأمر</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="command">أمر البوت الأساسي (Original Command)</label>
+                    <select id="command" name="command" class="glass-input" required>
+                        <% if (typeof commands !== 'undefined' && commands.length > 0) { %>
+                            <% commands.forEach(cmd => { %>
+                                <option value="<%= cmd %>">/<%= cmd %></option>
+                            <% }) %>
+                        <% } else { %>
+                            <option value="" disabled>لا توجد أوامر محملة</option>
+                        <% } %>
+                    </select>
+                    <small>اختر الأمر الذي سيتم ربطه بكلمة الاختصار</small>
+                </div>
             </div>
 
-            <hr style="border-color: var(--glass-border); margin: 30px 0;">
+            <button type="submit" class="btn btn-primary mt-2"><i class="fa-solid fa-plus"></i> إضافة الاختصار</button>
+        </form>
+    </div>
+</main>
 
-            <h3>إضافة اختصار جديد</h3>
-            <form action="/dashboard/<%= guild.id %>/aliases" method="POST" class="settings-form" style="margin-top: 20px;">
-                <div class="form-group" style="display: flex; gap: 20px;">
-                    <div style="flex: 1;">
-                        <label for="shortcut">كلمة الاختصار (مثال باند)</label>
-                        <input type="text" id="shortcut" name="shortcut" class="glass-input" required placeholder="eg باند or b">
-                        <small>يمكن للأعضاء كتابتها كبديل للأمر الأساسي</small>
-                    </div>
-                    <div style="flex: 1;">
-                        <label for="command">أمر البوت الأساسي المراد تنفيذه</label>
-                        <select id="command" name="command" class="glass-input" required style="width: 100%; box-sizing: border-box; height: 48px; background-color: rgba(255, 255, 255, 0.05); color: #fff;">
-                            <% if (typeof commands !== 'undefined' && commands.length > 0) { %>
-                                <% commands.forEach(cmd => { %>
-                                    <option value="<%= cmd %>" style="background-color: #1e1f22; color: #dbdee1;">/<%= cmd %></option>
-                                <% }) %>
-                            <% } else { %>
-                                <option value="" disabled>لا توجد أوامر محملة</option>
-                            <% } %>
-                        </select>
-                        <small>اختر الأمر الذي تريد إنشاء اختصار له</small>
-                    </div>
-                </div>
+<style>
+.aliases-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.alias-item-details {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+}
+.aid-row {
+    display: flex;
+    align-items: center;
+}
+.empty-state-simple {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-2);
+    border: 1px dashed var(--border);
+    border-radius: var(--r-md);
+}
+.empty-state-simple i {
+    font-size: 2rem;
+    color: var(--text-3);
+    margin-bottom: 12px;
+    display: block;
+}
+</style>
 
-                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> إضافة</button>
-            </form>
-        </div>
-    </main>
 <%- include('partials/footer') %>

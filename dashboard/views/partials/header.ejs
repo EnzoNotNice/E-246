@@ -3,20 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم البوت</title>
+    <meta name="theme-color" content="#000000">
+    <title>E-246 — لوحة التحكم</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 </head>
 <body>
+    <!-- Desktop Top Navigation -->
+    <nav class="top-nav">
+        <div class="top-nav-left">
+            <button id="sidebarToggle" class="sidebar-toggle" title="تبديل القائمة">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <a href="/" class="brand">
+                <i class="fa-solid fa-robot"></i>
+                <span>E-246</span>
+            </a>
+        </div>
+        <div class="top-nav-right">
+            <button class="nav-icon-btn" title="الإشعارات">
+                <i class="fa-solid fa-bell"></i>
+                <span class="badge"></span>
+            </button>
+            <% if (typeof user !== 'undefined' && user) { %>
+                <a href="/dashboard" class="user-menu">
+                    <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" alt="Avatar">
+                    <span><%= user.username %></span>
+                </a>
+            <% } else { %>
+                <a href="/auth/login" class="btn btn-primary btn-sm">
+                    <i class="fa-brands fa-discord"></i> تسجيل الدخول
+                </a>
+            <% } %>
+        </div>
+    </nav>
+
     <!-- Mobile Top Navigation Bar -->
     <header class="mobile-navbar">
-        <button id="sidebarToggle" class="mobile-menu-btn">
+        <button id="mobileSidebarToggle" class="mobile-menu-btn">
             <i class="fa-solid fa-bars"></i>
         </button>
         <span class="mobile-logo"><i class="fa-solid fa-robot"></i> E-246</span>
-        <div style="width: 40px;"></div>
+        <div class="mobile-spacer"></div>
     </header>
 
-    <div class="app-wrapper">
-        <!-- Global Sidebar / App Sidebar will be included in templates that need it, or here if global -->
+    <div class="app-wrapper" id="appWrapper">

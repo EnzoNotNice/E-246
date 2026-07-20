@@ -41,13 +41,13 @@ function setupMusic(client) {
 
     client.manager = new LavalinkManager({
         nodes: nodes,
-        sendToShard: (guildId, payload) => {
-            const guild = client.guilds.cache.get(guildId);
-            if (guild) guild.shard.send(payload);
-        },
         client: {
             id: process.env.CLIENT_ID,
             username: 'E-246 Music'
+        },
+        sendToShard: (guildId, payload) => {
+            const guild = client.guilds.cache.get(guildId);
+            if (guild) guild.shard.send(payload);
         },
         playerOptions: {
             defaultSearchPlatform: 'ytsearch',

@@ -4,6 +4,23 @@ const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/e246';
 const client = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 5000 });
 let mongoDb = null;
 
+function safeCollection(name) {
+  if (!mongoDb) {
+    // return a stub with commonly used methods that do nothing safely
+    return {
+      insertOne: async () => ({}),
+      updateOne: async () => ({}),
+      updateMany: async () => ({}),
+      deleteMany: async () => ({}),
+      deleteOne: async () => ({}),
+      findOne: async () => null,
+      find: () => ({ toArray: async () => [] }),
+      createIndex: async () => (null)
+    };
+  }
+  return mongoDb.collection(name);
+}
+
 const cache = {
   guild_settings: new Map(),
   warnings: [],
@@ -45,6 +62,7 @@ const cache = {
   social_alerts: []
 };
 
+const unhandledSqlStatements = [];
 
 function stripId(doc) {
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return doc;
@@ -58,6 +76,10 @@ function safeSet(doc) {
 }
 
 async function loadMongoCache() {
+  if (!mongoDb) {
+    console.warn('[MongoDB] loadMongoCache skipped — no active connection');
+    return;
+  }
   const collections = await mongoDb.collections();
   const names = collections.map(c => c.collectionName);
 
@@ -98,7 +120,7 @@ async function loadMongoCache() {
 
   for (const col of mapCollections) {
     if (names.includes(col.name)) {
-      const data = await mongoDb.collection(col.name).find({}).toArray();
+      const data = await safeCollection(col.name).find({}).toArray();
       for (const doc of data) {
         cache[col.name].set(col.key(doc), doc);
       }
@@ -107,7 +129,7 @@ async function loadMongoCache() {
 
   for (const name of arrayCollections) {
     if (names.includes(name)) {
-      const data = await mongoDb.collection(name).find({}).toArray();
+      const data = await safeCollection(name).find({}).toArray();
       cache[name].push(...data);
     }
   }
@@ -123,7 +145,7 @@ async function connect() {
   console.log('✅ [MongoDB] Connected successfully to database');
   
   // Auto-delete message cache entries after 3 days (259200 seconds) to save database space
-  await mongoDb.collection('message_cache').createIndex({ createdAt: 1 }, { expireAfterSeconds: 259200 }).catch(() => {});
+  await safeCollection('message_cache').createIndex({ createdAt: 1 }, { expireAfterSeconds: 259200 }).catch(() => {});
   
   await loadMongoCache();
 }
@@ -138,7 +160,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.log_settings.get(guildId) || { guildId };
     doc[colName] = value;
     cache.log_settings.set(guildId, doc);
-    mongoDb.collection('log_settings').updateOne({ guildId }, { $set: { [colName]: value } }, { upsert: true }).catch(console.error);
+    safeCollection('log_settings').updateOne({ guildId }, { $set: { [colName]: value } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -151,7 +173,7 @@ function translateSql(opType, sql, args) {
     } else {
       cache.reactroles.push(newDoc);
     }
-    mongoDb.collection('reactroles').updateOne({ messageId, emoji }, { $set: stripId(newDoc) }, { upsert: true }).catch(console.error);
+    safeCollection('reactroles').updateOne({ messageId, emoji }, { $set: stripId(newDoc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -161,7 +183,7 @@ function translateSql(opType, sql, args) {
     doc.channel = channel;
     doc.enabled = 1;
     cache.greet_settings.set(guildId, doc);
-    mongoDb.collection('greet_settings').updateOne({ guildId }, { $set: { channel, enabled: 1 } }, { upsert: true }).catch(console.error);
+    safeCollection('greet_settings').updateOne({ guildId }, { $set: { channel, enabled: 1 } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -170,7 +192,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.greet_settings.get(guildId) || { guildId };
     doc.delete_after = delete_after;
     cache.greet_settings.set(guildId, doc);
-    mongoDb.collection('greet_settings').updateOne({ guildId }, { $set: { delete_after } }, { upsert: true }).catch(console.error);
+    safeCollection('greet_settings').updateOne({ guildId }, { $set: { delete_after } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -179,7 +201,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.greet_settings.get(guildId) || { guildId };
     doc.dm_message = dm_message;
     cache.greet_settings.set(guildId, doc);
-    mongoDb.collection('greet_settings').updateOne({ guildId }, { $set: { dm_message } }, { upsert: true }).catch(console.error);
+    safeCollection('greet_settings').updateOne({ guildId }, { $set: { dm_message } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -188,14 +210,14 @@ function translateSql(opType, sql, args) {
     let doc = cache.greet_settings.get(guildId) || { guildId };
     doc.message = message;
     cache.greet_settings.set(guildId, doc);
-    mongoDb.collection('greet_settings').updateOne({ guildId }, { $set: { message } }, { upsert: true }).catch(console.error);
+    safeCollection('greet_settings').updateOne({ guildId }, { $set: { message } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
   if (/INSERT INTO invite_logs/i.test(cleanSql)) {
     const [guildId, channelId] = args;
     cache.invite_logs.set(guildId, { guildId, channelId });
-    mongoDb.collection('invite_logs').updateOne({ guildId }, { $set: { channelId } }, { upsert: true }).catch(console.error);
+    safeCollection('invite_logs').updateOne({ guildId }, { $set: { channelId } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -204,7 +226,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.level_settings.get(guildId) || { guildId };
     doc.enabled = enabled;
     cache.level_settings.set(guildId, doc);
-    mongoDb.collection('level_settings').updateOne({ guildId }, { $set: { enabled } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings').updateOne({ guildId }, { $set: { enabled } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -213,7 +235,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.level_settings.get(guildId) || { guildId };
     doc.channel = channel;
     cache.level_settings.set(guildId, doc);
-    mongoDb.collection('level_settings').updateOne({ guildId }, { $set: { channel } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings').updateOne({ guildId }, { $set: { channel } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -223,7 +245,7 @@ function translateSql(opType, sql, args) {
     doc.xp_min = xp_min;
     doc.xp_max = xp_max;
     cache.level_settings.set(guildId, doc);
-    mongoDb.collection('level_settings').updateOne({ guildId }, { $set: { xp_min, xp_max } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings').updateOne({ guildId }, { $set: { xp_min, xp_max } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -232,7 +254,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.level_settings.get(guildId) || { guildId };
     doc.xp_cooldown = xp_cooldown;
     cache.level_settings.set(guildId, doc);
-    mongoDb.collection('level_settings').updateOne({ guildId }, { $set: { xp_cooldown } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings').updateOne({ guildId }, { $set: { xp_cooldown } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -250,7 +272,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.level_settings.get(guildId) || { guildId };
     doc.role_rewards = rewards;
     cache.level_settings.set(guildId, doc);
-    mongoDb.collection('level_settings').updateOne({ guildId }, { $set: { role_rewards: rewards } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings').updateOne({ guildId }, { $set: { role_rewards: rewards } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -259,7 +281,7 @@ function translateSql(opType, sql, args) {
     if (!cache.protection_settings.has(guildId)) {
       const newDoc = { guildId, enabled: 0 };
       cache.protection_settings.set(guildId, newDoc);
-      mongoDb.collection('protection_settings').insertOne(newDoc).catch(() => null);
+      safeCollection('protection_settings').insertOne(newDoc).catch(() => null);
     }
     return { changes: 1 };
   }
@@ -274,7 +296,7 @@ function translateSql(opType, sql, args) {
     cache.protection_settings.set(guildId, doc);
     const updateObj = { [colName]: val };
     if (bypass !== null) updateObj.bypass_role = bypass;
-    mongoDb.collection('protection_settings').updateOne({ guildId }, { $set: updateObj }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings').updateOne({ guildId }, { $set: updateObj }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -285,7 +307,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.protection_settings.get(guildId) || { guildId };
     doc[colName] = val;
     cache.protection_settings.set(guildId, doc);
-    mongoDb.collection('protection_settings').updateOne({ guildId }, { $set: { [colName]: val } }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings').updateOne({ guildId }, { $set: { [colName]: val } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -294,7 +316,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.protection_settings.get(guildId) || { guildId };
     doc.enabled = 1;
     cache.protection_settings.set(guildId, doc);
-    mongoDb.collection('protection_settings').updateOne({ guildId }, { $set: { enabled: 1 } }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings').updateOne({ guildId }, { $set: { enabled: 1 } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -303,7 +325,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.protection_settings.get(guildId) || { guildId };
     doc.enabled = 0;
     cache.protection_settings.set(guildId, doc);
-    mongoDb.collection('protection_settings').updateOne({ guildId }, { $set: { enabled: 0 } }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings').updateOne({ guildId }, { $set: { enabled: 0 } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -312,7 +334,7 @@ function translateSql(opType, sql, args) {
     let doc = cache.protection_settings.get(guildId) || { guildId };
     doc.action = action;
     cache.protection_settings.set(guildId, doc);
-    mongoDb.collection('protection_settings').updateOne({ guildId }, { $set: { action: action } }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings').updateOne({ guildId }, { $set: { action: action } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -327,7 +349,7 @@ function translateSql(opType, sql, args) {
     const updateObj = { category_id, staff_role };
     if (log_channel !== null) updateObj.log_channel = log_channel;
     if (ticket_message !== null) updateObj.ticket_message = ticket_message;
-    mongoDb.collection('ticket_settings').updateOne({ guildId }, { $set: updateObj }, { upsert: true }).catch(console.error);
+    safeCollection('ticket_settings').updateOne({ guildId }, { $set: updateObj }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -335,6 +357,12 @@ function translateSql(opType, sql, args) {
     const [guildId] = args;
     return cache.reactroles.filter(r => r.guildId === guildId);
   }
+
+  if (/SELECT \* FROM reactroles WHERE messageId = \? AND emoji = \?/i.test(cleanSql)) {
+    const [messageId, emoji] = args;
+    return cache.reactroles.find(r => r.messageId === messageId && r.emoji === emoji) || null;
+  }
+
 
   if (/SELECT \* FROM levels WHERE guildId = \? ORDER BY messages DESC LIMIT 10/i.test(cleanSql)) {
     const [guildId] = args;
@@ -364,7 +392,7 @@ function translateSql(opType, sql, args) {
     const [guildId, messageId, emoji] = args;
     const idx = cache.reactroles.findIndex(r => r.guildId === guildId && r.messageId === messageId && r.emoji === emoji);
     if (idx !== -1) cache.reactroles.splice(idx, 1);
-    mongoDb.collection('reactroles').deleteOne({ guildId, messageId, emoji }).catch(console.error);
+    safeCollection('reactroles').deleteOne({ guildId, messageId, emoji }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -379,19 +407,19 @@ function translateSql(opType, sql, args) {
   }
 
   if (/INSERT INTO level_settings/i.test(cleanSql)) {
-    const [guildId, enabled, channel, xp_min, xp_max] = args;
+    const [guildId, enabled, channel, xp_min, xp_max] = args.slice(0, 5);
     let doc = cache.level_settings.get(guildId) || { guildId };
     doc.enabled = enabled;
     doc.channel = channel;
     doc.xp_min = xp_min;
     doc.xp_max = xp_max;
     cache.level_settings.set(guildId, doc);
-    mongoDb.collection('level_settings').updateOne({ guildId }, { $set: { enabled, channel, xp_min, xp_max } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings').updateOne({ guildId }, { $set: { enabled, channel, xp_min, xp_max } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
   if (/INSERT INTO greet_settings/i.test(cleanSql)) {
-    const [guildId, enabled, channel, messageText, image_url, avatar_x, avatar_y, avatar_size, username_x, username_y, username_color, username_size] = args;
+    const [guildId, enabled, channel, messageText, image_url, avatar_x, avatar_y, avatar_size, username_x, username_y, username_color, username_size] = args.slice(0, 12);
     let doc = cache.greet_settings.get(guildId) || { guildId };
     doc.enabled = enabled;
     doc.channel = channel;
@@ -405,24 +433,24 @@ function translateSql(opType, sql, args) {
     doc.username_color = username_color;
     doc.username_size = username_size;
     cache.greet_settings.set(guildId, doc);
-    mongoDb.collection('greet_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('greet_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).catch(() => null);
     return { changes: 1 };
   }
 
   if (/INSERT INTO protection_settings/i.test(cleanSql)) {
-    const [guildId, enabled, ban_limit, kick_limit, action] = args;
+    const [guildId, enabled, ban_limit, kick_limit, action] = args.slice(0, 5);
     let doc = cache.protection_settings.get(guildId) || { guildId };
     doc.enabled = enabled;
     doc.ban_limit = ban_limit;
     doc.kick_limit = kick_limit;
     doc.action = action;
     cache.protection_settings.set(guildId, doc);
-    mongoDb.collection('protection_settings').updateOne({ guildId }, { $set: { enabled, ban_limit, kick_limit, action } }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings').updateOne({ guildId }, { $set: { enabled, ban_limit, kick_limit, action } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
   if (/INSERT INTO log_settings/i.test(cleanSql)) {
-    const [guildId, ...channelVals] = args;
+    const [guildId, ...channelVals] = args.slice(0, 15);
     const cols = [
       'ban_channel', 'unban_channel', 'kick_channel', 'timeout_channel', 'warn_channel',
       'message_delete_channel', 'message_edit_channel', 'member_join_channel', 'member_leave_channel',
@@ -433,7 +461,7 @@ function translateSql(opType, sql, args) {
       doc[cols[i]] = channelVals[i];
     }
     cache.log_settings.set(guildId, doc);
-    mongoDb.collection('log_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('log_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
@@ -447,7 +475,7 @@ function translateSql(opType, sql, args) {
     const now = Math.floor(Date.now() / 1000);
     const newDoc = { userId, guildId, xp: 0, voice_xp: 0, level: 0, voice_level: 0, messages: 0, last_message: now, reactionsCount: 0 };
     cache.levels.set(`${userId}_${guildId}`, newDoc);
-    mongoDb.collection('levels').insertOne(newDoc).catch(console.error);
+    safeCollection('levels').insertOne(newDoc).catch(console.error);
     return { changes: 1 };
   }
 
@@ -461,16 +489,14 @@ function translateSql(opType, sql, args) {
       doc.reactionsCount = (doc.reactionsCount || 0) + 1;
     }
     cache.levels.set(`${userId}_${guildId}`, doc);
-    mongoDb.collection('levels').updateOne({ userId, guildId }, { $set: { reactionsCount: doc.reactionsCount } }, { upsert: true }).catch(console.error);
+    safeCollection('levels').updateOne({ userId, guildId }, { $set: { reactionsCount: doc.reactionsCount } }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   }
 
-  if (/SELECT \* FROM reactroles WHERE messageId = \? AND emoji = \?/i.test(cleanSql)) {
-    const [messageId, emoji] = args;
-    return cache.reactroles.find(r => r.messageId === messageId && r.emoji === emoji) || null;
-  }
-
-  console.warn('[DB Mock] Unhandled raw SQL statement executed:', sql, args);
+  unhandledSqlStatements.push({ sql, args, timestamp: Date.now() });
+  console.error('[DB Mock] Unhandled SQL statement executed. Add a handler for this query. Statement:', sql, 'Args:', args);
+  if (opType === 'get') return null;
+  if (opType === 'all') return [];
   return { changes: 0 };
 }
 
@@ -494,7 +520,7 @@ const helpers = {
     if (!row) {
       row = { guildId, prefix: '#', giveaway_emoji: '🎉', reply_type: 'embed' };
       cache.guild_settings.set(guildId, row);
-      mongoDb.collection('guild_settings').insertOne(row).catch(() => null);
+      safeCollection('guild_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -505,14 +531,14 @@ const helpers = {
     let doc = cache.guild_settings.get(guildId) || { guildId };
     doc[key] = value;
     cache.guild_settings.set(guildId, doc);
-    mongoDb.collection('guild_settings').updateOne({ guildId }, { $set: { [key]: value } }, { upsert: true }).catch(console.error);
+    safeCollection('guild_settings').updateOne({ guildId }, { $set: { [key]: value } }, { upsert: true }).catch(console.error);
   },
 
   addWarning(userId, guildId, reason, moderatorId) {
     const timestamp = Math.floor(Date.now() / 1000);
     const newDoc = { userId, guildId, reason, moderatorId, timestamp };
     cache.warnings.push(newDoc);
-    mongoDb.collection('warnings').insertOne(newDoc).catch(console.error);
+    safeCollection('warnings').insertOne(newDoc).catch(console.error);
     return { changes: 1 };
   },
   getWarnings(userId, guildId) {
@@ -520,7 +546,7 @@ const helpers = {
   },
   clearWarnings(userId, guildId) {
     cache.warnings = cache.warnings.filter(w => !(w.userId === userId && w.guildId === guildId));
-    mongoDb.collection('warnings').deleteMany({ userId, guildId }).catch(console.error);
+    safeCollection('warnings').deleteMany({ userId, guildId }).catch(console.error);
     return { changes: 1 };
   },
 
@@ -538,7 +564,7 @@ const helpers = {
       doc.last_message = now;
     }
     cache.levels.set(`${userId}_${guildId}`, doc);
-    mongoDb.collection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
   },
   addVoiceXP(userId, guildId, xp) {
     let doc = cache.levels.get(`${userId}_${guildId}`);
@@ -548,7 +574,7 @@ const helpers = {
       doc.voice_xp = (doc.voice_xp || 0) + xp;
     }
     cache.levels.set(`${userId}_${guildId}`, doc);
-    mongoDb.collection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
   },
   setLevel(userId, guildId, level, xp, voice_level, voice_xp) {
     let doc = cache.levels.get(`${userId}_${guildId}`) || { userId, guildId, messages: 0, last_message: 0, reactionsCount: 0 };
@@ -557,7 +583,7 @@ const helpers = {
     doc.voice_level = voice_level;
     doc.voice_xp = voice_xp;
     cache.levels.set(`${userId}_${guildId}`, doc);
-    mongoDb.collection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
   },
   getLeaderboard(guildId, limit = 10) {
     return Array.from(cache.levels.values())
@@ -577,7 +603,7 @@ const helpers = {
     if (!row) {
       row = { guildId, enabled: 1, channel: null, xp_min: 15, xp_max: 25, xp_cooldown: 60, role_rewards: [] };
       cache.level_settings.set(guildId, row);
-      mongoDb.collection('level_settings').insertOne(row).catch(() => null);
+      safeCollection('level_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -591,11 +617,10 @@ const helpers = {
         username_x: 100, username_y: 300, username_color: '#ffffff', username_size: 40
       };
       cache.greet_settings.set(guildId, row);
-      mongoDb.collection('greet_settings').insertOne(row).catch(() => null);
+      safeCollection('greet_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
-
   getAutomation(guildId, channelId) {
     return cache.automation.filter(a => a.guildId === guildId && a.channelId === channelId);
   },
@@ -604,23 +629,23 @@ const helpers = {
   },
   addAutomation(guildId, channelId, type, value) {
     cache.automation = cache.automation.filter(a => !(a.guildId === guildId && a.channelId === channelId && a.type === type));
-    mongoDb.collection('automation').deleteMany({ guildId, channelId, type }).catch(() => null);
+    safeCollection('automation').deleteMany({ guildId, channelId, type }).catch(() => null);
 
     const newDoc = { guildId, channelId, type, value };
     cache.automation.push(newDoc);
-    mongoDb.collection('automation').insertOne(newDoc).catch(console.error);
+    safeCollection('automation').insertOne(newDoc).catch(console.error);
     return { changes: 1 };
   },
   removeAutomation(guildId, channelId, type) {
     cache.automation = cache.automation.filter(a => !(a.guildId === guildId && a.channelId === channelId && a.type === type));
-    mongoDb.collection('automation').deleteMany({ guildId, channelId, type }).catch(console.error);
+    safeCollection('automation').deleteMany({ guildId, channelId, type }).catch(console.error);
     return { changes: 1 };
   },
 
   createGiveaway(messageId, channelId, guildId, prize, winners, host, endTime, emoji) {
     const doc = { messageId, channelId, guildId, prize, winners, host, endTime, emoji, ended: 0, paused: 0 };
     cache.giveaways.set(messageId, doc);
-    mongoDb.collection('giveaways').insertOne(doc).catch(console.error);
+    safeCollection('giveaways').insertOne(doc).catch(console.error);
     return { changes: 1 };
   },
   getGiveaway(messageId) {
@@ -637,7 +662,7 @@ const helpers = {
     if (doc) {
       doc.ended = 1;
       cache.giveaways.set(messageId, doc);
-      mongoDb.collection('giveaways').updateOne({ messageId }, { $set: { ended: 1 } }).catch(console.error);
+      safeCollection('giveaways').updateOne({ messageId }, { $set: { ended: 1 } }).catch(console.error);
     }
     return { changes: 1 };
   },
@@ -649,7 +674,7 @@ const helpers = {
     if (doc) {
       doc[field] = value;
       cache.giveaways.set(messageId, doc);
-      mongoDb.collection('giveaways').updateOne({ messageId }, { $set: { [field]: value } }).catch(console.error);
+      safeCollection('giveaways').updateOne({ messageId }, { $set: { [field]: value } }).catch(console.error);
     }
     return { changes: 1 };
   },
@@ -662,7 +687,7 @@ const helpers = {
         ban_limit: 3, kick_limit: 3, channel_limit: 3, role_limit: 3, webhook_limit: 3, action: 'ban'
       };
       cache.protection_settings.set(guildId, row);
-      mongoDb.collection('protection_settings').insertOne(row).catch(() => null);
+      safeCollection('protection_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -676,7 +701,7 @@ const helpers = {
       if (data[key] !== undefined) current[key] = data[key];
     }
     cache.protection_settings.set(guildId, current);
-    return mongoDb.collection('protection_settings').updateOne(
+    return safeCollection('protection_settings').updateOne(
       { guildId },
       { $set: stripId(current) },
       { upsert: true }
@@ -690,13 +715,13 @@ const helpers = {
     if (!exists) {
       const newDoc = { guildId, targetId, type };
       cache.whitelist.push(newDoc);
-      mongoDb.collection('whitelist').insertOne(newDoc).catch(() => null);
+      safeCollection('whitelist').insertOne(newDoc).catch(() => null);
     }
     return { changes: 1 };
   },
   removeWhitelist(guildId, targetId) {
     cache.whitelist = cache.whitelist.filter(w => !(w.guildId === guildId && w.targetId === targetId));
-    mongoDb.collection('whitelist').deleteMany({ guildId, targetId }).catch(console.error);
+    safeCollection('whitelist').deleteMany({ guildId, targetId }).catch(console.error);
     return { changes: 1 };
   },
   addBlacklist(guildId, targetId, type) {
@@ -704,13 +729,13 @@ const helpers = {
     if (!exists) {
       const newDoc = { guildId, targetId, type };
       cache.blacklist.push(newDoc);
-      mongoDb.collection('blacklist').insertOne(newDoc).catch(() => null);
+      safeCollection('blacklist').insertOne(newDoc).catch(() => null);
     }
     return { changes: 1 };
   },
   removeBlacklist(guildId, targetId) {
     cache.blacklist = cache.blacklist.filter(b => !(b.guildId === guildId && b.targetId === targetId));
-    mongoDb.collection('blacklist').deleteMany({ guildId, targetId }).catch(console.error);
+    safeCollection('blacklist').deleteMany({ guildId, targetId }).catch(console.error);
     return { changes: 1 };
   },
   isWhitelisted(guildId, targetId) {
@@ -722,7 +747,7 @@ const helpers = {
     if (!row) {
       row = { userId, guildId, total: 0, fake: 0, left: 0, bonus: 0 };
       cache.invites.set(`${userId}_${guildId}`, row);
-      mongoDb.collection('invites').insertOne(row).catch(() => null);
+      safeCollection('invites').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -734,14 +759,14 @@ const helpers = {
     if (!doc) doc = { userId, guildId, total: 0, fake: 0, left: 0, bonus: 0 };
     doc[field] = (doc[field] || 0) + value;
     cache.invites.set(`${userId}_${guildId}`, doc);
-    mongoDb.collection('invites').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('invites').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
   },
   resetInvites(userId, guildId) {
     let doc = cache.invites.get(`${userId}_${guildId}`);
     if (doc) {
       doc.total = 0; doc.fake = 0; doc.left = 0; doc.bonus = 0;
       cache.invites.set(`${userId}_${guildId}`, doc);
-      mongoDb.collection('invites').updateOne({ userId, guildId }, { $set: { total: 0, fake: 0, left: 0, bonus: 0 } }).catch(console.error);
+      safeCollection('invites').updateOne({ userId, guildId }, { $set: { total: 0, fake: 0, left: 0, bonus: 0 } }).catch(console.error);
     }
   },
   resetAllInvites(guildId) {
@@ -750,18 +775,18 @@ const helpers = {
         val.total = 0; val.fake = 0; val.left = 0; val.bonus = 0;
       }
     }
-    mongoDb.collection('invites').updateMany({ guildId }, { $set: { total: 0, fake: 0, left: 0, bonus: 0 } }).catch(console.error);
+    safeCollection('invites').updateMany({ guildId }, { $set: { total: 0, fake: 0, left: 0, bonus: 0 } }).catch(console.error);
   },
   getInviteRanks(guildId) {
     return cache.invite_ranks.filter(r => r.guildId === guildId).sort((a, b) => a.count - b.count);
   },
   addInviteRank(guildId, count, roleId) {
     cache.invite_ranks = cache.invite_ranks.filter(r => !(r.guildId === guildId && r.count === count));
-    mongoDb.collection('invite_ranks').deleteMany({ guildId, count }).catch(() => null);
+    safeCollection('invite_ranks').deleteMany({ guildId, count }).catch(() => null);
 
     const newDoc = { guildId, count, roleId };
     cache.invite_ranks.push(newDoc);
-    mongoDb.collection('invite_ranks').insertOne(newDoc).catch(console.error);
+    safeCollection('invite_ranks').insertOne(newDoc).catch(console.error);
     return { changes: 1 };
   },
   getInviteLogs(guildId) {
@@ -779,7 +804,7 @@ const helpers = {
         ticket_message: 'Thank you for opening a ticket! Support will be with you shortly.', panel_data: {}
       };
       cache.ticket_settings.set(guildId, row);
-      mongoDb.collection('ticket_settings').insertOne(row).catch(() => null);
+      safeCollection('ticket_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -796,13 +821,13 @@ const helpers = {
     if (data.panel_data !== undefined) current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
 
     cache.ticket_settings.set(guildId, current);
-    return mongoDb.collection('ticket_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('ticket_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   createTicket(guildId, userId, channelId, category) {
     const timestamp = Math.floor(Date.now() / 1000);
     const doc = { guildId, userId, channelId, status: 'open', category, created_at: timestamp };
     cache.tickets.push(doc);
-    mongoDb.collection('tickets').insertOne(doc).catch(console.error);
+    safeCollection('tickets').insertOne(doc).catch(console.error);
     return { changes: 1 };
   },
   getTicketByChannel(channelId) {
@@ -812,7 +837,7 @@ const helpers = {
     const t = cache.tickets.find(tk => tk.channelId === channelId);
     if (t) {
       t.status = status;
-      mongoDb.collection('tickets').updateOne({ channelId }, { $set: { status } }).catch(console.error);
+      safeCollection('tickets').updateOne({ channelId }, { $set: { status } }).catch(console.error);
     }
     return { changes: 1 };
   },
@@ -823,7 +848,7 @@ const helpers = {
 
     ticket.claimedBy = userId;
 
-    mongoDb.collection("tickets").updateOne(
+    safeCollection("tickets").updateOne(
         { channelId },
         { $set: { claimedBy: userId } }
     ).catch(console.error);
@@ -843,9 +868,7 @@ addTicketBlacklist(guildId, userId) {
     cache.ticket_blacklist ??= [];
     cache.ticket_blacklist.push(row);
 
-    return mongoDb
-        .collection("ticket_blacklist")
-        .insertOne(row);
+    return safeCollection("ticket_blacklist").insertOne(row);
 },
 
 removeTicketBlacklist(guildId, userId) {
@@ -860,9 +883,7 @@ removeTicketBlacklist(guildId, userId) {
                 )
         );
 
-    return mongoDb
-        .collection("ticket_blacklist")
-        .deleteOne({
+    return safeCollection("ticket_blacklist").deleteOne({
             guildId,
             userId
         });
@@ -892,9 +913,7 @@ addTicketWarning(guildId, userId, moderatorId, reason) {
     cache.ticket_warnings ??= [];
     cache.ticket_warnings.push(row);
 
-    return mongoDb
-        .collection("ticket_warnings")
-        .insertOne(row);
+    return safeCollection("ticket_warnings").insertOne(row);
 },
 
 getTicketWarnings(guildId, userId) {
@@ -910,19 +929,18 @@ getTicketWarnings(guildId, userId) {
 
 
 
-
   getAutoReplies(guildId) {
     return cache.auto_reply.filter(a => a.guildId === guildId);
   },
   addAutoReply(guildId, trigger, response, deleteTrigger = 0) {
     const doc = { guildId, trigger, response, deleteTrigger: Number(deleteTrigger) };
     cache.auto_reply.push(doc);
-    mongoDb.collection('auto_reply').insertOne(doc).catch(console.error);
+    safeCollection('auto_reply').insertOne(doc).catch(console.error);
     return { changes: 1 };
   },
   removeAutoReply(guildId, trigger) {
     cache.auto_reply = cache.auto_reply.filter(a => !(a.guildId === guildId && a.trigger === trigger));
-    mongoDb.collection('auto_reply').deleteMany({ guildId, trigger }).catch(console.error);
+    safeCollection('auto_reply').deleteMany({ guildId, trigger }).catch(console.error);
     return { changes: 1 };
   },
 
@@ -930,7 +948,7 @@ getTicketWarnings(guildId, userId) {
     const now = Math.floor(Date.now() / 1000);
     const doc = { channelId, content, authorId, authorTag, authorAvatar, timestamp: now };
     cache.snipe.set(channelId, doc);
-    mongoDb.collection('snipe').updateOne({ channelId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('snipe').updateOne({ channelId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
   },
   getSnipe(channelId) {
     return cache.snipe.get(channelId);
@@ -945,7 +963,7 @@ getTicketWarnings(guildId, userId) {
         channel_create_channel: null, channel_delete_channel: null, role_create_channel: null, role_delete_channel: null, nick_change_channel: null
       };
       cache.log_settings.set(guildId, row);
-      mongoDb.collection('log_settings').insertOne(row).catch(() => null);
+      safeCollection('log_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -960,12 +978,12 @@ getTicketWarnings(guildId, userId) {
   addAlias(guildId, shortcut, command) {
     const doc = { guildId, shortcut, command };
     cache.aliases.push(doc);
-    mongoDb.collection('aliases').insertOne(doc).catch(console.error);
+    safeCollection('aliases').insertOne(doc).catch(console.error);
     return { changes: 1 };
   },
   removeAlias(guildId, shortcut) {
     cache.aliases = cache.aliases.filter(a => !(a.guildId === guildId && a.shortcut === shortcut));
-    mongoDb.collection('aliases').deleteMany({ guildId, shortcut }).catch(console.error);
+    safeCollection('aliases').deleteMany({ guildId, shortcut }).catch(console.error);
     return { changes: 1 };
   },
 
@@ -974,7 +992,7 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { guildId, log_channel: null, panel_data: {}, questions: [] };
       cache.forms_settings.set(guildId, row);
-      mongoDb.collection('forms_settings').insertOne(row).catch(() => null);
+      safeCollection('forms_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -985,7 +1003,7 @@ getTicketWarnings(guildId, userId) {
     if (data.questions !== undefined) current.questions = typeof data.questions === 'string' ? JSON.parse(data.questions) : data.questions;
 
     cache.forms_settings.set(guildId, current);
-    return mongoDb.collection('forms_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('forms_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   getReactionRoles(guildId) {
@@ -993,7 +1011,7 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { guildId, panel_data: {}, roles_data: [] };
       cache.reaction_roles.set(guildId, row);
-      mongoDb.collection('reaction_roles').insertOne(row).catch(() => null);
+      safeCollection('reaction_roles').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -1003,7 +1021,7 @@ getTicketWarnings(guildId, userId) {
     if (data.roles_data !== undefined) current.roles_data = typeof data.roles_data === 'string' ? JSON.parse(data.roles_data) : data.roles_data;
 
     cache.reaction_roles.set(guildId, current);
-    return mongoDb.collection('reaction_roles').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('reaction_roles').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   getCaptchaSettings(guildId) {
@@ -1011,7 +1029,7 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { guildId, enabled: 0, unverified_role: null, verified_role: null, panel_channel: null, panel_data: {} };
       cache.captcha_settings.set(guildId, row);
-      mongoDb.collection('captcha_settings').insertOne(row).catch(() => null);
+      safeCollection('captcha_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -1024,7 +1042,7 @@ getTicketWarnings(guildId, userId) {
     if (data.panel_data !== undefined) current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
 
     cache.captcha_settings.set(guildId, current);
-    return mongoDb.collection('captcha_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('captcha_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   getTempVoiceSettings(guildId) {
@@ -1032,7 +1050,7 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { guildId, master_channel: null, category_id: null, panel_channel: null };
       cache.tempvoice_settings.set(guildId, row);
-      mongoDb.collection('tempvoice_settings').insertOne(row).catch(() => null);
+      safeCollection('tempvoice_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -1041,13 +1059,13 @@ getTicketWarnings(guildId, userId) {
     doc.master_channel = master_channel;
     doc.category_id = category_id;
     cache.tempvoice_settings.set(guildId, doc);
-    return mongoDb.collection('tempvoice_settings').updateOne({ guildId }, { $set: { master_channel, category_id } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_settings').updateOne({ guildId }, { $set: { master_channel, category_id } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   updateTempVoicePanel(guildId, panel_channel) {
     let doc = cache.tempvoice_settings.get(guildId) || { guildId };
     doc.panel_channel = panel_channel;
     cache.tempvoice_settings.set(guildId, doc);
-    return mongoDb.collection('tempvoice_settings').updateOne({ guildId }, { $set: { panel_channel } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_settings').updateOne({ guildId }, { $set: { panel_channel } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   getJailSettings(guildId) {
@@ -1055,14 +1073,14 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { guildId, jailRoleId: null, jailChannelId: null, staffVoiceId: null };
       cache.jail_settings.set(guildId, row);
-      mongoDb.collection('jail_settings').insertOne(row).catch(() => null);
+      safeCollection('jail_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
   setJailSettings(guildId, roleId, channelId, staffVoiceId) {
     const doc = { guildId, jailRoleId: roleId, jailChannelId: channelId, staffVoiceId };
     cache.jail_settings.set(guildId, doc);
-    return mongoDb.collection('jail_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('jail_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   getJailedUser(userId, guildId) {
     return cache.jailed_users.get(`${userId}_${guildId}`);
@@ -1071,24 +1089,24 @@ getTicketWarnings(guildId, userId) {
     const now = Math.floor(Date.now() / 1000);
     const doc = { userId, guildId, oldRoles, jailedAt: now };
     cache.jailed_users.set(`${userId}_${guildId}`, doc);
-    return mongoDb.collection('jailed_users').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('jailed_users').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   removeJailedUser(userId, guildId) {
     cache.jailed_users.delete(`${userId}_${guildId}`);
-    return mongoDb.collection('jailed_users').deleteOne({ userId, guildId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('jailed_users').deleteOne({ userId, guildId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
-
+  
   addTempVoiceChannel(channelId, ownerId, guildId) {
     const doc = { channelId, ownerId, guildId };
     cache.tempvoice_channels.set(channelId, doc);
-    return mongoDb.collection('tempvoice_channels').insertOne(doc).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_channels').insertOne(doc).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   getTempVoiceChannel(channelId) {
     return cache.tempvoice_channels.get(channelId);
   },
   removeTempVoiceChannel(channelId) {
     cache.tempvoice_channels.delete(channelId);
-    return mongoDb.collection('tempvoice_channels').deleteOne({ channelId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_channels').deleteOne({ channelId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   getTempVoiceChannelsByGuild(guildId) {
     return Array.from(cache.tempvoice_channels.values()).filter(c => c.guildId === guildId);
@@ -1099,7 +1117,7 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { id: 1, status: 'online', activity_type: 'PLAYING', activity_name: 'E-246 System' };
       cache.bot_settings.set(1, row);
-      mongoDb.collection('bot_settings').insertOne(row).catch(() => null);
+      safeCollection('bot_settings').insertOne(row).catch(() => null);
     }
     return row;
   },
@@ -1107,7 +1125,7 @@ getTicketWarnings(guildId, userId) {
     let doc = cache.bot_settings.get(1) || { id: 1 };
     doc.status = status; doc.activity_type = activity_type; doc.activity_name = activity_name; doc.emoji_color = emoji_color; doc.broadcast_tokens = broadcast_tokens;
     cache.bot_settings.set(1, doc);
-    return mongoDb.collection('bot_settings').updateOne({ id: 1 }, { $set: { status, activity_type, activity_name, emoji_color, broadcast_tokens } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('bot_settings').updateOne({ id: 1 }, { $set: { status, activity_type, activity_name, emoji_color, broadcast_tokens } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   getTempVoiceUserSettings(userId) {
@@ -1116,17 +1134,17 @@ getTicketWarnings(guildId, userId) {
   saveTempVoiceUserSettings(userId, name, limit) {
     const doc = { userId, preferredName: name, preferredLimit: limit };
     cache.tempvoice_user_settings.set(userId, doc);
-    return mongoDb.collection('tempvoice_user_settings').updateOne({ userId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_user_settings').updateOne({ userId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
 
   addTempVoiceBan(channelId, targetId) {
     const doc = { channelId, targetId };
     cache.tempvoice_bans.set(`${channelId}_${targetId}`, doc);
-    return mongoDb.collection('tempvoice_bans').updateOne({ channelId, targetId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_bans').updateOne({ channelId, targetId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   removeTempVoiceBan(channelId, targetId) {
     cache.tempvoice_bans.delete(`${channelId}_${targetId}`);
-    return mongoDb.collection('tempvoice_bans').deleteOne({ channelId, targetId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_bans').deleteOne({ channelId, targetId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   isTempVoiceBanned(channelId, targetId) {
     return cache.tempvoice_bans.has(`${channelId}_${targetId}`);
@@ -1138,11 +1156,11 @@ getTicketWarnings(guildId, userId) {
   addTempVoiceTrusted(channelId, userId) {
     const doc = { channelId, userId };
     cache.tempvoice_trusted.set(`${channelId}_${userId}`, doc);
-    return mongoDb.collection('tempvoice_trusted').updateOne({ channelId, userId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_trusted').updateOne({ channelId, userId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   removeTempVoiceTrusted(channelId, userId) {
     cache.tempvoice_trusted.delete(`${channelId}_${userId}`);
-    return mongoDb.collection('tempvoice_trusted').deleteOne({ channelId, userId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_trusted').deleteOne({ channelId, userId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   isTempVoiceTrusted(channelId, userId) {
     return cache.tempvoice_trusted.has(`${channelId}_${userId}`);
@@ -1156,7 +1174,7 @@ getTicketWarnings(guildId, userId) {
     let doc = cache.stats_daily_members.get(`${guildId}_${today}`);
     if (!doc) { doc = { guildId, date: today, joins: 1, leaves: 0 }; } else { doc.joins = (doc.joins || 0) + 1; }
     cache.stats_daily_members.set(`${guildId}_${today}`, doc);
-    mongoDb.collection('stats_daily_members').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('stats_daily_members').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   },
   incrementDailyLeaves(guildId) {
@@ -1164,7 +1182,7 @@ getTicketWarnings(guildId, userId) {
     let doc = cache.stats_daily_members.get(`${guildId}_${today}`);
     if (!doc) { doc = { guildId, date: today, joins: 0, leaves: 1 }; } else { doc.leaves = (doc.leaves || 0) + 1; }
     cache.stats_daily_members.set(`${guildId}_${today}`, doc);
-    mongoDb.collection('stats_daily_members').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('stats_daily_members').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   },
   incrementHourlyMessages(guildId) {
@@ -1173,7 +1191,7 @@ getTicketWarnings(guildId, userId) {
     let doc = cache.stats_hourly_messages.get(`${guildId}_${today}_${hour}`);
     if (!doc) { doc = { guildId, date: today, hour, message_count: 1 }; } else { doc.message_count = (doc.message_count || 0) + 1; }
     cache.stats_hourly_messages.set(`${guildId}_${today}_${hour}`, doc);
-    mongoDb.collection('stats_hourly_messages').updateOne({ guildId, date: today, hour }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('stats_hourly_messages').updateOne({ guildId, date: today, hour }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   },
   addDailyVoiceSeconds(guildId, seconds) {
@@ -1181,7 +1199,7 @@ getTicketWarnings(guildId, userId) {
     let doc = cache.stats_daily_voice.get(`${guildId}_${today}`);
     if (!doc) { doc = { guildId, date: today, seconds }; } else { doc.seconds = (doc.seconds || 0) + seconds; }
     cache.stats_daily_voice.set(`${guildId}_${today}`, doc);
-    mongoDb.collection('stats_daily_voice').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('stats_daily_voice').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
     return { changes: 1 };
   },
 
@@ -1216,19 +1234,19 @@ getTicketWarnings(guildId, userId) {
   addSocialAlert(guildId, platform, channelId, socialId, message) {
     const doc = { id: Date.now().toString(36), guildId, platform, channelId, socialId, lastVideoId: null, message };
     cache.social_alerts.push(doc);
-    mongoDb.collection('social_alerts').insertOne(doc).catch(console.error);
+    safeCollection('social_alerts').insertOne(doc).catch(console.error);
     return { changes: 1 };
   },
   removeSocialAlert(id, guildId) {
     cache.social_alerts = cache.social_alerts.filter(a => !(a.id === id && a.guildId === guildId));
-    mongoDb.collection('social_alerts').deleteOne({ id, guildId }).catch(console.error);
+    safeCollection('social_alerts').deleteOne({ id, guildId }).catch(console.error);
     return { changes: 1 };
   },
   updateSocialAlertLastVideo(id, lastVideoId) {
     const idx = cache.social_alerts.findIndex(a => a.id === id);
     if (idx !== -1) {
       cache.social_alerts[idx].lastVideoId = lastVideoId;
-      mongoDb.collection('social_alerts').updateOne({ id }, { $set: { lastVideoId } }).catch(console.error);
+      safeCollection('social_alerts').updateOne({ id }, { $set: { lastVideoId } }).catch(console.error);
     }
     return { changes: 1 };
   },
@@ -1236,7 +1254,7 @@ getTicketWarnings(guildId, userId) {
     const idx = cache.social_alerts.findIndex(a => a.id === id);
     if (idx !== -1) {
       cache.social_alerts[idx].socialId = socialId;
-      mongoDb.collection('social_alerts').updateOne({ id }, { $set: { socialId } }).catch(console.error);
+      safeCollection('social_alerts').updateOne({ id }, { $set: { socialId } }).catch(console.error);
     }
     return { changes: 1 };
   },
@@ -1252,32 +1270,41 @@ getTicketWarnings(guildId, userId) {
       attachments,
       createdAt: new Date()
     };
-    mongoDb.collection('message_cache').insertOne(doc).catch(() => {});
+    safeCollection('message_cache').insertOne(doc).catch(err => console.error('[DB] Mongo write failed:', err));
+  },
+  async getCachedMessage(messageId) {
+    if (!mongoDb) return null;
+    const doc = await safeCollection('message_cache').findOne({ messageId }).catch(() => null);
+    return doc || null;
   },
   async getKV(key) {
     if (!mongoDb) return null;
-    const doc = await mongoDb.collection('quick_db').findOne({ key }).catch(() => null);
+    const doc = await safeCollection('quick_db').findOne({ key }).catch(() => null);
     return doc ? doc.value : null;
   },
   async setKV(key, value) {
     if (!mongoDb) return value;
-    await mongoDb.collection('quick_db').updateOne({ key }, { $set: { value } }, { upsert: true }).catch(() => {});
+    await safeCollection('quick_db').updateOne({ key }, { $set: { value } }, { upsert: true }).catch(err => console.error('[DB] Mongo write failed:', err));
     return value;
   },
   async deleteKV(key) {
     if (!mongoDb) return false;
-    await mongoDb.collection('quick_db').deleteOne({ key }).catch(() => {});
+    await safeCollection('quick_db').deleteOne({ key }).catch(err => console.error('[DB] Mongo write failed:', err));
     return true;
   },
   async getTopBalances(limit = 6) {
     if (!mongoDb) return [];
-    const docs = await mongoDb.collection('quick_db').find({ key: { $regex: /^balance_/ } }).toArray().catch(() => []);
+    const docs = await safeCollection('quick_db').find({ key: { $regex: /^balance_/ } }).toArray().catch(() => []);
     return docs.map(d => ({
       userId: d.key.replace('balance_', ''),
       balance: d.value
     })).sort((a, b) => b.balance - a.balance).slice(0, limit);
+  },
+  isConnected() {
+    return !!mongoDb;
   }
 };
+
 
 helpers.stripId = stripId;
 helpers.safeSet = safeSet;

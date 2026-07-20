@@ -52,6 +52,13 @@ module.exports = (client) => {
         if (!hasPerms) return res.redirect('/dashboard?error=missing_perms');
 
         req.guild = guild;
+
+        // Attach common collections to res.locals for EJS templates
+        res.locals.textChannels = guild.channels.cache.filter(c => c.type === 0 || c.type === 5);
+        res.locals.voiceChannels = guild.channels.cache.filter(c => c.type === 2);
+        res.locals.categories = guild.channels.cache.filter(c => c.type === 4);
+        res.locals.roles = guild.roles.cache.filter(r => r.id !== guild.id).sort((a, b) => b.position - a.position);
+
         next();
     }
 
@@ -556,7 +563,7 @@ console.log("PANEL:", panelData);
     router.get('/:id/reactionroles', checkAuth, checkGuildAccess, (req, res) => {
         const settings = db.getReactionRoles(req.guild.id);
         if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
-        if (typeof settings.roles_data === 'string') settings.roles_data = settings.roles_data;
+        if (typeof settings.roles_data === 'string') settings.roles_data = JSON.parse(settings.roles_data || '[]');
 
         const nativeReactionRoles = db.db.prepare('SELECT * FROM reactroles WHERE guildId = ?').all(req.guild.id);
 

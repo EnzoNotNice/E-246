@@ -1,114 +1,130 @@
 <%- include('partials/header') %>
-
 <%- include('partials/sidebar', { activeTab: 'welcome' }) %>
 
-    <main class="app-content">
-        <div class="glass-panel">
-            <h2><i class="fa-solid fa-handshake"></i> الترحيب والمغادرة</h2>
-            <p>الترحيب بالأعضاء الجدد عند انضمامهم للسيرفر</p>
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-handshake"></i> الترحيب والمغادرة</h1>
+        <p>قم بالترحيب بالأعضاء الجدد تلقائياً برسائل نصية أو بطاقات ترحيبية بصور مخصصة</p>
+    </div>
 
-            <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
-                <div class="alert alert-success">
-                    <%= req.query.success %>
-                </div>
-            <% } %>
+    <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
+    <% } %>
 
-            <form action="/dashboard/<%= guild.id %>/welcome" method="POST" class="settings-form">
+    <form action="/dashboard/<%= guild.id %>/welcome" method="POST" class="settings-form">
+
+        <!-- Core Welcome Settings -->
+        <div class="glass-panel reveal">
+            <div class="section-title"><i class="fa-solid fa-sliders"></i> الإعدادات الأساسية</div>
+            
+            <div class="grid-form-2">
                 <div class="form-group">
                     <label for="enabled">تفعيل نظام الترحيب</label>
                     <select id="enabled" name="enabled" class="glass-input">
-                        <option value="1" <%= settings.enabled === 1 ? 'selected' : '' %>>مفعل</option>
-                        <option value="0" <%= settings.enabled === 0 ? 'selected' : '' %>>معطل</option>
+                        <option value="1" <%= settings.enabled === 1 ? 'selected' : '' %>>🟢 مفعّل</option>
+                        <option value="0" <%= settings.enabled === 0 ? 'selected' : '' %>>🔴 معطّل</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="channel">قناة الترحيب والتهنئة</label>
+                    <select id="channel" name="channel" class="glass-input">
+                        <option value="" <%= !settings.channel ? 'selected' : '' %>>تعطيل / بدون إرسال</option>
+                        <% textChannels.forEach(c => { %>
+                            <option value="<%= c.id %>" <%= settings.channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
+                        <% }) %>
                     </select>
                 </div>
 
+            </div>
+
+            <div class="form-group">
+                <label for="message">رسالة الترحيب النصية</label>
+                <textarea id="message" name="message" class="glass-input" rows="3" placeholder="اكتب رسالة الترحيب هنا..."><%= settings.message %></textarea>
+                <small>المتغيرات المدعومة: <code>{user}</code> لذكر العضو، <code>{server}</code> لاسم السيرفر، <code>{membercount}</code> لعدد الأعضاء</small>
+            </div>
+        </div>
+
+        <!-- Welcome Image Settings -->
+        <div class="glass-panel reveal" style="animation-delay: 0.05s;">
+            <div class="section-title"><i class="fa-solid fa-image"></i> بطاقة وصورة الترحيب المخصصة</div>
+
+            <div class="form-group">
+                <label for="image_url">رابط صورة الخلفية (Background Image URL)</label>
+                <div class="d-flex gap-2">
+                    <input type="text" id="image_url" name="image_url" class="glass-input flex-grow-1" value="<%= settings.image_url || '' %>" placeholder="https://example.com/background.png">
+                    <input type="file" id="bg_upload" accept="image/*" style="display: none;">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('bg_upload').click()"><i class="fa-solid fa-upload"></i> رفع ملف</button>
+                </div>
+                <small id="upload_status" class="text-muted mt-1">اتركه فارغاً في حال أردت استخدام الترحيب النصي فقط بدون صورة بطاقة</small>
+            </div>
+
+            <div class="grid-form-3 mt-2">
                 <div class="form-group">
-                    <label for="channel">أيدي روم الترحيب (مرحباً Channel ID)</label>
-                    <input type="text" id="channel" name="channel" class="glass-input" value="<%= settings.channel || '' %>" placeholder="e.g. 1234567890">
+                    <label for="avatar_x">موقع الأفتار X (أفقي)</label>
+                    <input type="number" id="avatar_x" name="avatar_x" class="glass-input" value="<%= settings.avatar_x || 100 %>">
                 </div>
-
                 <div class="form-group">
-                    <label for="message">رسالة الترحيب النصية</label>
-                    <textarea id="message" name="message" class="glass-input" rows="4"><%= settings.message %></textarea>
-                    <small>المتغيرات المتاحة <code>{user}</code> <code>{server}</code> <code>{membercount}</code></small>
+                    <label for="avatar_y">موقع الأفتار Y (رأسي)</label>
+                    <input type="number" id="avatar_y" name="avatar_y" class="glass-input" value="<%= settings.avatar_y || 100 %>">
                 </div>
-
-                <hr style="border: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
-                <h3>إعدادات صورة الترحيب</h3>
-
                 <div class="form-group">
-                    <label for="image_url">رابط صورة الخلفية (أو قم برفع صورة من جهازك)</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="image_url" name="image_url" class="glass-input" value="<%= settings.image_url || '' %>" placeholder="https://example.com/bg.png" style="flex: 1;">
-                        <input type="file" id="bg_upload" accept="image/*" style="display: none;">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('bg_upload').click()"><i class="fa-solid fa-upload"></i> رفع صورة</button>
-                    </div>
-                    <small id="upload_status">اتركه فارغاً لاستخدام الترحيب النصي فقط</small>
+                    <label for="avatar_size">حجم الأفتار (Avatar Size)</label>
+                    <input type="number" id="avatar_size" name="avatar_size" class="glass-input" value="<%= settings.avatar_size || 150 %>">
                 </div>
+            </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="avatar_x">صورة العضو X (محور السينات)</label>
-                        <input type="number" id="avatar_x" name="avatar_x" class="glass-input" value="<%= settings.avatar_x || 100 %>">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="avatar_y">صورة العضو Y (محور الصادات)</label>
-                        <input type="number" id="avatar_y" name="avatar_y" class="glass-input" value="<%= settings.avatar_y || 100 %>">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="avatar_size">حجم صورة العضو</label>
-                        <input type="number" id="avatar_size" name="avatar_size" class="glass-input" value="<%= settings.avatar_size || 150 %>">
-                    </div>
+            <div class="grid-form-2">
+                <div class="form-group">
+                    <label for="username_x">موقع اسم المستخدم X</label>
+                    <input type="number" id="username_x" name="username_x" class="glass-input" value="<%= settings.username_x || 100 %>">
                 </div>
-
-                <div style="display: flex; gap: 10px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="username_x">موقع الاسم X</label>
-                        <input type="number" id="username_x" name="username_x" class="glass-input" value="<%= settings.username_x || 100 %>">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="username_y">موقع الاسم Y</label>
-                        <input type="number" id="username_y" name="username_y" class="glass-input" value="<%= settings.username_y || 300 %>">
-                    </div>
+                <div class="form-group">
+                    <label for="username_y">موقع اسم المستخدم Y</label>
+                    <input type="number" id="username_y" name="username_y" class="glass-input" value="<%= settings.username_y || 300 %>">
                 </div>
+            </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="username_color">لون الاسم</label>
-                        <input type="color" id="username_color" name="username_color" class="glass-input" value="<%= settings.username_color || '#ffffff' %>" style="height: 40px; padding: 2px;">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="username_size">حجم خط الاسم</label>
-                        <input type="number" id="username_size" name="username_size" class="glass-input" value="<%= settings.username_size || 40 %>">
-                    </div>
+            <div class="grid-form-2">
+                <div class="form-group">
+                    <label for="username_color">لون خط الاسم</label>
+                    <input type="color" id="username_color" name="username_color" class="glass-input" value="<%= settings.username_color || '#ffffff' %>" style="height: 40px; padding: 4px; cursor: pointer;">
                 </div>
+                <div class="form-group">
+                    <label for="username_size">حجم خط الاسم</label>
+                    <input type="number" id="username_size" name="username_size" class="glass-input" value="<%= settings.username_size || 40 %>">
+                </div>
+            </div>
+        </div>
 
-                <hr style="border: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
-                <h3>المعاينة المباشرة (Live Preview)</h3>
-                <p>قم بسحب الأفتار واسم العضو بالفأرة لتحريكهم بحرية أو استخدم الأرقام بالأعلى</p>
+        <!-- Live Preview -->
+        <div class="glass-panel reveal" style="animation-delay: 0.1s;">
+            <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة وتعديل تفاعلي</div>
+            <p class="text-muted mb-2">يمكنك تحريك صورة الأفتار والاسم يدوياً بالسحب بالفأرة مباشرة داخل اللوحة أدناه</p>
 
-                <style>
-                    @font-face {
-                        font-family: 'CustomFont';
-                        src: url('/fonts/font.ttf') format('truetype');
-                    }
-                </style>
-                <div id="preview-container" style="position: relative; width: 100%; max-width: 800px; height: 400px; background-color: rgba(0,0,0,0.5); background-size: contain; background-repeat: no-repeat; background-position: top left; border: 2px dashed rgba(255,255,255,0.2); margin-bottom: 20px; overflow: hidden; user-select: none;">
-
-                    <div id="preview-avatar" style="position: absolute; border: 2px solid #57F287; border-radius: 50%; background-color: rgba(255,255,255,0.2); cursor: move; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                        <i class="fa-solid fa-user" style="font-size: 3rem; color: rgba(255,255,255,0.8);"></i>
+            <style>
+                @font-face {
+                    font-family: 'CustomFont';
+                    src: url('/fonts/font.ttf') format('truetype');
+                }
+            </style>
+            
+            <div class="canvas-workspace">
+                <div id="preview-container" class="preview-container greet-canvas-container" style="border: 1px solid var(--border); border-radius: var(--r-md); background: #080808;">
+                    <div id="preview-avatar" class="preview-avatar" style="border: 2px solid #fff;">
+                        <i class="fa-solid fa-user" style="font-size: 3rem; color: rgba(255,255,255,0.4);"></i>
                     </div>
-
-                    <div id="preview-username" style="position: absolute; cursor: move; font-family: 'CustomFont', sans-serif; font-weight: bold; white-space: nowrap;">
+                    <div id="preview-username" class="preview-username" style="font-family: 'CustomFont', sans-serif;">
                         Username
                     </div>
-
                 </div>
+            </div>
 
-                <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
-            </form>
+
+            <button type="submit" class="btn btn-primary mt-3 btn-large"><i class="fa-solid fa-floppy-disk"></i> حفظ كافة التغييرات</button>
         </div>
-    </main>
+
+    </form>
+</main>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -172,7 +188,7 @@
             avatarEl.style.height = (asize * scale) + 'px';
 
             const icon = avatarEl.querySelector('i');
-            if (icon) icon.style.fontSize = Math.max(10, (asize * scale * 0.5)) + 'px';
+            if (icon) icon.style.fontSize = Math.max(10, (asize * scale * 0.4)) + 'px';
 
             const ux = parseInt(uxInput.value) || 0;
             const uy = parseInt(uyInput.value) || 0;
@@ -237,7 +253,7 @@
                 if (!file) return;
 
                 uploadStatus.textContent = 'جاري الرفع...';
-                uploadStatus.style.color = '#FEE75C';
+                uploadStatus.style.color = '#ffb000';
                 
                 const reader = new FileReader();
                 reader.onload = async (ev) => {
@@ -252,15 +268,15 @@
                         if (data.success) {
                             bgInput.value = data.url;
                             updateBackground();
-                            uploadStatus.textContent = 'تم رفع الصورة بنجاح! لا تنس حفظ التغييرات.';
-                            uploadStatus.style.color = '#57F287';
+                            uploadStatus.textContent = 'تم رفع الصورة بنجاح! يرجى حفظ الإعدادات لتطبيقها.';
+                            uploadStatus.style.color = '#4ade80';
                         } else {
                             uploadStatus.textContent = 'فشل الرفع: ' + data.error;
-                            uploadStatus.style.color = '#ED4245';
+                            uploadStatus.style.color = '#f87171';
                         }
                     } catch (err) {
                         uploadStatus.textContent = 'حدث خطأ أثناء الرفع.';
-                        uploadStatus.style.color = '#ED4245';
+                        uploadStatus.style.color = '#f87171';
                     }
                 };
                 reader.readAsDataURL(file);
@@ -271,6 +287,5 @@
         setTimeout(updateBackground, 100);
     });
 </script>
-        </div>
-    </main>
+
 <%- include('partials/footer') %>

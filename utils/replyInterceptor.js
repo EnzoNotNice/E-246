@@ -49,6 +49,7 @@ const originalEditReply = CommandInteraction.prototype.editReply;
 const originalFollowUp = CommandInteraction.prototype.followUp;
 
 CommandInteraction.prototype.reply = function(options) {
+    options = options || {};
     try {
         const guildId = this.guildId;
         if (guildId) {
@@ -64,6 +65,7 @@ CommandInteraction.prototype.reply = function(options) {
 };
 
 CommandInteraction.prototype.editReply = function(options) {
+    options = options || {};
     try {
         const guildId = this.guildId;
         if (guildId) {
@@ -79,6 +81,7 @@ CommandInteraction.prototype.editReply = function(options) {
 };
 
 CommandInteraction.prototype.followUp = function(options) {
+    options = options || {};
     try {
         const guildId = this.guildId;
         if (guildId) {

@@ -1,319 +1,226 @@
 <%- include('partials/header') %>
-
-<style>
-.sidebar {
-    width: 250px;
-    background: rgba(10, 10, 12, 0.7);
-    backdrop-filter: blur(20px);
-    border-left: 1px solid var(--glass-border);
-    padding: 20px 0;
-    display: flex;
-    flex-direction: column;
-}
-.sidebar-brand {
-    padding: 0 20px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    margin-bottom: 10px;
-    text-align: center;
-}
-.sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    padding: 0 10px;
-}
-.nav-item {
-    padding: 12px 15px;
-    border-radius: 8px;
-    color: var(--text-muted);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: all 0.3s ease;
-}
-.nav-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #fff;
-}
-.nav-item.active {
-    background: rgba(88, 101, 242, 0.15);
-    color: var(--primary);
-    border-right: 3px solid var(--primary);
-}
-
-/* Discord Preview Styles */
-.discord-preview-container {
-    background: #2b2d31;
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 25px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-    border: 1px solid #1e1f22;
-}
-
-.discord-avatar-wrapper {
-    position: relative;
-    width: 80px;
-    height: 80px;
-}
-
-.discord-avatar {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background-color: #5865f2;
-    object-fit: cover;
-}
-
-.discord-status-icon {
-    position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background-color: #2b2d31; /* matches parent bg to create border effect */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.status-indicator {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-}
-
-.status-online { background-color: #23a559; }
-.status-idle { 
-    background-color: #f0b232; 
-    position: relative;
-}
-.status-idle::after {
-    content: "";
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    background: #2b2d31; /* matches preview container */
-    border-radius: 50%;
-    top: -2px;
-    left: -2px;
-}
-.status-dnd {
-    background-color: #f23f43;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.status-dnd::after {
-    content: "";
-    width: 10px;
-    height: 3px;
-    background: #2b2d31;
-    border-radius: 2px;
-}
-.status-invisible {
-    background-color: #80848e;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.status-invisible::after {
-    content: "";
-    width: 10px;
-    height: 10px;
-    background: #2b2d31;
-    border-radius: 50%;
-}
-
-.discord-profile-info {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.discord-username {
-    color: #f2f3f5;
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin: 0 0 4px 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.discord-bot-tag {
-    background: #5865F2;
-    color: white;
-    font-size: 0.65rem;
-    padding: 2px 4px;
-    border-radius: 3px;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    line-height: 1;
-}
-
-.discord-activity {
-    color: #b5bac1;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-/* Custom Select Styling */
-select.glass-input option {
-    background: #2b2d31;
-    color: #fff;
-    padding: 10px;
-}
-</select>
-</style>
-
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <h3 style="margin: 0; color: #fff;">لوحة التحكم</h3>
-        <span style="font-size: 0.8rem; color: var(--text-muted);">تحكم المالك</span>
-    </div>
-    <div class="sidebar-nav">
-        <a href="/dashboard" class="nav-item"><i class="fa-solid fa-arrow-right-from-bracket"></i> العودة للسيرفرات</a>
-        <a href="/dashboard/admin/botsettings" class="nav-item active"><i class="fa-solid fa-robot"></i> حالة البوت</a>
-    </div>
-</div>
+<%- include('partials/sidebar', { activeTab: 'botsettings' }) %>
 
 <main class="app-content">
     <div class="content-header">
-        <h1><i class="fa-solid fa-robot"></i> إعدادات البوت العامة</h1>
-        <p>تغيير حالة البوت (Status) والنشاط (Activity) في ديسكورد لجميع السيرفرات</p>
+        <h1><i class="fa-solid fa-robot"></i> إعدادات البوت</h1>
+        <p>تغيير حالة البوت ونشاطه وإعدادات الإيموجيات لجميع السيرفرات</p>
     </div>
 
-    <div class="glass-panel">
-        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
-            <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= req.query.success %></div>
-        <% } %>
+    <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
+    <% } %>
+
+    <form action="/dashboard/admin/botsettings" method="POST">
 
         <!-- Live Preview -->
-        <h4 style="margin-top:0; margin-bottom:15px; color: var(--text-muted); font-size: 0.9rem;">معاينة (Preview)</h4>
-        <div class="discord-preview-container">
-            <div class="discord-avatar-wrapper">
-                <img src="<%= bot.displayAvatarURL({ extension: 'png', size: 128 }) %>" alt="Bot Avatar" class="discord-avatar">
-                <div class="discord-status-icon">
-                    <div id="preview-status" class="status-indicator status-<%= settings.status %>"></div>
+        <div class="glass-panel reveal">
+            <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة</div>
+            <div class="bot-preview-card">
+                <div class="bot-preview-avatar">
+                    <img src="<%= bot.displayAvatarURL({ extension: 'png', size: 128 }) %>" alt="Bot Avatar">
+                    <div class="bot-preview-status-ring">
+                        <div id="preview-status" class="bps-indicator bps-<%= settings.status %>"></div>
+                    </div>
                 </div>
-            </div>
-            <div class="discord-profile-info">
-                <h3 class="discord-username">
-                    <%= bot.username %> <span class="discord-bot-tag"><i class="fa-solid fa-check"></i> APP</span>
-                </h3>
-                <div class="discord-activity">
-                    <span id="preview-type-text"><%= settings.activity_type === 'Playing' ? 'Playing' : (settings.activity_type === 'Listening' ? 'Listening to' : (settings.activity_type === 'Watching' ? 'Watching' : (settings.activity_type === 'Competing' ? 'Competing in' : ''))) %></span>
-                    <strong id="preview-activity-name" style="color: #f2f3f5;"><%= settings.activity_name %></strong>
+                <div class="bot-preview-info">
+                    <div class="bot-preview-name">
+                        <%= bot.username %>
+                        <span class="bot-tag"><i class="fa-solid fa-check" style="font-size:0.55rem;"></i> APP</span>
+                    </div>
+                    <div class="bot-preview-activity">
+                        <span id="preview-type-text" class="bpa-type"><%= settings.activity_type === 'Playing' ? 'Playing' : (settings.activity_type === 'Listening' ? 'Listening to' : (settings.activity_type === 'Watching' ? 'Watching' : (settings.activity_type === 'Competing' ? 'Competing in' : ''))) %></span>
+                        <strong id="preview-activity-name"><%= settings.activity_name %></strong>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <form action="/dashboard/admin/botsettings" method="POST" class="settings-form">
-            <div class="form-group">
-                <label for="status">حالة البوت (Status)</label>
-                <select id="status" name="status" class="glass-input">
-                    <option value="online" <%= settings.status === 'online' ? 'selected' : '' %>>متصل (Online)</option>
-                    <option value="idle" <%= settings.status === 'idle' ? 'selected' : '' %>>خامل (Idle)</option>
-                    <option value="dnd" <%= settings.status === 'dnd' ? 'selected' : '' %>>مشغول (Do Not Disturb)</option>
-                    <option value="invisible" <%= settings.status === 'invisible' ? 'selected' : '' %>>مخفي (Invisible)</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="emoji_color">لون ايموجيات البوت (Emoji Theme Color)</label>
-                <select id="emoji_color" name="emoji_color" class="glass-input" onchange="updateEmojiPreview(this.value)">
-                    <option value="blue" <%= settings.emoji_color === 'blue' ? 'selected' : '' %>>الأزرق الافتراضي (Blue - Default)</option>
-                    <option value="red" <%= settings.emoji_color === 'red' ? 'selected' : '' %>>الأحمر البريميوم (Red Premium)</option>
-                    <option value="green" <%= settings.emoji_color === 'green' ? 'selected' : '' %>>الأخضر البريميوم (Green Premium)</option>
-                    <option value="purple" <%= settings.emoji_color === 'purple' ? 'selected' : '' %>>البنفسجي البريميوم (Purple Premium)</option>
-                    <option value="gold" <%= settings.emoji_color === 'gold' ? 'selected' : '' %>>الذهبي الملكي (Gold Premium)</option>
-                    <option value="pink" <%= settings.emoji_color === 'pink' ? 'selected' : '' %>>الوردي الفاخر (Pink Premium)</option>
-                </select>
-                
-                <div class="emoji-preview-container" style="display: flex; gap: 15px; margin-top: 15px; background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 10px; align-items: center; border: 1px solid rgba(255, 255, 255, 0.1);">
-                    <span style="font-size: 14px; color: rgba(255,255,255,0.7);">معاينة الايموجيات (Preview):</span>
-                    <img id="prev_check" src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/circlecheck.png" style="width: 32px; height: 32px;" />
-                    <img id="prev_x" src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/circlex.png" style="width: 32px; height: 32px;" />
-                    <img id="prev_shield" src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/shieldcheck.png" style="width: 32px; height: 32px;" />
-                    <img id="prev_lock" src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/lock.png" style="width: 32px; height: 32px;" />
-                </div>
-            </div>
-            
-            <script>
-                function updateEmojiPreview(color) {
-                    document.getElementById('prev_check').src = '/assets/emojis/' + color + '/circlecheck.png';
-                    document.getElementById('prev_x').src = '/assets/emojis/' + color + '/circlex.png';
-                    document.getElementById('prev_shield').src = '/assets/emojis/' + color + '/shieldcheck.png';
-                    document.getElementById('prev_lock').src = '/assets/emojis/' + color + '/lock.png';
-                }
-            </script>
-
-            <div class="form-group" style="display: flex; gap: 20px;">
-                <div style="flex: 1;">
-                    <label for="activity_type">نوع النشاط (Activity Type)</label>
-                    <select id="activity_type" name="activity_type" class="glass-input">
-                        <option value="Playing" <%= settings.activity_type === 'Playing' ? 'selected' : '' %>>يلعب (Playing)</option>
-                        <option value="Watching" <%= settings.activity_type === 'Watching' ? 'selected' : '' %>>يشاهد (Watching)</option>
-                        <option value="Listening" <%= settings.activity_type === 'Listening' ? 'selected' : '' %>>يستمع (Listening to)</option>
-                        <option value="Competing" <%= settings.activity_type === 'Competing' ? 'selected' : '' %>>ينافس (Competing in)</option>
-                        <option value="Custom" <%= settings.activity_type === 'Custom' ? 'selected' : '' %>>مخصص (Custom Status)</option>
+        <!-- Status & Activity -->
+        <div class="glass-panel reveal">
+            <div class="section-title"><i class="fa-solid fa-circle-dot"></i> الحالة والنشاط</div>
+            <div class="grid-form-2">
+                <div class="form-group">
+                    <label for="status">حالة البوت</label>
+                    <select id="status" name="status" class="glass-input">
+                        <option value="online"    <%= settings.status === 'online'    ? 'selected' : '' %>>🟢 متصل (Online)</option>
+                        <option value="idle"      <%= settings.status === 'idle'      ? 'selected' : '' %>>🌙 خامل (Idle)</option>
+                        <option value="dnd"       <%= settings.status === 'dnd'       ? 'selected' : '' %>>🔴 مشغول (Do Not Disturb)</option>
+                        <option value="invisible" <%= settings.status === 'invisible' ? 'selected' : '' %>>⚫ مخفي (Invisible)</option>
                     </select>
                 </div>
-                <div style="flex: 2;">
-                    <label for="activity_name">نص النشاط (Activity Text)</label>
-                    <input type="text" id="activity_name" name="activity_name" class="glass-input" value="<%= settings.activity_name %>" required placeholder="مثال أخدم 50 سيرفر">
+                <div class="form-group">
+                    <label for="activity_type">نوع النشاط</label>
+                    <select id="activity_type" name="activity_type" class="glass-input">
+                        <option value="Playing"   <%= settings.activity_type === 'Playing'   ? 'selected' : '' %>>🎮 يلعب (Playing)</option>
+                        <option value="Watching"  <%= settings.activity_type === 'Watching'  ? 'selected' : '' %>>📺 يشاهد (Watching)</option>
+                        <option value="Listening" <%= settings.activity_type === 'Listening' ? 'selected' : '' %>>🎧 يستمع (Listening to)</option>
+                        <option value="Competing" <%= settings.activity_type === 'Competing' ? 'selected' : '' %>>🏆 ينافس (Competing in)</option>
+                        <option value="Custom"    <%= settings.activity_type === 'Custom'    ? 'selected' : '' %>>✏️ مخصص (Custom)</option>
+                    </select>
                 </div>
             </div>
-
             <div class="form-group">
-                <label for="broadcast_tokens">توكنات مساعدين البرودكاست (Broadcast Helpers Tokens)</label>
-                <textarea id="broadcast_tokens" name="broadcast_tokens" class="glass-input" rows="5" placeholder="أدخل توكن بوت في كل سطر..." style="font-family: monospace; font-size: 13px;"><%= Array.isArray(settings.broadcast_tokens) ? settings.broadcast_tokens.join('\n') : '' %></textarea>
-                <p style="font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 5px;">ملاحظة: يجب إضافة وتفعيل هذه البوتات في السيرفر لتتمكن من إرسال الرسائل للأعضاء.</p>
+                <label for="activity_name">نص النشاط</label>
+                <input type="text" id="activity_name" name="activity_name" class="glass-input"
+                    value="<%= settings.activity_name %>" required placeholder="مثال: أخدم 50 سيرفر">
             </div>
+        </div>
 
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> تطبيق التغييرات</button>
-        </form>
-    </div>
+        <!-- Emoji Color -->
+        <div class="glass-panel reveal">
+            <div class="section-title"><i class="fa-solid fa-palette"></i> لون الإيموجيات</div>
+            <div class="form-group">
+                <label for="emoji_color">ثيم الإيموجيات</label>
+                <select id="emoji_color" name="emoji_color" class="glass-input" onchange="updateEmojiPreview(this.value)">
+                    <option value="blue"   <%= settings.emoji_color === 'blue'   ? 'selected' : '' %>>🔵 الأزرق (افتراضي)</option>
+                    <option value="red"    <%= settings.emoji_color === 'red'    ? 'selected' : '' %>>🔴 الأحمر بريميوم</option>
+                    <option value="green"  <%= settings.emoji_color === 'green'  ? 'selected' : '' %>>🟢 الأخضر بريميوم</option>
+                    <option value="purple" <%= settings.emoji_color === 'purple' ? 'selected' : '' %>>🟣 البنفسجي بريميوم</option>
+                    <option value="gold"   <%= settings.emoji_color === 'gold'   ? 'selected' : '' %>>🟡 الذهبي الملكي</option>
+                    <option value="pink"   <%= settings.emoji_color === 'pink'   ? 'selected' : '' %>>🩷 الوردي الفاخر</option>
+                </select>
+                <div class="emoji-preview-row mt-1">
+                    <span class="text-muted" style="font-size:0.8rem;">معاينة:</span>
+                    <img id="prev_check"  src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/circlecheck.png"  style="width:28px;height:28px;">
+                    <img id="prev_x"      src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/circlex.png"      style="width:28px;height:28px;">
+                    <img id="prev_shield" src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/shieldcheck.png"  style="width:28px;height:28px;">
+                    <img id="prev_lock"   src="/assets/emojis/<%= settings.emoji_color || 'blue' %>/lock.png"         style="width:28px;height:28px;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Broadcast Tokens -->
+        <div class="glass-panel reveal">
+            <div class="section-title"><i class="fa-solid fa-satellite-dish"></i> مساعدو البرودكاست</div>
+            <div class="form-group">
+                <label for="broadcast_tokens">توكنات البوتات المساعدة</label>
+                <textarea id="broadcast_tokens" name="broadcast_tokens" class="glass-input"
+                    rows="5" placeholder="أدخل توكن بوت في كل سطر..."
+                    style="font-family: 'Fira Code', monospace; font-size: 0.82rem; resize: vertical;"><%= Array.isArray(settings.broadcast_tokens) ? settings.broadcast_tokens.join('\n') : '' %></textarea>
+                <small>كل سطر = توكن بوت واحد. يجب أن تكون هذه البوتات موجودة في السيرفر لترسل للأعضاء.</small>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> تطبيق التغييرات</button>
+    </form>
+
 </main>
 
+<style>
+/* Bot Preview Card */
+.bot-preview-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #111;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 16px 20px;
+}
+.bot-preview-avatar {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+}
+.bot-preview-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+}
+.bot-preview-status-ring {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 22px;
+    height: 22px;
+    background: #111;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.bps-indicator {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+}
+.bps-online    { background: #23a559; }
+.bps-idle      { background: #f0b232; }
+.bps-dnd       { background: #f23f43; }
+.bps-invisible { background: #80848e; }
+
+.bot-preview-info { display: flex; flex-direction: column; gap: 5px; }
+.bot-preview-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.bot-tag {
+    background: #5865F2;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 3px;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.bot-preview-activity {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.875rem;
+}
+.bpa-type { color: var(--text-2); }
+
+.emoji-preview-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+}
+</style>
+
 <script>
-    // Live Preview Script
-    const statusSelect = document.getElementById('status');
-    const typeSelect = document.getElementById('activity_type');
-    const nameInput = document.getElementById('activity_name');
-    
-    const previewStatus = document.getElementById('preview-status');
-    const previewTypeText = document.getElementById('preview-type-text');
-    const previewName = document.getElementById('preview-activity-name');
+/* Emoji Preview */
+function updateEmojiPreview(color) {
+    const base = '/assets/emojis/' + color + '/';
+    document.getElementById('prev_check').src  = base + 'circlecheck.png';
+    document.getElementById('prev_x').src      = base + 'circlex.png';
+    document.getElementById('prev_shield').src = base + 'shieldcheck.png';
+    document.getElementById('prev_lock').src   = base + 'lock.png';
+}
 
-    statusSelect.addEventListener('change', (e) => {
-        previewStatus.className = 'status-indicator status-' + e.target.value;
-    });
+/* Live Preview */
+const statusSelect = document.getElementById('status');
+const typeSelect   = document.getElementById('activity_type');
+const nameInput    = document.getElementById('activity_name');
+const previewStatus   = document.getElementById('preview-status');
+const previewTypeText = document.getElementById('preview-type-text');
+const previewName     = document.getElementById('preview-activity-name');
 
-    typeSelect.addEventListener('change', (e) => {
-        let text = '';
-        switch (e.target.value) {
-            case 'Playing': text = 'Playing'; break;
-            case 'Listening': text = 'Listening to'; break;
-            case 'Watching': text = 'Watching'; break;
-            case 'Competing': text = 'Competing in'; break;
-            case 'Custom': text = ''; break;
-        }
-        previewTypeText.textContent = text;
-    });
-
-    nameInput.addEventListener('input', (e) => {
-        previewName.textContent = e.target.value;
-    });
+statusSelect.addEventListener('change', (e) => {
+    previewStatus.className = 'bps-indicator bps-' + e.target.value;
+});
+typeSelect.addEventListener('change', (e) => {
+    const map = { Playing: 'Playing', Listening: 'Listening to', Watching: 'Watching', Competing: 'Competing in', Custom: '' };
+    previewTypeText.textContent = map[e.target.value] || '';
+});
+nameInput.addEventListener('input', (e) => {
+    previewName.textContent = e.target.value;
+});
 </script>
 
 <%- include('partials/footer') %>

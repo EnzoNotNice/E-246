@@ -1,101 +1,111 @@
 <%- include('partials/header') %>
-
 <%- include('partials/sidebar', { activeTab: 'protection' }) %>
 
 <main class="app-content">
     <div class="content-header">
         <h1><i class="fa-solid fa-shield-halved"></i> إعدادات الحماية</h1>
-        <p>جميع أنواع الحماية وحدود مكافحة النيوك لحماية سيرفرك</p>
+        <p>قم بضبط جدار الحماية ضد النيوك والروابط والسبام لحماية سيرفرك</p>
     </div>
 
-    <div class="glass-panel">
-        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
-            <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= req.query.success %></div>
-        <% } %>
+    <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
+    <% } %>
 
-        <form action="/dashboard/<%= guild.id %>/protection" method="POST" class="settings-form">
+    <form action="/dashboard/<%= guild.id %>/protection" method="POST" class="settings-form">
+
+        <!-- General & Social Protection -->
+        <div class="glass-panel reveal">
+            <div class="section-title"><i class="fa-solid fa-sliders"></i> الحماية العامة</div>
+
             <div class="form-group">
-                <label for="enabled">حالة نظام الحماية</label>
+                <label for="enabled">حالة نظام الحماية العام</label>
                 <select id="enabled" name="enabled" class="glass-input">
-                    <option value="1" <%= settings.enabled == 1 ? 'selected' : '' %>>مفعّل</option>
-                    <option value="0" <%= settings.enabled != 1 ? 'selected' : '' %>>معطّل</option>
+                    <option value="1" <%= settings.enabled == 1 ? 'selected' : '' %>>🟢 مفعّل</option>
+                    <option value="0" <%= settings.enabled != 1 ? 'selected' : '' %>>🔴 معطّل</option>
                 </select>
+                <small>تفعيل أو تعطيل درع الحماية بالكامل على السيرفر</small>
             </div>
 
-            <h3 style="margin: 25px 0 15px; color: var(--primary);">أنواع الحماية</h3>
-
-            <div class="form-group" style="display: flex; gap: 20px; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 180px;">
+            <div class="grid-form-3 mt-2">
+                <div class="form-group">
                     <label for="antilink">منع الروابط (Anti-Link)</label>
                     <select id="antilink" name="antilink" class="glass-input">
                         <option value="1" <%= settings.antilink == 1 ? 'selected' : '' %>>مفعّل</option>
                         <option value="0" <%= settings.antilink != 1 ? 'selected' : '' %>>معطّل</option>
                     </select>
+                    <small>حذف روابط الدعوات والمواقع الخارجية تلقائياً</small>
                 </div>
-                <div style="flex: 1; min-width: 180px;">
+                <div class="form-group">
                     <label for="antispam">منع السبام (Anti-Spam)</label>
                     <select id="antispam" name="antispam" class="glass-input">
                         <option value="1" <%= settings.antispam == 1 ? 'selected' : '' %>>مفعّل</option>
                         <option value="0" <%= settings.antispam != 1 ? 'selected' : '' %>>معطّل</option>
                     </select>
+                    <small>الحد من إرسال الرسائل المتكررة بسرعة فائقة</small>
                 </div>
-                <div style="flex: 1; min-width: 180px;">
+                <div class="form-group">
                     <label for="antiraid">منع الرايد (Anti-Raid)</label>
                     <select id="antiraid" name="antiraid" class="glass-input">
                         <option value="1" <%= settings.antiraid == 1 ? 'selected' : '' %>>مفعّل</option>
                         <option value="0" <%= settings.antiraid != 1 ? 'selected' : '' %>>معطّل</option>
                     </select>
+                    <small>منع دخول الحسابات الوهمية أو دخول أعداد كبيرة فجأة</small>
                 </div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group mt-2">
                 <label for="bypass_role">رتبة الاستثناء (Bypass Role)</label>
                 <select id="bypass_role" name="bypass_role" class="glass-input">
-                    <option value="">بدون</option>
+                    <option value="">بدون استثناء</option>
                     <% if (typeof roles !== 'undefined') { roles.forEach(r => { %>
                         <option value="<%= r.id %>" <%= settings.bypass_role === r.id ? 'selected' : '' %>><%= r.name %></option>
                     <% }) } %>
                 </select>
+                <small>الرتبة التي يُعفى أصحابها من قيود الفلترة والمنع</small>
             </div>
+        </div>
 
-            <h3 style="margin: 25px 0 15px; color: var(--primary);">حدود مكافحة النيوك</h3>
+        <!-- Anti-Nuke Settings -->
+        <div class="glass-panel reveal" style="animation-delay: 0.1s;">
+            <div class="section-title"><i class="fa-solid fa-radiation"></i> جدار الحماية من التخريب (Anti-Nuke)</div>
 
-            <div class="form-group" style="display: flex; gap: 20px; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 140px;">
-                    <label for="ban_limit">حد الباند / دقيقة</label>
+            <div class="grid-form-5">
+                <div class="form-group">
+                    <label for="ban_limit">طرد نهائي (Ban) / دقيقة</label>
                     <input type="number" id="ban_limit" name="ban_limit" class="glass-input" min="1" max="50" value="<%= settings.ban_limit || 3 %>" required>
                 </div>
-                <div style="flex: 1; min-width: 140px;">
-                    <label for="kick_limit">حد الكيك / دقيقة</label>
+                <div class="form-group">
+                    <label for="kick_limit">طرد (Kick) / دقيقة</label>
                     <input type="number" id="kick_limit" name="kick_limit" class="glass-input" min="1" max="50" value="<%= settings.kick_limit || 3 %>" required>
                 </div>
-                <div style="flex: 1; min-width: 140px;">
-                    <label for="channel_limit">حد القنوات / دقيقة</label>
+                <div class="form-group">
+                    <label for="channel_limit">حذف/إنشاء قنوات / دقيقة</label>
                     <input type="number" id="channel_limit" name="channel_limit" class="glass-input" min="1" max="50" value="<%= settings.channel_limit || 3 %>" required>
                 </div>
-                <div style="flex: 1; min-width: 140px;">
-                    <label for="role_limit">حد الرتب / دقيقة</label>
+                <div class="form-group">
+                    <label for="role_limit">حذف/إنشاء رتب / دقيقة</label>
                     <input type="number" id="role_limit" name="role_limit" class="glass-input" min="1" max="50" value="<%= settings.role_limit || 3 %>" required>
                 </div>
-                <div style="flex: 1; min-width: 140px;">
-                    <label for="webhook_limit">حد الويبهوك / دقيقة</label>
+                <div class="form-group">
+                    <label for="webhook_limit">إنشاء ويبهوك / دقيقة</label>
                     <input type="number" id="webhook_limit" name="webhook_limit" class="glass-input" min="1" max="50" value="<%= settings.webhook_limit || 3 %>" required>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="action">الإجراء عند تجاوز الحد</label>
+            <div class="form-group mt-2">
+                <label for="action">الإجراء العقابي عند تجاوز الحد</label>
                 <select id="action" name="action" class="glass-input">
-                    <option value="ban" <%= settings.action === 'ban' ? 'selected' : '' %>>باند المخالف</option>
-                    <option value="kick" <%= settings.action === 'kick' ? 'selected' : '' %>>كيك المخالف</option>
-                    <option value="timeout" <%= settings.action === 'timeout' ? 'selected' : '' %>>تايم اوت للمخالف (28 يوم)</option>
-                    <option value="strip" <%= settings.action === 'strip' ? 'selected' : '' %>>تجريد الرتب</option>
+                    <option value="ban" <%= settings.action === 'ban' ? 'selected' : '' %>>🚫 حظر الإداري المخرب (Ban)</option>
+                    <option value="kick" <%= settings.action === 'kick' ? 'selected' : '' %>>👢 طرد الإداري المخرب (Kick)</option>
+                    <option value="timeout" <%= settings.action === 'timeout' ? 'selected' : '' %>>⏳ كتم الإداري مؤقتاً (Timeout - 28 يوم)</option>
+                    <option value="strip" <%= settings.action === 'strip' ? 'selected' : '' %>>🛡️ تجريد المخرب من جميع رتبه</option>
                 </select>
+                <small>العقوبة المطبقة تلقائياً على أي إداري يتجاوز أحد الحدود المذكورة أعلاه</small>
             </div>
+        </div>
 
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> حفظ التغييرات</button>
-        </form>
-    </div>
+        <button type="submit" class="btn btn-primary mt-2"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات الحماية</button>
+    </form>
 </main>
 
 <%- include('partials/footer') %>

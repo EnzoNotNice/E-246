@@ -54,17 +54,27 @@ module.exports = (client) => {
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+    let sessionStore;
+    if (db.isConnected()) {
+        sessionStore = MongoStore.create({
+            mongoUrl: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/e246',
+            collectionName: 'sessions',
+            ttl: 24 * 60 * 60
+        });
+        console.log('[Dashboard] Session store configured using MongoStore');
+    } else {
+        sessionStore = new session.MemoryStore();
+        console.log('⚠️ [Dashboard] MongoDB is offline, using MemoryStore for sessions');
+    }
+
     app.use(session({
         secret: process.env.SESSION_SECRET || process.env.CLIENT_SECRET,
         resave: false,
         saveUninitialized: false,
-        store: MongoStore.create({
-            mongoUrl: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/e246',
-            collectionName: 'sessions',
-            ttl: 24 * 60 * 60
-        }),
+        store: sessionStore,
         cookie: { maxAge: 1000 * 60 * 60 * 24, httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' }
     }));
+
 
     app.use(passport.initialize());
     app.use(passport.session());

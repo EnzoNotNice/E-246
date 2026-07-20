@@ -247,10 +247,17 @@ module.exports = {
       /*5*/
 
       if (id.startsWith('rr_') && id !== 'rr_select') {
+        if (interaction.replied || interaction.deferred) return;
         const parts = id.split('_');
         const roleId = parts[1];
 
-        await interaction.deferReply({ flags: ['Ephemeral'] });
+        await interaction.deferReply({ flags: ['Ephemeral'] }).catch(() => null);
+        if (interaction.replied || interaction.deferred) {
+            // Check if defer succeeded
+        } else {
+            return;
+        }
+
 
         const role = interaction.guild.roles.cache.get(roleId);
         if (!role) {
@@ -311,7 +318,7 @@ module.exports = {
         const isAccept = id.startsWith('form_accept_');
         const userId = id.split('_')[2];
 
-        const embed = EmbedBuilder.from(interaction.message.embeds[0]);
+        const embed = EmbedBuilder.from(interaction.message?.embeds?.[0]);
         embed.setColor(isAccept ? 0x57F287 : 0xED4245);
         embed.setFooter({ text: isAccept ? locale.get('forms.panelAccepted', { user: interaction.user.tag }) : locale.get('forms.panelRejected', { user: interaction.user.tag }) });
 
@@ -354,12 +361,12 @@ module.exports = {
 
         await interaction.deferUpdate();
 
-        const row = interaction.message.components[0];
+        const row = interaction.message?.components?.[0];
         const newComponents = row.components.map(c => ButtonBuilder.from(c).setDisabled(true));
         const disabledRow = new ActionRowBuilder().addComponents(newComponents);
         await interaction.editReply({ content: locale.get('broadcast.starting'), components: [disabledRow] });
 
-        let members = await interaction.guild.members.fetch({ withPresences: true }).catch(() => null);
+        let members = await interaction.guild.members.fetch().catch(() => null);
         if (!members) {
             return interaction.followUp({ content: locale.get('broadcast.fetchFailed'), flags: ['Ephemeral'] });
         }

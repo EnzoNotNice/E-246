@@ -1,117 +1,131 @@
-<aside class="app-sidebar">
-    <div class="sidebar-header">
-        <h2><i class="fa-solid fa-robot"></i> E-246</h2>
-    </div>
-
+<aside class="app-sidebar" id="appSidebar">
     <div class="sidebar-content">
         <ul class="nav-menu">
             <li>
-                <a href="/" class="<%= (typeof activeTab !== 'undefined' && activeTab === 'home') ? 'active' : '' %>">
-                    <i class="fa-solid fa-house"></i> الرئيسية
+                <a href="/" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'home') ? 'active' : '' %>">
+                    <i class="fa-solid fa-house nav-icon"></i>
+                    <span class="sidebar-text">الرئيسية</span>
                 </a>
             </li>
             <% if (user) { %>
                 <li>
-                    <a href="/dashboard" class="<%= (typeof activeTab !== 'undefined' && activeTab === 'servers') ? 'active' : '' %>">
-                        <i class="fa-solid fa-server"></i> قائمة السيرفرات
+                    <a href="/dashboard" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'servers') ? 'active' : '' %>">
+                        <i class="fa-solid fa-server nav-icon"></i>
+                        <span class="sidebar-text">قائمة السيرفرات</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/admin/botsettings" class="<%= (typeof activeTab !== 'undefined' && activeTab === 'botsettings') ? 'active' : '' %>">
-                        <i class="fa-solid fa-user-tie"></i> إعدادات البوت
+                    <a href="/dashboard/admin/botsettings" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'botsettings') ? 'active' : '' %>">
+                        <i class="fa-solid fa-robot nav-icon"></i>
+                        <span class="sidebar-text">إعدادات البوت</span>
                     </a>
                 </li>
             <% } %>
         </ul>
 
         <% if (typeof guild !== 'undefined' && guild) { %>
-            <div class="nav-divider">إعدادات السيرفر الحالي</div>
+            <div class="nav-divider"><span class="sidebar-text">إعدادات السيرفر الحالي</span></div>
 
             <div class="active-server-widget">
                 <% if (guild.iconURL()) { %>
                     <img src="<%= guild.iconURL() %>" alt="Guild Icon">
                 <% } else { %>
-                    <div class="no-icon" style="width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(135deg, var(--primary), #8A2BE2); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: white; margin: 0 auto 15px;"><%= guild.name.charAt(0) %></div>
+                    <div class="no-icon"><%= guild.name.charAt(0) %></div>
                 <% } %>
-                <strong style="display: block; font-size: 1.1rem;"><%= guild.name %></strong>
+                <strong class="sidebar-text"><%= guild.name %></strong>
             </div>
 
             <ul class="nav-menu">
                 <li>
-                    <a href="/dashboard/<%= guild.id %>" class="<%= activeTab === 'general' ? 'active' : '' %>">
-                        <i class="fa-solid fa-gear"></i> الإعدادات العامة
+                    <a href="/dashboard/<%= guild.id %>" class="nav-link <%= activeTab === 'general' ? 'active' : '' %>">
+                        <i class="fa-solid fa-sliders nav-icon"></i>
+                        <span class="sidebar-text">الإعدادات العامة</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/levels" class="<%= activeTab === 'levels' ? 'active' : '' %>">
-                        <i class="fa-solid fa-arrow-up-right-dots"></i> المستويات
+                    <a href="/dashboard/<%= guild.id %>/levels" class="nav-link <%= activeTab === 'levels' ? 'active' : '' %>">
+                        <i class="fa-solid fa-arrow-up-right-dots nav-icon"></i>
+                        <span class="sidebar-text">المستويات</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/welcome" class="<%= activeTab === 'welcome' ? 'active' : '' %>">
-                        <i class="fa-solid fa-handshake"></i> الترحيب
+                    <a href="/dashboard/<%= guild.id %>/welcome" class="nav-link <%= activeTab === 'welcome' ? 'active' : '' %>">
+                        <i class="fa-solid fa-handshake nav-icon"></i>
+                        <span class="sidebar-text">الترحيب</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/protection" class="<%= activeTab === 'protection' ? 'active' : '' %>">
-                        <i class="fa-solid fa-shield-halved"></i> الحماية
+                    <a href="/dashboard/<%= guild.id %>/protection" class="nav-link <%= activeTab === 'protection' ? 'active' : '' %>">
+                        <i class="fa-solid fa-shield-halved nav-icon"></i>
+                        <span class="sidebar-text">الحماية</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/tempvoice" class="<%= activeTab === 'tempvoice' ? 'active' : '' %>">
-                        <i class="fa-solid fa-microphone-lines"></i> الغرف المؤقتة
+                    <a href="/dashboard/<%= guild.id %>/tempvoice" class="nav-link <%= activeTab === 'tempvoice' ? 'active' : '' %>">
+                        <i class="fa-solid fa-microphone-lines nav-icon"></i>
+                        <span class="sidebar-text">الغرف المؤقتة</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/alerts" class="<%= activeTab === 'alerts' ? 'active' : '' %>">
-                        <i class="fa-brands fa-youtube"></i> تنبيهات المحتوى
+                    <a href="/dashboard/<%= guild.id %>/alerts" class="nav-link <%= activeTab === 'alerts' ? 'active' : '' %>">
+                        <i class="fa-brands fa-youtube nav-icon"></i>
+                        <span class="sidebar-text">تنبيهات المحتوى</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/autoreplies" class="<%= activeTab === 'autoreplies' ? 'active' : '' %>">
-                        <i class="fa-solid fa-reply-all"></i> الردود التلقائية
+                    <a href="/dashboard/<%= guild.id %>/autoreplies" class="nav-link <%= activeTab === 'autoreplies' ? 'active' : '' %>">
+                        <i class="fa-solid fa-reply-all nav-icon"></i>
+                        <span class="sidebar-text">الردود التلقائية</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/aliases" class="<%= activeTab === 'aliases' ? 'active' : '' %>">
-                        <i class="fa-solid fa-link"></i> اختصارات الأوامر
+                    <a href="/dashboard/<%= guild.id %>/aliases" class="nav-link <%= activeTab === 'aliases' ? 'active' : '' %>">
+                        <i class="fa-solid fa-link nav-icon"></i>
+                        <span class="sidebar-text">اختصارات الأوامر</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/logs" class="<%= activeTab === 'logs' ? 'active' : '' %>">
-                        <i class="fa-solid fa-clipboard-list"></i> سجلات الأحداث
+                    <a href="/dashboard/<%= guild.id %>/logs" class="nav-link <%= activeTab === 'logs' ? 'active' : '' %>">
+                        <i class="fa-solid fa-clipboard-list nav-icon"></i>
+                        <span class="sidebar-text">سجلات الأحداث</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/tickets" class="<%= activeTab === 'tickets' ? 'active' : '' %>">
-                        <i class="fa-solid fa-ticket"></i> التذاكر
+                    <a href="/dashboard/<%= guild.id %>/tickets" class="nav-link <%= activeTab === 'tickets' ? 'active' : '' %>">
+                        <i class="fa-solid fa-ticket nav-icon"></i>
+                        <span class="sidebar-text">التذاكر</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/embed" class="<%= activeTab === 'embed' ? 'active' : '' %>">
-                        <i class="fa-solid fa-paintbrush"></i> صانع الإمبيد
+                    <a href="/dashboard/<%= guild.id %>/embed" class="nav-link <%= activeTab === 'embed' ? 'active' : '' %>">
+                        <i class="fa-solid fa-paintbrush nav-icon"></i>
+                        <span class="sidebar-text">صانع الإمبيد</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/stats" class="<%= activeTab === 'stats' ? 'active' : '' %>">
-                        <i class="fa-solid fa-chart-column"></i> الإحصائيات
+                    <a href="/dashboard/<%= guild.id %>/stats" class="nav-link <%= activeTab === 'stats' ? 'active' : '' %>">
+                        <i class="fa-solid fa-chart-column nav-icon"></i>
+                        <span class="sidebar-text">الإحصائيات</span>
                     </a>
                 </li>
 
-                <li class="nav-divider">أدوات متقدمة</li>
+                <li class="nav-divider"><span class="sidebar-text">أدوات متقدمة</span></li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/reactionroles" class="<%= activeTab === 'reactionroles' ? 'active' : '' %>">
-                        <i class="fa-solid fa-masks-theater"></i> التفاعل بالرتب
+                    <a href="/dashboard/<%= guild.id %>/reactionroles" class="nav-link <%= activeTab === 'reactionroles' ? 'active' : '' %>">
+                        <i class="fa-solid fa-masks-theater nav-icon"></i>
+                        <span class="sidebar-text">التفاعل بالرتب</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/forms" class="<%= activeTab === 'forms' ? 'active' : '' %>">
-                        <i class="fa-solid fa-clipboard-question"></i> نظام التقديمات
+                    <a href="/dashboard/<%= guild.id %>/forms" class="nav-link <%= activeTab === 'forms' ? 'active' : '' %>">
+                        <i class="fa-solid fa-clipboard-question nav-icon"></i>
+                        <span class="sidebar-text">نظام التقديمات</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/captcha" class="<%= activeTab === 'captcha' ? 'active' : '' %>">
-                        <i class="fa-solid fa-shield-cat"></i> التحقق البشري
+                    <a href="/dashboard/<%= guild.id %>/captcha" class="nav-link <%= activeTab === 'captcha' ? 'active' : '' %>">
+                        <i class="fa-solid fa-shield-cat nav-icon"></i>
+                        <span class="sidebar-text">التحقق البشري</span>
                     </a>
                 </li>
             </ul>
@@ -122,31 +136,35 @@
         <% if (user) { %>
             <div class="user-profile-widget">
                 <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" alt="Avatar">
-                <div class="user-profile-info">
+                <div class="user-profile-info sidebar-text">
                     <span><%= user.username %></span>
                     <small>المشرف العام</small>
                 </div>
             </div>
-            <a href="/auth/logout" class="btn btn-danger" style="width: 100%;"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</a>
+            <a href="/auth/logout" class="btn btn-danger logout-btn" title="تسجيل الخروج">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span class="sidebar-text">تسجيل الخروج</span>
+            </a>
         <% } else { %>
-            <a href="/auth/login" class="btn btn-primary" style="width: 100%;"><i class="fa-brands fa-discord"></i> تسجيل الدخول</a>
+            <a href="/auth/login" class="btn btn-primary login-btn btn-block">
+                <i class="fa-brands fa-discord"></i>
+                <span class="sidebar-text">تسجيل الدخول</span>
+            </a>
         <% } %>
     </div>
 </aside>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const sidebarContent = document.querySelector('.sidebar-content') || document.querySelector('.app-sidebar');
+        const sidebarContent = document.querySelector('.sidebar-content');
         if (sidebarContent) {
             const savedScroll = sessionStorage.getItem('sidebarScrollPos');
             if (savedScroll !== null) {
                 sidebarContent.scrollTop = parseInt(savedScroll, 10);
             }
-
             window.addEventListener('beforeunload', () => {
                 sessionStorage.setItem('sidebarScrollPos', sidebarContent.scrollTop);
             });
-            
             sidebarContent.addEventListener('scroll', () => {
                 sessionStorage.setItem('sidebarScrollPos', sidebarContent.scrollTop);
             });

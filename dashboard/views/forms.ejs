@@ -1,118 +1,124 @@
 <%- include('partials/header') %>
-
 <%- include('partials/sidebar', { guild, activeTab: 'forms' }) %>
 
 <main class="app-content">
     <div class="content-header">
         <h1><i class="fa-solid fa-clipboard-question"></i> نظام التقديمات</h1>
-        <p>أنشئ استمارات تقديم مخصصة ليتقدم الأعضاء من خلالها</p>
+        <p>قم بإنشاء وتعديل استمارات التقديم المفتوحة للأعضاء (مثل طلبات الإدارة، طلبات الدعم)</p>
     </div>
 
-    <% if (typeof success !== 'undefined') { %>
-        <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> <%= success %></div>
+    <% if (typeof success !== 'undefined' && success) { %>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= success %></div>
     <% } %>
-    <% if (typeof error !== 'undefined') { %>
-        <div class="alert alert-success" style="background: rgba(237, 66, 69, 0.1); border-color: rgba(237,66,69,0.3); color: #ED4245;"><i class="fa-solid fa-triangle-exclamation"></i> <%= error %></div>
+    <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <%= error %></div>
     <% } %>
 
-    <div class="grid-2col">
-        <!-- نموذج الإنشاء -->
+    <div class="tickets-layout reveal">
+        <!-- settings form -->
         <div class="glass-panel">
             <form action="/dashboard/<%= guild.id %>/forms" method="POST" id="formsForm">
-                <h3 style="margin-bottom: 20px; color: var(--primary);">١ تصميم الإمبيد</h3>
-                <div class="form-group">
-                    <label>عنوان الإمبيد</label>
-                    <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'التقديم للطاقم' %>" required>
+                <div class="section-title"><i class="fa-solid fa-paintbrush"></i> ١. تصميم لوحة التقديم</div>
+                
+                <div class="form-group mt-2">
+                    <label>عنوان الإمبيد الرئيسي</label>
+                    <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'التقديم للطاقم الإداري' %>" required>
                 </div>
                 <div class="form-group">
                     <label>وصف الإمبيد</label>
-                    <textarea name="description" id="description" class="glass-input" rows="4" required><%= settings.panel_data.description || 'اضغط على الزر أدناه للتقديم.' %></textarea>
+                    <textarea name="description" id="description" class="glass-input" rows="3" required><%= settings.panel_data.description || 'اضغط على الزر أدناه لبدء تعبئة نموذج التقديم.' %></textarea>
                 </div>
-                <div class="grid-2col-sm">
+                <div class="grid-form-2">
                     <div class="form-group">
                         <label>لون الإمبيد</label>
-                        <input type="color" name="color" id="color" class="glass-input" style="height: 50px; padding: 5px;" value="<%= settings.panel_data.color || '#5865F2' %>">
+                        <input type="color" name="color" id="color" class="glass-input" style="height: 40px; padding: 4px; cursor: pointer;" value="<%= settings.panel_data.color || '#5865F2' %>">
                     </div>
                     <div class="form-group">
-                        <label>رابط الصورة المصغرة (اختياري)</label>
-                        <input type="url" name="thumbnail" id="thumbnail" class="glass-input" placeholder="https://..." value="<%= settings.panel_data.thumbnail || '' %>">
+                        <label>رابط الصورة المصغرة (Thumbnail)</label>
+                        <input type="url" name="thumbnail" id="thumbnail" class="glass-input" placeholder="https://example.com/thumb.png" value="<%= settings.panel_data.thumbnail || '' %>">
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>رابط الصورة الكبيرة (اختياري)</label>
-                    <input type="url" name="image" id="image" class="glass-input" placeholder="https://..." value="<%= settings.panel_data.image || '' %>">
+                    <label>رابط الصورة الكبيرة (Banner Image)</label>
+                    <input type="url" name="image" id="image" class="glass-input" placeholder="https://example.com/banner.png" value="<%= settings.panel_data.image || '' %>">
                 </div>
 
-                <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
+                <hr class="divider">
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div class="setting-row" style="margin-bottom:12px;">
                     <div>
-                        <h3 style="color: var(--primary);">٢ أسئلة الاستمارة</h3>
-                        <small style="color: var(--text-muted);">الحد الأقصى 5 أسئلة بسبب قيود ديسكورد</small>
+                        <div class="section-title" style="margin:0;"><i class="fa-solid fa-clipboard-list"></i> ٢. أسئلة نموذج التقديم</div>
+                        <small class="text-muted">الحد الأقصى 5 أسئلة تملؤها نماذج ديسكورد (Modals)</small>
                     </div>
-                    <button type="button" class="btn btn-secondary" onclick="addQuestionRow()"><i class="fa-solid fa-plus"></i> إضافة سؤال</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addQuestionRow()"><i class="fa-solid fa-plus"></i> إضافة سؤال</button>
                 </div>
-                <div id="questionsContainer"></div>
+                
+                <div id="questionsContainer" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;"></div>
                 <input type="hidden" name="questions" id="questions_data">
 
-                <hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
+                <hr class="divider">
 
-                <h3 style="margin-bottom: 15px; color: var(--primary);">٣ القنوات والنشر</h3>
-                <div class="form-group" style="margin-top:15px;">
-                    <label>قناة استقبال التقديمات</label>
-                    <select name="log_channel" class="glass-input" required>
-                        <option value="">-- اختر القناة --</option>
-                        <% textChannels.forEach(c => { %>
-                            <option value="<%= c.id %>" <%= settings.log_channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
-                        <% }) %>
-                    </select>
-                </div>
-                <div class="form-group" style="margin-top:15px;">
-                    <label>قناة نشر لوحة التقديم</label>
-                    <select name="panel_channel" class="glass-input">
-                        <option value="">-- اختر القناة --</option>
-                        <% textChannels.forEach(c => { %>
-                            <option value="<%= c.id %>"># <%= c.name %></option>
-                        <% }) %>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" name="send_panel" value="yes">
-                        إرسال / تحديث اللوحة الآن
-                    </label>
-                    <small>فعّل هذا لإرسال لوحة التقديم إلى القناة المختارة</small>
+                <div class="section-title"><i class="fa-solid fa-paper-plane"></i> ٣. القنوات ونشر اللوحة</div>
+                <div class="grid-form-2 mt-2">
+                    <div class="form-group">
+                        <label>قناة استقبال طلبات التقديم</label>
+                        <select name="log_channel" class="glass-input" required>
+                            <option value="">-- اختر القناة --</option>
+                            <% textChannels.forEach(c => { %>
+                                <option value="<%= c.id %>" <%= settings.log_channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
+                            <% }) %>
+                        </select>
+                        <small>القناة التي ستصل إليها إجابات الأعضاء ومراجعتها</small>
+                    </div>
+                    <div class="form-group">
+                        <label>قناة نشر لوحة التقديم</label>
+                        <select name="panel_channel" class="glass-input">
+                            <option value="">-- اختر القناة --</option>
+                            <% textChannels.forEach(c => { %>
+                                <option value="<%= c.id %>"># <%= c.name %></option>
+                            <% }) %>
+                        </select>
+                        <small>القناة التي سيظهر فيها إمبيد التقديم وزر الدخول</small>
+                    </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary" style="width: 100%;" onclick="prepareSubmit(event)">
-                    <i class="fa-solid fa-save"></i> حفظ ونشر
+                <div class="form-group d-flex align-items-center gap-2 mt-2 mb-3">
+                    <input type="checkbox" name="send_panel" id="send_panel" value="yes" style="width:18px;height:18px;accent-color:#fff;cursor:pointer;">
+                    <label for="send_panel" class="cursor-pointer" style="margin:0; font-weight:500; font-size:0.85rem;">إرسال / تحديث اللوحة في القناة الآن</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-large btn-block" onclick="prepareSubmit(event)">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ ونشر التقديمات
                 </button>
             </form>
         </div>
 
-        <!-- المعاينة المباشرة -->
-        <div>
-            <div class="glass-panel sticky-preview" style="top: 90px;">
-                <h3 style="margin-bottom: 20px;"><i class="fa-brands fa-discord"></i> معاينة مباشرة</h3>
-                <div style="background: #36393f; border-radius: 8px; padding: 16px; font-family: 'gg sans', Arial, sans-serif;">
-                    <div style="display: flex; gap: 16px;">
-                        <img src="<%= client.user.displayAvatarURL() %>" style="width: 40px; height: 40px; border-radius: 50%;">
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                <span style="color: #fff; font-weight: 500;"><%= client.user.username %></span>
-                                <span style="background: #5865F2; color: #fff; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: 600;">BOT</span>
-                            </div>
-                            <div id="preview-embed" style="border-left: 4px solid #5865F2; background: #2f3136; padding: 16px; border-radius: 4px; display: flex; gap: 16px;">
-                                <div style="flex: 1;">
-                                    <div id="preview-title" style="color: #fff; font-weight: 600; font-size: 1rem; margin-bottom: 8px;"></div>
-                                    <div id="preview-desc" style="color: #dcddde; font-size: 0.875rem; white-space: pre-wrap; line-height: 1.375;"></div>
-                                    <img id="preview-image" src="" style="max-width: 100%; max-height: 300px; border-radius: 4px; margin-top: 16px; display: none;">
+        <!-- live preview -->
+        <div class="sticky-preview">
+            <div class="glass-panel">
+                <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة</div>
+
+                <div class="discord-preview-container" style="background:#0c0c0c; border: 1px solid var(--border); border-radius: var(--r-md); padding:16px;">
+                    <div class="discord-embed" style="background-color:#141414; max-width:100%; border-radius:var(--r-sm); border:1px solid var(--border); border-right:4px solid #5865F2; border-left:none; padding:16px;">
+                        <div class="d-flex gap-2">
+                            <img src="<%= client.user.displayAvatarURL() %>" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--border);">
+                            <div class="flex-grow-1" style="min-width:0;">
+                                <div class="d-flex align-items-center gap-sm mb-1">
+                                    <span style="color:#fff; font-weight:600; font-size:0.85rem;"><%= client.user.username %></span>
+                                    <span class="bot-tag-preview">BOT</span>
                                 </div>
-                                <img id="preview-thumb" src="" style="width: 80px; height: 80px; border-radius: 4px; object-fit: contain; display: none;">
-                            </div>
-                            <div id="preview-components" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
-                                <div style="background: #5865F2; color: #fff; padding: 8px 16px; border-radius: 3px; font-weight: 500; font-size: 0.875rem; display: flex; align-items: center; gap: 8px; cursor: default;">
-                                    <span>📝</span> <span>قدّم الآن</span>
+                                <div id="preview-embed" style="border-right:4px solid #5865F2; border-left:none; background:#0a0a0a; padding:12px; border-radius:var(--r-sm); border:1px solid var(--border); display:flex; gap:16px; justify-content:space-between;">
+                                    <div class="flex-grow-1" style="min-width:0;">
+                                        <div id="preview-title" style="color:#fff; font-weight:700; font-size:0.95rem; margin-bottom:6px;"></div>
+                                        <div id="preview-desc" style="color:var(--text-2); font-size:0.85rem; line-height:1.5; white-space:pre-wrap;"></div>
+                                        <img id="preview-image" src="" style="max-width:100%; max-height:200px; border-radius:4px; margin-top:10px; object-fit:cover; display:none;">
+                                    </div>
+                                    <img id="preview-thumb" src="" style="width:60px; height:60px; border-radius:4px; object-fit:contain; display:none; flex-shrink:0;">
+                                </div>
+                                <div class="mt-2">
+                                    <div class="discord-button" style="border-radius:var(--r-sm); font-size:0.8rem; padding: 6px 12px; cursor:default; background:#248046;">
+                                        <span>📝</span> <span style="margin-right: 4px;">قدّم الآن</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -122,6 +128,29 @@
         </div>
     </div>
 </main>
+
+<style>
+.question-row {
+    position: relative;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 14px;
+    padding-left: 40px;
+    transition: border-color var(--t-fast);
+}
+.question-row:hover {
+    border-color: var(--border-hover);
+}
+.bot-tag-preview {
+    background: #5865F2;
+    color: #fff;
+    font-size: 0.6rem;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 700;
+}
+</style>
 
 <script>
     const existingQuestions = <%- JSON.stringify(settings.questions || []) %>;
@@ -133,17 +162,16 @@
 
     function addQuestionRow(questionText = '') {
         if (questionCount >= 5) {
-            alert('الحد الأقصى هو 5 أسئلة فقط بسبب قيود ديسكورد.');
+            alert('الحد الأقصى هو 5 أسئلة فقط بسبب قيود ديسكورد للـ Modals.');
             return;
         }
         const div = document.createElement('div');
         div.className = "question-row";
-        div.style.cssText = "background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative;";
         div.innerHTML = `
-            <button type="button" onclick="this.parentElement.remove(); questionCount--;" style="position: absolute; top: 10px; left: 10px; background: transparent; border: none; color: var(--danger); cursor: pointer;"><i class="fa-solid fa-trash"></i></button>
+            <button type="button" onclick="this.parentElement.remove(); questionCount--;" style="position: absolute; top: 12px; left: 12px; background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 1rem;"><i class="fa-solid fa-trash"></i></button>
             <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.85rem;">السؤال</label>
-                <input type="text" class="glass-input question-input" placeholder="مثال: كم عمرك؟" value="${questionText}" required>
+                <label style="font-size: 0.85rem; font-weight:600;">نص السؤال</label>
+                <input type="text" class="glass-input question-input" placeholder="مثال: اذكر خبراتك السابقة في الإشراف..." value="${questionText}" required>
             </div>
         `;
         questionsContainer.appendChild(div);
@@ -165,14 +193,17 @@
         });
         if (questionsData.length === 0) {
             e.preventDefault();
-            alert('يجب إضافة سؤال واحد على الأقل');
+            alert('يجب إضافة سؤال واحد على الأقل للاستمارة');
             return;
         }
         document.getElementById('questions_data').value = JSON.stringify(questionsData);
     }
 
     const formInputs = ['title', 'description', 'color', 'thumbnail', 'image'];
-    formInputs.forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+    formInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updatePreview);
+    });
 
     function updatePreview() {
         const title = document.getElementById('title').value;
@@ -181,7 +212,7 @@
         const thumb = document.getElementById('thumbnail').value;
         const img = document.getElementById('image').value;
 
-        document.getElementById('preview-embed').style.borderLeftColor = color;
+        document.getElementById('preview-embed').style.borderRightColor = color;
         document.getElementById('preview-title').innerText = title;
         document.getElementById('preview-desc').innerText = desc;
 

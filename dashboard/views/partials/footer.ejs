@@ -1,18 +1,52 @@
     </div> <!-- close app-wrapper -->
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <script>
         const sidebarToggle = document.getElementById('sidebarToggle');
         const sidebar = document.querySelector('.app-sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const mobileToggle = document.getElementById('mobileSidebarToggle');
+        const appWrapper = document.getElementById('appWrapper');
+
+        function openMobileSidebar() {
+            if (sidebar) sidebar.classList.add('active');
+            if (overlay) overlay.classList.add('active');
+            document.body.classList.add('no-scroll');
+        }
+        function closeMobileSidebar() {
+            if (sidebar) sidebar.classList.remove('active');
+            if (overlay) overlay.classList.remove('active');
+            document.body.classList.remove('no-scroll');
+        }
+
         if (sidebarToggle && sidebar) {
             sidebarToggle.addEventListener('click', (e) => {
                 e.stopPropagation();
-                sidebar.classList.toggle('active');
+                const collapsed = sidebar.classList.toggle('collapsed');
+                appWrapper.classList.toggle('sidebar-collapsed', collapsed);
+                try { localStorage.setItem('sidebarCollapsed', collapsed); } catch(_) {}
             });
-            document.addEventListener('click', (e) => {
-                if (sidebar.classList.contains('active') && !sidebar.contains(e.target) && e.target !== sidebarToggle) {
-                    sidebar.classList.remove('active');
-                }
+        }
+        if (mobileToggle && sidebar) {
+            mobileToggle.addEventListener('click', openMobileSidebar);
+        }
+        if (overlay) overlay.addEventListener('click', closeMobileSidebar);
+
+        try {
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                sidebar.classList.add('collapsed');
+                appWrapper.classList.add('sidebar-collapsed');
+            }
+        } catch(_) {}
+
+        if (sidebar) {
+            sidebar.addEventListener('click', (e) => {
+                if (window.innerWidth <= 1024) closeMobileSidebar();
             });
         }
     </script>
+    <script src="/js/animations.js"></script>
 </body>
 </html>
