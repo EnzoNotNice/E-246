@@ -633,6 +633,26 @@ module.exports = {
     /*11*/
 
     if (interaction.isModalSubmit()) {
+        if (interaction.customId.startsWith('say_modal_')) {
+            const channelId = interaction.customId.replace('say_modal_', '');
+            const text = interaction.fields.getTextInputValue('message_text');
+            const targetChannel = interaction.guild.channels.cache.get(channelId);
+
+            if (!targetChannel) {
+                const { error } = require('../utils/embeds');
+                return interaction.reply({ embeds: [error('لم يتم العثور على القناة المحددة.')], flags: ['Ephemeral'] });
+            }
+
+            try {
+                await targetChannel.send({ content: text });
+                const { success } = require('../utils/embeds');
+                return interaction.reply({ embeds: [success(`تم إرسال الرسالة بنجاح في ${targetChannel}`)], flags: ['Ephemeral'] });
+            } catch (e) {
+                const { error } = require('../utils/embeds');
+                return interaction.reply({ embeds: [error('فشل إرسال الرسالة. تأكد من صلاحيات البوت في القناة المحددة.')], flags: ['Ephemeral'] });
+            }
+        }
+
         if (interaction.customId === 'verify_submit') {
             const answer = interaction.fields.getTextInputValue('captcha_input');
             const captchaKey = `${interaction.guildId}:${interaction.user.id}`;

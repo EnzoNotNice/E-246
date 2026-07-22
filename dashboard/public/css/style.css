@@ -1194,6 +1194,12 @@ code {
   .tickets-layout { grid-template-columns: 1fr !important; }
   .tickets-layout .sticky-preview { position: static !important; }
   
+  /* Discord preview responsive */
+  .discord-preview-container {
+    flex-direction: column !important;
+    gap: 12px;
+  }
+  
   /* Welcome card canvas workspace scale container */
   .canvas-workspace {
     overflow-x: auto;
@@ -1205,6 +1211,30 @@ code {
     min-width: 600px;
   }
 }
+
+@media (max-width: 480px) {
+  .app-content { 
+    padding: 10px; 
+  }
+  .glass-panel { 
+    padding: 10px; 
+  }
+  
+  .bento-grid.cols-4,
+  .bento-grid.cols-3,
+  .bento-grid.cols-2 { 
+    grid-template-columns: 1fr !important; 
+    gap: 10px !important; 
+  }
+  
+  .metric-card {
+    padding: 12px !important;
+  }
+  .metric-card .metric-value {
+    font-size: 1.25rem !important;
+  }
+}
+
 
 
 /* ============================================================
