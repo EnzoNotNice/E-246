@@ -42,8 +42,20 @@ async function createFakeInteraction(message, cmd, args) {
       }
       optionValues[optName] = val;
     } else if (optType === 4 || optType === 10) { 
-      val = parseFloat(val);
-      optionValues[optName] = isNaN(val) ? null : val;
+      let multiplier = 1;
+      let lowerVal = String(val).toLowerCase();
+      if (lowerVal === 'all' || lowerVal === 'كل' || lowerVal === 'الكل') {
+        const db = require('../database/db');
+        const userBalance = await db.getKV(`balance_${message.author.id}`) || 0;
+        optionValues[optName] = userBalance;
+      } else {
+        if (lowerVal.endsWith('k')) { multiplier = 1000; lowerVal = lowerVal.slice(0, -1); }
+        else if (lowerVal.endsWith('m')) { multiplier = 1000000; lowerVal = lowerVal.slice(0, -1); }
+        else if (lowerVal.endsWith('b')) { multiplier = 1000000000; lowerVal = lowerVal.slice(0, -1); }
+        
+        const parsed = parseFloat(lowerVal) * multiplier;
+        optionValues[optName] = isNaN(parsed) ? null : parsed;
+      }
       argIndex++;
     } else if (optType === 5) { 
       val = val.toLowerCase();
@@ -139,10 +151,6 @@ async function createFakeInteraction(message, cmd, args) {
         payload.content = '';
       }
       await repliedMessage.edit(payload).catch(() => null);
-      return repliedMessage;
-    },
-
-    async fetchReply() {
       return repliedMessage;
     },
 

@@ -112,10 +112,11 @@ module.exports = {
                 .setColor(0xFF0000);
 
             
+            const cleanTrashEmoji = emojis.trash ? (emojis.trash.match(/:(\d+)>/) ? emojis.trash.match(/:(\d+)>/)[1] : emojis.trash) : '🗑️';
             const options = players.filter(p => p.id !== winner.id).map(p => ({
                 label: p.name,
                 value: p.id,
-                emoji: emojis.trash
+                emoji: cleanTrashEmoji
             }));
 
             const selectMenu = new StringSelectMenuBuilder()
