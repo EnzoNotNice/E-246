@@ -1,4 +1,10 @@
 <%- include('partials/header') %>
+<%
+guilds = typeof guilds !== 'undefined' && Array.isArray(guilds) ? guilds : [];
+botGuilds = typeof botGuilds !== 'undefined' && botGuilds ? botGuilds : new Set();
+stats = typeof stats !== 'undefined' && stats ? stats : { totalGuilds: 0, uptime: '0s', ping: '0ms' };
+user = typeof user !== 'undefined' ? user : null;
+%>
 <%- include('partials/sidebar', { activeTab: 'servers' }) %>
 
 <main class="app-content">
@@ -13,7 +19,7 @@
     <div class="bento-grid cols-4" style="margin-bottom: 28px;">
 
         <!-- السيرفرات المتاحة -->
-        <div class="metric-card reveal">
+        <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
                 <i class="fa-solid fa-server"></i>
             </div>
@@ -22,7 +28,7 @@
         </div>
 
         <!-- سيرفرات البوت -->
-        <div class="metric-card reveal">
+        <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
                 <i class="fa-solid fa-globe"></i>
             </div>
@@ -31,7 +37,7 @@
         </div>
 
         <!-- مدة التشغيل -->
-        <div class="metric-card reveal">
+        <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
                 <i class="fa-solid fa-clock-rotate-left"></i>
             </div>
@@ -42,7 +48,7 @@
         </div>
 
         <!-- البينج -->
-        <div class="metric-card reveal">
+        <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
                 <i class="fa-solid fa-signal"></i>
             </div>
@@ -66,25 +72,28 @@
     <div class="guild-grid reveal">
         <% guilds.forEach(guild => { %>
             <% const isBotInGuild = botGuilds.has(guild.id); %>
-            <div class="guild-card">
-                <% if (guild.icon) { %>
-                    <img
-                        src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png?size=128"
-                        alt="<%= guild.name %>"
-                        loading="lazy"
-                    >
-                <% } else { %>
-                    <div class="no-icon"><%= guild.name.charAt(0).toUpperCase() %></div>
-                <% } %>
+            <div class="glass-panel reveal guild-card">
+                <div class="guild-icon-wrapper">
+                    <% if (guild.icon) { %>
+                        <img
+                            src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png?size=128"
+                            alt="<%= guild.name %>"
+                            loading="lazy"
+                            class="guild-icon"
+                        >
+                    <% } else { %>
+                        <div class="no-icon guild-icon"><%= guild.name.charAt(0).toUpperCase() %></div>
+                    <% } %>
+                </div>
 
-                <h3 title="<%= guild.name %>"><%= guild.name %></h3>
+                <h3 title="<%= guild.name %>" class="guild-name"><%= guild.name %></h3>
 
                 <% if (isBotInGuild) { %>
-                    <a href="/dashboard/<%= guild.id %>" class="btn btn-primary btn-large">
+                    <a href="/dashboard/<%= guild.id %>" class="btn btn-primary btn-large" style="width: 100%; margin-top: auto;">
                         <i class="fa-solid fa-sliders"></i> إدارة السيرفر
                     </a>
                 <% } else { %>
-                    <span class="btn btn-secondary btn-large disabled" style="opacity:0.35; cursor:not-allowed;">
+                    <span class="btn btn-secondary btn-large disabled" style="opacity:0.35; cursor:not-allowed; width: 100%; margin-top: auto;">
                         <i class="fa-solid fa-robot"></i> البوت غير موجود
                     </span>
                 <% } %>
@@ -93,7 +102,7 @@
     </div>
     <% } else { %>
     <!-- Empty State -->
-    <div class="empty-state reveal">
+    <div class="glass-panel reveal empty-state">
         <div class="empty-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
         <h2>لا يوجد سيرفرات متاحة</h2>
         <p>ليس لديك صلاحيات إدارية في أي سيرفر متواجد فيه البوت حالياً</p>
@@ -127,9 +136,10 @@
 .empty-state {
     text-align: center;
     padding: 60px 24px;
-    border: 1px dashed var(--border);
-    border-radius: var(--r-xl);
-    background: rgba(255,255,255,0.015);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 .empty-state .empty-icon {
     font-size: 3rem;
@@ -155,6 +165,73 @@
 .uptime-display {
     font-variant-numeric: tabular-nums;
     direction: ltr;
+}
+
+/* Typography & Transitions Improvements */
+.guild-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 24px;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    gap: 16px;
+    min-height: 260px;
+}
+
+.guild-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.guild-icon-wrapper {
+    margin-bottom: 8px;
+}
+
+.guild-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+    transition: border-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--text-1);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.guild-card:hover .guild-icon {
+    border-color: var(--primary);
+}
+
+.guild-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-1);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+.metric-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 24px;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(255, 255, 255, 0.1);
 }
 </style>
 

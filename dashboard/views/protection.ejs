@@ -1,5 +1,10 @@
 <%- include('partials/header') %>
-<%- include('partials/sidebar', { activeTab: 'protection' }) %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : {};
+roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'protection' }) %>
 
 <main class="app-content">
     <div class="content-header">
@@ -7,7 +12,7 @@
         <p>قم بضبط جدار الحماية ضد النيوك والروابط والسبام لحماية سيرفرك</p>
     </div>
 
-    <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+    <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
         <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
     <% } %>
 

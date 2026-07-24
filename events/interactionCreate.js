@@ -21,6 +21,7 @@ const logTicket = require("../utils/ticketlogger");
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction) {
+  try {
     const client = interaction.client;
 
 
@@ -161,15 +162,16 @@ module.exports = {
       const id = interaction.customId;
 
       if (id === 'ticket_delete') {
+          if (!interaction.channel || !interaction.guild) return;
           const ticket = db.getTicketByChannel(interaction.channel.id);
           if (!ticket) {
               return interaction.reply({ content: '{emoji:circlex} لم يتم العثور على بيانات التذكرة', flags: ['Ephemeral'] });
           }
           
           const settings = db.getTicketSettings(interaction.guild.id);
-          const staffRole = settings.staff_role;
-          const hasBypass = interaction.member.permissions.has('Administrator') || 
-                            (staffRole && interaction.member.roles.cache.has(staffRole));
+          const staffRole = settings?.staff_role;
+          const hasBypass = interaction.member?.permissions?.has('Administrator') || 
+                            (staffRole && interaction.member?.roles?.cache?.has(staffRole));
 
           if (!hasBypass) {
               return interaction.reply({ content: '{emoji:circlex} هذا الإجراء مخصص لطاقم الدعم والإدارة فقط.', flags: ['Ephemeral'] });
@@ -178,29 +180,34 @@ module.exports = {
           await interaction.reply({ content: '{emoji:trash} سيتم حذف التذكرة نهائياً خلال 5 ثواني...' });
           
           setTimeout(async () => {
-              await interaction.channel.delete().catch(() => null);
+              try {
+                  await interaction.channel?.delete().catch(() => null);
+              } catch (err) {
+                  console.error('[Ticket Delete Error]', err);
+              }
           }, 5000);
           
           await logTicket(
               interaction.guild,
               settings,
               "{emoji:trash} Ticket Deleted",
-              `التذكرة: ${interaction.channel.name}\nحذفت بواسطة: ${interaction.user}`,
+              `التذكرة: ${interaction.channel?.name || ''}\nحذفت بواسطة: ${interaction.user}`,
               "#ef4444"
           );
           return;
       }
 
       if (id === 'ticket_reopen') {
+          if (!interaction.channel || !interaction.guild) return;
           const ticket = db.getTicketByChannel(interaction.channel.id);
           if (!ticket) {
               return interaction.reply({ content: '{emoji:circlex} لم يتم العثور على بيانات التذكرة', flags: ['Ephemeral'] });
           }
           
           const settings = db.getTicketSettings(interaction.guild.id);
-          const staffRole = settings.staff_role;
-          const hasBypass = interaction.member.permissions.has('Administrator') || 
-                            (staffRole && interaction.member.roles.cache.has(staffRole));
+          const staffRole = settings?.staff_role;
+          const hasBypass = interaction.member?.permissions?.has('Administrator') || 
+                            (staffRole && interaction.member?.roles?.cache?.has(staffRole));
 
           if (!hasBypass) {
               return interaction.reply({ content: '{emoji:circlex} هذا الإجراء مخصص لطاقم الدعم والإدارة فقط.', flags: ['Ephemeral'] });
@@ -1247,7 +1254,7 @@ if (interaction.customId === "claim_ticket") {
 
     const settings = db.getTicketSettings(interaction.guild.id);
     const staffRole = settings.staff_role;
-    const hasBypass = interaction.member.permissions.has('Administrator') || 
+    const hasBypass = interaction.member?.permissions.has('Administrator') || 
                       (staffRole && interaction.member.roles.cache.has(staffRole));
 
     if (!hasBypass) {
@@ -1365,16 +1372,18 @@ if (ticketOwner) {
 const channelId = interaction.channel.id;
 
 setTimeout(async () => {
+    try {
+        const channel =
+            interaction.guild?.channels?.cache?.get(
+                channelId
+            );
 
-    const channel =
-        interaction.guild.channels.cache.get(
-            channelId
-        );
+        if (!channel) return;
 
-    if (!channel) return;
-
-    await channel.delete().catch(() => null);
-
+        await channel.delete().catch(() => null);
+    } catch (err) {
+        console.error('[Ticket Close Timeout Error]', err);
+    }
 }, 5000);
 
 
@@ -1413,7 +1422,7 @@ if (action && ticketActions.includes(action)) {
     }
     const settings = db.getTicketSettings(interaction.guild.id);
     const staffRole = settings.staff_role;
-    const hasBypass = interaction.member.permissions.has('Administrator') || 
+    const hasBypass = interaction.member?.permissions.has('Administrator') || 
                       (staffRole && interaction.member.roles.cache.has(staffRole));
 
     if (!hasBypass) {
@@ -2037,6 +2046,9 @@ if (
 
 
 
-  }
+  
+  } catch (err) {
+    console.error("Unhandled interaction error:", err);
+  }}
 
 };

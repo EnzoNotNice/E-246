@@ -12,13 +12,21 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
   async execute(interaction) {
-    const count = interaction.options.getInteger('count');
-    const role = interaction.options.getRole('role');
-
-    if (role.position >= interaction.guild.members.me.roles.highest.position)
-      return interaction.reply({ embeds: [error(locale.get('general.botRoleTooLow'))], flags: ['Ephemeral'] });
-
-    db.addInviteRank(interaction.guildId, count, role.id);
-    return interaction.reply({ embeds: [success(locale.get('invites.rankAdded', { count, role }))] });
-  }
+    try {  
+      const count = interaction.options.getInteger('count');
+      const role = interaction.options.getRole('role');
+  
+      if (role.position >= interaction.guild.members.me.roles.highest.position)
+        return interaction.reply({ embeds: [error(locale.get('general.botRoleTooLow'))], flags: ['Ephemeral'] });
+  
+      db.addInviteRank(interaction.guildId, count, role.id);
+      return interaction.reply({ embeds: [success(locale.get('invites.rankAdded', { count, role }))] });
+    
+    } catch (err) {
+      console.error('[Command Error - addrank.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
+    }
+}
 };

@@ -11,9 +11,17 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const ch = interaction.options.getChannel('channel');
-    db.setLogChannel(interaction.guildId, ch.id);
-    db.setGuildSetting(interaction.guildId, 'setlog_channel', ch.id);
-    return interaction.reply({ embeds: [success(locale.get('moderation.mainLogSet', { channel: ch }))] });
-  }
+    try {  
+      const ch = interaction.options.getChannel('channel');
+      db.setLogChannel(interaction.guildId, ch.id);
+      db.setGuildSetting(interaction.guildId, 'setlog_channel', ch.id);
+      return interaction.reply({ embeds: [success(locale.get('moderation.mainLogSet', { channel: ch }))] });
+    
+    } catch (err) {
+      console.error('[Command Error - setlog.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
+    }
+}
 };

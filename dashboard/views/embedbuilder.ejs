@@ -1,5 +1,9 @@
 <%- include('partials/header') %>
-<%- include('partials/sidebar', { activeTab: 'embed' }) %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+channels = typeof channels !== 'undefined' && Array.isArray(channels) ? channels : [];
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'embed' }) %>
 
 <main class="app-content">
     <div class="content-header">
@@ -7,10 +11,10 @@
         <p>صمّم بطاقات ديسكورد (Embeds) مخصصة مع معاينة حية قبل النشر في السيرفر</p>
     </div>
 
-    <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+    <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
         <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
     <% } %>
-    <% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
+    <% if (typeof req !== 'undefined' && req && req.query && req.query.error) { %>
         <div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <%= req.query.error %></div>
     <% } %>
 

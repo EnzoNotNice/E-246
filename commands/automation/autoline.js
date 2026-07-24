@@ -10,16 +10,24 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const channel = interaction.options.getChannel('channel');
-
-    const existing = db.getAutomation(interaction.guildId, channel.id).find(a => a.type === 'autoline');
-
-    if (existing) {
-      db.removeAutomation(interaction.guildId, channel.id, 'autoline');
-      return interaction.reply({ embeds: [success('تعطيل الفاصل التلقائي', `تم تعطيل الفاصل التلقائي في ${channel}`)] });
-    } else {
-      db.addAutomation(interaction.guildId, channel.id, 'autoline', 'enabled');
-      return interaction.reply({ embeds: [success('تفعيل الفاصل التلقائي', `تم تفعيل الفاصل التلقائي في ${channel}`)] });
+    try {  
+      const channel = interaction.options.getChannel('channel');
+  
+      const existing = db.getAutomation(interaction.guildId, channel.id).find(a => a.type === 'autoline');
+  
+      if (existing) {
+        db.removeAutomation(interaction.guildId, channel.id, 'autoline');
+        return interaction.reply({ embeds: [success('تعطيل الفاصل التلقائي', `تم تعطيل الفاصل التلقائي في ${channel}`)] });
+      } else {
+        db.addAutomation(interaction.guildId, channel.id, 'autoline', 'enabled');
+        return interaction.reply({ embeds: [success('تفعيل الفاصل التلقائي', `تم تفعيل الفاصل التلقائي في ${channel}`)] });
+      }
+    
+    } catch (err) {
+      console.error('[Command Error - autoline.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
     }
-  }
+}
 };

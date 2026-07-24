@@ -56,23 +56,27 @@
     if (reduced) return;
 
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9999;opacity:0;pointer-events:none;transition:opacity 0.2s ease;';
+    overlay.className = 'page-transition-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9999;opacity:0;pointer-events:none;transition:opacity 0.15s ease;';
     document.body.appendChild(overlay);
 
     document.querySelectorAll('a[href]').forEach(link => {
       const href = link.getAttribute('href');
       if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('//') || href.startsWith('javascript')) return;
-      link.addEventListener('click', () => {
+      link.addEventListener('click', (e) => {
+        if (e.ctrlKey || e.metaKey || e.target.closest('[target="_blank"]')) return;
         overlay.style.opacity = '1';
         overlay.style.pointerEvents = 'all';
+        setTimeout(() => {
+          overlay.style.opacity = '0';
+          overlay.style.pointerEvents = 'none';
+        }, 1500); // Fail-safe
       });
     });
 
-    window.addEventListener('pageshow', (e) => {
-      if (e.persisted) {
-        overlay.style.opacity = '0';
-        overlay.style.pointerEvents = 'none';
-      }
+    window.addEventListener('pageshow', () => {
+      overlay.style.opacity = '0';
+      overlay.style.pointerEvents = 'none';
     });
   }
 
@@ -229,14 +233,25 @@
     const content = document.querySelector('.app-content');
     if (content && !reduced) {
       content.style.opacity = '0';
-      content.style.transform = 'translateY(8px)';
-      content.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      content.style.transform = 'translateY(15px)';
+      content.style.transition = 'opacity 0.4s cubic-bezier(0.16,1,0.3,1), transform 0.4s cubic-bezier(0.16,1,0.3,1)';
+      
+      // Fallback to ensure it never gets stuck hidden
+      const fallback = setTimeout(() => {
+        content.style.opacity = '1';
+        content.style.transform = 'translateY(0)';
+      }, 100);
+
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+          clearTimeout(fallback);
           content.style.opacity = '1';
           content.style.transform = 'translateY(0)';
         });
       });
+    } else if (content) {
+      content.style.opacity = '1';
+      content.style.transform = 'none';
     }
   });
 })();

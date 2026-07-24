@@ -1,4 +1,9 @@
 <%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : {};
+textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+%>
 <%- include('partials/sidebar', { activeTab: 'welcome' }) %>
 
 <main class="app-content">
@@ -7,7 +12,7 @@
         <p>قم بالترحيب بالأعضاء الجدد تلقائياً برسائل نصية أو بطاقات ترحيبية بصور مخصصة</p>
     </div>
 
-    <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+    <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
         <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
     <% } %>
 
@@ -34,7 +39,6 @@
                         <% }) %>
                     </select>
                 </div>
-
             </div>
 
             <div class="form-group">
@@ -45,7 +49,7 @@
         </div>
 
         <!-- Welcome Image Settings -->
-        <div class="glass-panel reveal" style="animation-delay: 0.05s;">
+        <div class="glass-panel reveal" style="animation-delay: 0.1s;">
             <div class="section-title"><i class="fa-solid fa-image"></i> بطاقة وصورة الترحيب المخصصة</div>
 
             <div class="form-group">
@@ -58,7 +62,7 @@
                 <small id="upload_status" class="text-muted mt-1">اتركه فارغاً في حال أردت استخدام الترحيب النصي فقط بدون صورة بطاقة</small>
             </div>
 
-            <div class="grid-form-3 mt-2">
+            <div class="grid-form-3">
                 <div class="form-group">
                     <label for="avatar_x">موقع الأفتار X (أفقي)</label>
                     <input type="number" id="avatar_x" name="avatar_x" class="glass-input" value="<%= settings.avatar_x || 100 %>">
@@ -97,7 +101,7 @@
         </div>
 
         <!-- Live Preview -->
-        <div class="glass-panel reveal" style="animation-delay: 0.1s;">
+        <div class="glass-panel reveal" style="animation-delay: 0.2s;">
             <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة وتعديل تفاعلي</div>
             <p class="text-muted mb-2">يمكنك تحريك صورة الأفتار والاسم يدوياً بالسحب بالفأرة مباشرة داخل اللوحة أدناه</p>
 
@@ -119,8 +123,9 @@
                 </div>
             </div>
 
-
-            <button type="submit" class="btn btn-primary mt-3 btn-large"><i class="fa-solid fa-floppy-disk"></i> حفظ كافة التغييرات</button>
+            <div class="form-group mt-3">
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ كافة التغييرات</button>
+            </div>
         </div>
 
     </form>

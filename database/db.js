@@ -2,6 +2,14 @@ const { MongoClient } = require('mongodb');
 
 const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/e246';
 const client = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 5000 });
+
+client.on('error', (err) => console.error('[MongoDB Connection Error]', err));
+client.on('close', () => console.warn('[MongoDB Connection Closed]'));
+client.on('reconnect', () => console.log('✅ [MongoDB Reconnected]'));
+client.on('topologyDescriptionChanged', (ev) => {
+  // Silence or log server selection topology changes if needed
+});
+
 let mongoDb = null;
 
 function safeCollection(name) {
@@ -59,7 +67,9 @@ const cache = {
   stats_daily_members: new Map(),
   stats_hourly_messages: new Map(),
   stats_daily_voice: new Map(),
-  social_alerts: []
+  social_alerts: [],
+  automod_settings: new Map(),
+  custom_commands: []
 };
 
 const unhandledSqlStatements = [];
@@ -109,13 +119,14 @@ async function loadMongoCache() {
     { name: 'stats_daily_members', key: d => `${d.guildId}_${d.date}` },
     { name: 'stats_hourly_messages', key: d => `${d.guildId}_${d.date}_${d.hour}` },
     { name: 'stats_daily_voice', key: d => `${d.guildId}_${d.date}` },
-    { name: 'snipe', key: d => d.channelId }
+    { name: 'snipe', key: d => d.channelId },
+    { name: 'automod_settings', key: d => d.guildId }
   ];
 
   const arrayCollections = [
     'warnings', 'automation', 'whitelist', 'blacklist', 'invite_ranks',
     'tickets', 'auto_reply', 'reactroles', 'aliases', 'social_alerts',
-    'ticket_blacklist', 'ticket_warnings'
+    'ticket_blacklist', 'ticket_warnings', 'custom_commands'
   ];
 
   for (const col of mapCollections) {
@@ -1300,13 +1311,52 @@ getTicketWarnings(guildId, userId) {
       balance: d.value
     })).sort((a, b) => b.balance - a.balance).slice(0, limit);
   },
+  
+  getAutomod(guildId) {
+    let row = cache.automod_settings.get(guildId);
+    if (!row) {
+      row = { guildId, enabled: 0, action: 'delete', words: [], bypass_roles: [] };
+      cache.automod_settings.set(guildId, row);
+      safeCollection('automod_settings').insertOne(row).catch(() => null);
+    }
+    return row;
+  },
+  
+  updateAutomod(guildId, data) {
+    let current = this.getAutomod(guildId);
+    if (data.enabled !== undefined) current.enabled = data.enabled;
+    if (data.action !== undefined) current.action = data.action;
+    if (data.words !== undefined) current.words = typeof data.words === 'string' ? JSON.parse(data.words) : data.words;
+    if (data.bypass_roles !== undefined) current.bypass_roles = typeof data.bypass_roles === 'string' ? JSON.parse(data.bypass_roles) : data.bypass_roles;
+    
+    cache.automod_settings.set(guildId, current);
+    return safeCollection('automod_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+  },
+
   isConnected() {
     return !!mongoDb;
+  },
+
+  getCustomCommands(guildId) {
+    return cache.custom_commands.filter(c => c.guildId === guildId);
+  },
+  addCustomCommand(guildId, id, trigger, actions) {
+    const newDoc = { id, guildId, trigger, actions };
+    cache.custom_commands.push(newDoc);
+    safeCollection('custom_commands').insertOne(newDoc).catch(console.error);
+    return { changes: 1 };
+  },
+  deleteCustomCommand(guildId, id) {
+    cache.custom_commands = cache.custom_commands.filter(c => !(c.guildId === guildId && c.id === id));
+    safeCollection('custom_commands').deleteOne({ guildId, id }).catch(console.error);
+    return { changes: 1 };
   }
 };
 
 
 helpers.stripId = stripId;
 helpers.safeSet = safeSet;
+helpers.client = client;
 helpers.prepare = (sql) => helpers.db.prepare(sql);
 module.exports = helpers;
+

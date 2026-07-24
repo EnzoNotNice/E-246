@@ -7,6 +7,19 @@ function xpForLevel(level) {
 const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]+/i;
 const spamTracker = new Map();
 
+function normalizeArabic(text) {
+  if (!text) return '';
+  return text
+    .replace(/[\u064B-\u065F\u0670]/g, '') // Remove diacritics (tashkeel)
+    .replace(/[أإآ]/g, 'ا') // Normalize Alif
+    .replace(/ة/g, 'ه') // Normalize Ta Marbuta
+    .replace(/ي/g, 'ى') // Normalize Ya
+    .replace(/ؤ/g, 'و') // Normalize Waw
+    .replace(/ئ/g, 'ى') // Normalize Ya
+    .replace(/\s+/g, '') // Remove all spaces
+    .toLowerCase();
+}
+
 module.exports = {
   name: 'messageCreate',
   async execute(message) {
@@ -30,6 +43,40 @@ module.exports = {
     const prefix = db.getGuildSettings(guildId).prefix || '#';
 
     let isCommand = false;
+
+    // --- Custom Commands Logic ---
+    const customCommands = db.getCustomCommands(guildId);
+    const contentTrimmed = message.content.trim().toLowerCase();
+    const matchedCustomCmd = customCommands.find(c => c.trigger === contentTrimmed);
+    if (matchedCustomCmd) {
+      for (const action of matchedCustomCmd.actions) {
+        let val = String(action.value || '')
+          .replace(/{user}/g, `<@${message.author.id}>`)
+          .replace(/{server}/g, message.guild.name);
+          
+        try {
+          if (action.type === 'reply_text') {
+            await message.channel.send(val);
+          } else if (action.type === 'reply_embed') {
+            const { EmbedBuilder } = require('discord.js');
+            const embed = new EmbedBuilder().setDescription(val).setColor('#5865F2');
+            await message.channel.send({ embeds: [embed] });
+          } else if (action.type === 'add_role') {
+            const role = message.guild.roles.cache.get(action.value);
+            if (role && message.member) await message.member.roles.add(role).catch(() => null);
+          } else if (action.type === 'remove_role') {
+            const role = message.guild.roles.cache.get(action.value);
+            if (role && message.member) await message.member.roles.remove(role).catch(() => null);
+          } else if (action.type === 'delete_message') {
+            if (message.deletable) await message.delete().catch(() => null);
+          }
+        } catch (e) {
+          console.error("Custom Command Execution Error:", e);
+        }
+      }
+      return; // Stop processing further commands or replies
+    }
+    // -----------------------------
     let commandName = null;
     let args = [];
     let resolvedAlias = null;
@@ -226,6 +273,34 @@ module.exports = {
           const warnMsg = await message.channel.send({ content: `${message.author}, {emoji:alerttriangle} تم رصد سبام` });
           setTimeout(() => warnMsg.delete().catch(() => null), 5000);
           spamTracker.set(key, []);
+          return;
+        }
+      }
+    }
+
+    const automod = db.getAutomod(guildId);
+    if (automod && automod.enabled && Array.isArray(automod.words) && automod.words.length > 0) {
+      const member = message.member;
+      const bypassRoles = Array.isArray(automod.bypass_roles) ? automod.bypass_roles : [];
+      const hasBypass = member && bypassRoles.some(roleId => member.roles.cache.has(roleId));
+
+      if (!hasBypass) {
+        const normalizedMsg = normalizeArabic(message.content);
+        const hasBadWord = automod.words.some(word => {
+          const normalizedWord = normalizeArabic(word);
+          return normalizedMsg.includes(normalizedWord);
+        });
+
+        if (hasBadWord) {
+          await message.delete().catch(() => null);
+          if (automod.action === 'warn') {
+            const warnMsg = await message.channel.send({ content: `${message.author}, {emoji:circlex} يرجى احترام قوانين الخادم وتجنب استخدام الكلمات الممنوعة.` });
+            setTimeout(() => warnMsg.delete().catch(() => null), 5000);
+          } else if (automod.action === 'timeout' && member && member.moderatable) {
+            await member.timeout(60 * 60 * 1000, 'استخدام كلمات ممنوعة').catch(() => null);
+            const warnMsg = await message.channel.send({ content: `${message.author}, {emoji:alerttriangle} تم إعطائك تايم أوت لمدة ساعة بسبب استخدام كلمات ممنوعة.` });
+            setTimeout(() => warnMsg.delete().catch(() => null), 5000);
+          }
           return;
         }
       }

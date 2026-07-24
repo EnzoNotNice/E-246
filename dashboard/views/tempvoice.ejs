@@ -1,5 +1,11 @@
 <%- include('partials/header') %>
-<%- include('partials/sidebar', { activeTab: 'tempvoice' }) %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : {};
+channels = typeof channels !== 'undefined' && Array.isArray(channels) ? channels : [];
+categories = typeof categories !== 'undefined' && Array.isArray(categories) ? categories : [];
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'tempvoice' }) %>
 
 <main class="app-content">
     <div class="content-header">
@@ -10,7 +16,7 @@
     <div class="glass-panel reveal">
         <div class="section-title"><i class="fa-solid fa-sliders"></i> إعدادات الروم الأساسية</div>
 
-        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+        <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
             <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
         <% } %>
 

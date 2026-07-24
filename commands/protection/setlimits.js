@@ -14,36 +14,44 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
-    const ban = interaction.options.getInteger('ban');
-    const kick = interaction.options.getInteger('kick');
-    const channel = interaction.options.getInteger('channel');
-    const role = interaction.options.getInteger('role');
-    const webhook = interaction.options.getInteger('webhook');
-
-    const prot = db.getProtection(interaction.guildId);
-    const updates = {};
-    if (ban !== null) updates.ban_limit = ban;
-    if (kick !== null) updates.kick_limit = kick;
-    if (channel !== null) updates.channel_limit = channel;
-    if (role !== null) updates.role_limit = role;
-    if (webhook !== null) updates.webhook_limit = webhook;
-
-    for (const [key, val] of Object.entries(updates)) {
-      db.db.prepare(`UPDATE protection_settings SET ${key} = ? WHERE guildId = ?`).run(val, interaction.guildId);
+    try {  
+      const ban = interaction.options.getInteger('ban');
+      const kick = interaction.options.getInteger('kick');
+      const channel = interaction.options.getInteger('channel');
+      const role = interaction.options.getInteger('role');
+      const webhook = interaction.options.getInteger('webhook');
+  
+      const prot = db.getProtection(interaction.guildId);
+      const updates = {};
+      if (ban !== null) updates.ban_limit = ban;
+      if (kick !== null) updates.kick_limit = kick;
+      if (channel !== null) updates.channel_limit = channel;
+      if (role !== null) updates.role_limit = role;
+      if (webhook !== null) updates.webhook_limit = webhook;
+  
+      for (const [key, val] of Object.entries(updates)) {
+        db.db.prepare(`UPDATE protection_settings SET ${key} = ? WHERE guildId = ?`).run(val, interaction.guildId);
+      }
+  
+      const embed = new EmbedBuilder()
+        .setColor(0xFF6B6B)
+        .setTitle('{emoji:shield} تم تحديث حدود الحماية')
+        .addFields(
+          { name: '{emoji:shieldlock} حد الباند', value: String(ban ?? prot.ban_limit), inline: true },
+          { name: '{emoji:circlex} حد الطرد', value: String(kick ?? prot.kick_limit), inline: true },
+          { name: '{emoji:folder} حد القنوات', value: String(channel ?? prot.channel_limit), inline: true },
+          { name: '{emoji:user} حد الرتب', value: String(role ?? prot.role_limit), inline: true },
+          { name: '{emoji:settings} حد الويب هوك', value: String(webhook ?? prot.webhook_limit), inline: true },
+        )
+        .setTimestamp();
+  
+      return interaction.reply({ embeds: [embed] });
+    
+    } catch (err) {
+      console.error('[Command Error - setlimits.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
     }
-
-    const embed = new EmbedBuilder()
-      .setColor(0xFF6B6B)
-      .setTitle('{emoji:shield} تم تحديث حدود الحماية')
-      .addFields(
-        { name: '{emoji:shieldlock} حد الباند', value: String(ban ?? prot.ban_limit), inline: true },
-        { name: '{emoji:circlex} حد الطرد', value: String(kick ?? prot.kick_limit), inline: true },
-        { name: '{emoji:folder} حد القنوات', value: String(channel ?? prot.channel_limit), inline: true },
-        { name: '{emoji:user} حد الرتب', value: String(role ?? prot.role_limit), inline: true },
-        { name: '{emoji:settings} حد الويب هوك', value: String(webhook ?? prot.webhook_limit), inline: true },
-      )
-      .setTimestamp();
-
-    return interaction.reply({ embeds: [embed] });
-  }
+}
 };

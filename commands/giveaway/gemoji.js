@@ -11,8 +11,16 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const emoji = interaction.options.getString('emoji');
-    db.setGuildSetting(interaction.guildId, 'giveaway_emoji', emoji);
-    return interaction.reply({ embeds: [success(locale.get('giveaway.emojiSet', { emoji }))] });
-  }
+    try {  
+      const emoji = interaction.options.getString('emoji');
+      db.setGuildSetting(interaction.guildId, 'giveaway_emoji', emoji);
+      return interaction.reply({ embeds: [success(locale.get('giveaway.emojiSet', { emoji }))] });
+    
+    } catch (err) {
+      console.error('[Command Error - gemoji.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
+    }
+}
 };

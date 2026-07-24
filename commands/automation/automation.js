@@ -29,66 +29,74 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const sub = interaction.options.getSubcommand();
-
-    if (sub === 'show') {
-      const all = db.getAllAutomation(interaction.guildId);
-      if (!all.length) return interaction.reply({ embeds: [error(locale.get('automation.noAutomation'))], flags: ['Ephemeral'] });
-
-      const lines = all.map(a => {
-        const types = { images: '{emoji:photo} Images Only', youtube: '{emoji:playerplay} YouTube Only', line: '{emoji:adjustments} Auto-Line', react: '{emoji:moodsmile} Auto-React' };
-        return `${types[a.type] || a.type} — <#${a.channelId}>${a.value ? ` (\`${a.value}\`)` : ''}`;
-      });
-
-      const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
-        .setTitle('{emoji:settings} Automation Settings')
-        .setDescription(lines.join('\n'))
-        .setTimestamp();
-      return interaction.reply({ embeds: [embed] });
-    }
-
-    if (sub === 'images') {
-      const ch = interaction.options.getChannel('channel');
-      const existing = db.getAutomation(interaction.guildId, ch.id).find(a => a.type === 'images');
-      if (existing) {
-        db.removeAutomation(interaction.guildId, ch.id, 'images');
-        return interaction.reply({ embeds: [success(locale.get('automation.imagesDisabled', { channel: ch }))] });
+    try {  
+      const sub = interaction.options.getSubcommand();
+  
+      if (sub === 'show') {
+        const all = db.getAllAutomation(interaction.guildId);
+        if (!all.length) return interaction.reply({ embeds: [error(locale.get('automation.noAutomation'))], flags: ['Ephemeral'] });
+  
+        const lines = all.map(a => {
+          const types = { images: '{emoji:photo} Images Only', youtube: '{emoji:playerplay} YouTube Only', line: '{emoji:adjustments} Auto-Line', react: '{emoji:moodsmile} Auto-React' };
+          return `${types[a.type] || a.type} — <#${a.channelId}>${a.value ? ` (\`${a.value}\`)` : ''}`;
+        });
+  
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('{emoji:settings} Automation Settings')
+          .setDescription(lines.join('\n'))
+          .setTimestamp();
+        return interaction.reply({ embeds: [embed] });
       }
-      db.addAutomation(interaction.guildId, ch.id, 'images', null);
-      return interaction.reply({ embeds: [success(locale.get('automation.imagesEnabled', { channel: ch }))] });
-    }
-
-    if (sub === 'youtube') {
-      const ch = interaction.options.getChannel('channel');
-      const existing = db.getAutomation(interaction.guildId, ch.id).find(a => a.type === 'youtube');
-      if (existing) {
-        db.removeAutomation(interaction.guildId, ch.id, 'youtube');
-        return interaction.reply({ embeds: [success(locale.get('automation.youtubeDisabled', { channel: ch }))] });
+  
+      if (sub === 'images') {
+        const ch = interaction.options.getChannel('channel');
+        const existing = db.getAutomation(interaction.guildId, ch.id).find(a => a.type === 'images');
+        if (existing) {
+          db.removeAutomation(interaction.guildId, ch.id, 'images');
+          return interaction.reply({ embeds: [success(locale.get('automation.imagesDisabled', { channel: ch }))] });
+        }
+        db.addAutomation(interaction.guildId, ch.id, 'images', null);
+        return interaction.reply({ embeds: [success(locale.get('automation.imagesEnabled', { channel: ch }))] });
       }
-      db.addAutomation(interaction.guildId, ch.id, 'youtube', null);
-      return interaction.reply({ embeds: [success(locale.get('automation.youtubeEnabled', { channel: ch }))] });
+  
+      if (sub === 'youtube') {
+        const ch = interaction.options.getChannel('channel');
+        const existing = db.getAutomation(interaction.guildId, ch.id).find(a => a.type === 'youtube');
+        if (existing) {
+          db.removeAutomation(interaction.guildId, ch.id, 'youtube');
+          return interaction.reply({ embeds: [success(locale.get('automation.youtubeDisabled', { channel: ch }))] });
+        }
+        db.addAutomation(interaction.guildId, ch.id, 'youtube', null);
+        return interaction.reply({ embeds: [success(locale.get('automation.youtubeEnabled', { channel: ch }))] });
+      }
+  
+      if (sub === 'lineadd') {
+        const ch = interaction.options.getChannel('channel');
+        const sep = interaction.options.getString('separator');
+        db.addAutomation(interaction.guildId, ch.id, 'line', sep);
+        return interaction.reply({ embeds: [success(locale.get('automation.autoLineAdded', { channel: ch, sep }))] });
+      }
+  
+      if (sub === 'reactadd') {
+        const ch = interaction.options.getChannel('channel');
+        const emoji = interaction.options.getString('emoji');
+        db.addAutomation(interaction.guildId, ch.id, 'react', emoji);
+        return interaction.reply({ embeds: [success(locale.get('automation.autoReactAdded', { channel: ch, emoji }))] });
+      }
+  
+      if (sub === 'remove') {
+        const ch = interaction.options.getChannel('channel');
+        const type = interaction.options.getString('type');
+        db.removeAutomation(interaction.guildId, ch.id, type);
+        return interaction.reply({ embeds: [success(locale.get('automation.automationRemoved', { type, channel: ch }))] });
+      }
+    
+    } catch (err) {
+      console.error('[Command Error - automation.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
     }
-
-    if (sub === 'lineadd') {
-      const ch = interaction.options.getChannel('channel');
-      const sep = interaction.options.getString('separator');
-      db.addAutomation(interaction.guildId, ch.id, 'line', sep);
-      return interaction.reply({ embeds: [success(locale.get('automation.autoLineAdded', { channel: ch, sep }))] });
-    }
-
-    if (sub === 'reactadd') {
-      const ch = interaction.options.getChannel('channel');
-      const emoji = interaction.options.getString('emoji');
-      db.addAutomation(interaction.guildId, ch.id, 'react', emoji);
-      return interaction.reply({ embeds: [success(locale.get('automation.autoReactAdded', { channel: ch, emoji }))] });
-    }
-
-    if (sub === 'remove') {
-      const ch = interaction.options.getChannel('channel');
-      const type = interaction.options.getString('type');
-      db.removeAutomation(interaction.guildId, ch.id, type);
-      return interaction.reply({ embeds: [success(locale.get('automation.automationRemoved', { type, channel: ch }))] });
-    }
-  }
+}
 };

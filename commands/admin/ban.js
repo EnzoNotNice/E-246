@@ -13,7 +13,7 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
-    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+    if (!interaction.guild || !interaction.member?.permissions?.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({ embeds: [error(locale.get('general.noPermission'))], flags: ['Ephemeral'] });
     }
 
@@ -21,11 +21,12 @@ module.exports = {
     const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
     const deleteDays = interaction.options.getInteger('delete_messages') ?? 0;
 
+    if (!target) return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
+
     const member = await interaction.guild.members.fetch(target.id).catch(() => null);
 
-    if (!target) return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
     if (member && !member.bannable) return interaction.reply({ embeds: [error(locale.get('moderation.cannotBan'))], flags: ['Ephemeral'] });
-    if (interaction.user.id !== interaction.guild.ownerId && member && member.roles.highest.position >= interaction.member.roles.highest.position)
+    if (interaction.user.id !== interaction.guild.ownerId && member && (member.roles?.highest?.position ?? 0) >= (interaction.member?.roles?.highest?.position ?? 0))
       return interaction.reply({ embeds: [error(locale.get('general.noPermission'))], flags: ['Ephemeral'] });
 
     try {

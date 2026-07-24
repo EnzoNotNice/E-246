@@ -19,41 +19,49 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
-    const sub = interaction.options.getSubcommand();
-    const prot = db.getProtection(interaction.guildId);
-
-    if (sub === 'enable') {
-      db.db.prepare('UPDATE protection_settings SET enabled = 1 WHERE guildId = ?').run(interaction.guildId);
-      return interaction.reply({ embeds: [success(locale.get('protection.enabled'))] });
+    try {  
+      const sub = interaction.options.getSubcommand();
+      const prot = db.getProtection(interaction.guildId);
+  
+      if (sub === 'enable') {
+        db.db.prepare('UPDATE protection_settings SET enabled = 1 WHERE guildId = ?').run(interaction.guildId);
+        return interaction.reply({ embeds: [success(locale.get('protection.enabled'))] });
+      }
+  
+      if (sub === 'disable') {
+        db.db.prepare('UPDATE protection_settings SET enabled = 0 WHERE guildId = ?').run(interaction.guildId);
+        return interaction.reply({ embeds: [success(locale.get('protection.disabled'))] });
+      }
+  
+      if (sub === 'action') {
+        const action = interaction.options.getString('action');
+        db.db.prepare('UPDATE protection_settings SET action = ? WHERE guildId = ?').run(action, interaction.guildId);
+        return interaction.reply({ embeds: [success(locale.get('protection.actionSet', { action }))] });
+      }
+  
+      if (sub === 'show') {
+        const wl = db.getWhitelist(interaction.guildId);
+        const embed = new EmbedBuilder()
+          .setColor(0xFF6B6B)
+          .setTitle('{emoji:shield} نظام الحماية')
+          .addFields(
+            { name: '{emoji:chartpie} الحالة', value: prot.enabled ? '{emoji:circlecheck} نشط' : '{emoji:circlex} معطل', inline: true },
+            { name: '{emoji:bolt} الإجراء', value: prot.action === 'ban' ? 'باند' : prot.action === 'kick' ? 'طرد' : 'سحب رتب', inline: true },
+            { name: '{emoji:shieldlock} حد الباند', value: String(prot.ban_limit), inline: true },
+            { name: '{emoji:circlex} حد الطرد', value: String(prot.kick_limit), inline: true },
+            { name: '{emoji:folder} حد القنوات', value: String(prot.channel_limit), inline: true },
+            { name: '{emoji:user} حد الرتب', value: String(prot.role_limit), inline: true },
+            { name: '{emoji:heart} القائمة البيضاء', value: wl.length ? wl.map(w => `<@${w.targetId}>`).join(', ') : 'لا يوجد' }
+          )
+          .setTimestamp();
+        return interaction.reply({ embeds: [embed] });
+      }
+    
+    } catch (err) {
+      console.error('[Command Error - setup.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
     }
-
-    if (sub === 'disable') {
-      db.db.prepare('UPDATE protection_settings SET enabled = 0 WHERE guildId = ?').run(interaction.guildId);
-      return interaction.reply({ embeds: [success(locale.get('protection.disabled'))] });
-    }
-
-    if (sub === 'action') {
-      const action = interaction.options.getString('action');
-      db.db.prepare('UPDATE protection_settings SET action = ? WHERE guildId = ?').run(action, interaction.guildId);
-      return interaction.reply({ embeds: [success(locale.get('protection.actionSet', { action }))] });
-    }
-
-    if (sub === 'show') {
-      const wl = db.getWhitelist(interaction.guildId);
-      const embed = new EmbedBuilder()
-        .setColor(0xFF6B6B)
-        .setTitle('{emoji:shield} نظام الحماية')
-        .addFields(
-          { name: '{emoji:chartpie} الحالة', value: prot.enabled ? '{emoji:circlecheck} نشط' : '{emoji:circlex} معطل', inline: true },
-          { name: '{emoji:bolt} الإجراء', value: prot.action === 'ban' ? 'باند' : prot.action === 'kick' ? 'طرد' : 'سحب رتب', inline: true },
-          { name: '{emoji:shieldlock} حد الباند', value: String(prot.ban_limit), inline: true },
-          { name: '{emoji:circlex} حد الطرد', value: String(prot.kick_limit), inline: true },
-          { name: '{emoji:folder} حد القنوات', value: String(prot.channel_limit), inline: true },
-          { name: '{emoji:user} حد الرتب', value: String(prot.role_limit), inline: true },
-          { name: '{emoji:heart} القائمة البيضاء', value: wl.length ? wl.map(w => `<@${w.targetId}>`).join(', ') : 'لا يوجد' }
-        )
-        .setTimestamp();
-      return interaction.reply({ embeds: [embed] });
-    }
-  }
+}
 };

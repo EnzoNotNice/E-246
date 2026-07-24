@@ -208,12 +208,21 @@ const eventFiles = fs.readdirSync(eventsDir).filter(f => f.endsWith('.js'));
 
 for (const file of eventFiles) {
   const event = require(path.join(eventsDir, file));
-  if (event.once) {
-    client.once(event.name, (...args) => event.execute(...args));
-  } else {
-    client.on(event.name, (...args) => event.execute(...args));
+  if (event.name && typeof event.execute === 'function') {
+    const handler = async (...args) => {
+      try {
+        await event.execute(...args);
+      } catch (err) {
+        console.error(`Error in event ${event.name}:`, err);
+      }
+    };
+    if (event.once) {
+      client.once(event.name, handler);
+    } else {
+      client.on(event.name, handler);
+    }
+    console.log(`Loaded event: ${event.name}`);
   }
-  console.log(`Loaded event: ${event.name}`);
 }
 
 process.on('unhandledRejection', err => {

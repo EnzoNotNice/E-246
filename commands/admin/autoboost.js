@@ -21,28 +21,36 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const sub = interaction.options.getSubcommand();
-    const guildId = interaction.guildId;
-
-    if (sub === 'setup') {
-      const channel = interaction.options.getChannel('channel');
-      const message = interaction.options.getString('message');
-
-      db.setGuildSetting(guildId, 'autoboost_channel', channel.id);
-      db.setGuildSetting(guildId, 'autoboost_message', message);
-
-      return interaction.reply({
-        embeds: [success(`تم تفعيل رسالة البوست التلقائية بنجاح\n\n**الروم** <#${channel.id}>\n**الرسالة**\n${message}`)]
-      });
+    try {  
+      const sub = interaction.options.getSubcommand();
+      const guildId = interaction.guildId;
+  
+      if (sub === 'setup') {
+        const channel = interaction.options.getChannel('channel');
+        const message = interaction.options.getString('message');
+  
+        db.setGuildSetting(guildId, 'autoboost_channel', channel.id);
+        db.setGuildSetting(guildId, 'autoboost_message', message);
+  
+        return interaction.reply({
+          embeds: [success(`تم تفعيل رسالة البوست التلقائية بنجاح\n\n**الروم** <#${channel.id}>\n**الرسالة**\n${message}`)]
+        });
+      }
+  
+      if (sub === 'disable') {
+        db.setGuildSetting(guildId, 'autoboost_channel', null);
+        db.setGuildSetting(guildId, 'autoboost_message', null);
+  
+        return interaction.reply({
+          embeds: [success('تم تعطيل رسالة البوست التلقائية بنجاح')]
+        });
+      }
+    
+    } catch (err) {
+      console.error('[Command Error - autoboost.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
     }
-
-    if (sub === 'disable') {
-      db.setGuildSetting(guildId, 'autoboost_channel', null);
-      db.setGuildSetting(guildId, 'autoboost_message', null);
-
-      return interaction.reply({
-        embeds: [success('تم تعطيل رسالة البوست التلقائية بنجاح')]
-      });
-    }
-  }
+}
 };

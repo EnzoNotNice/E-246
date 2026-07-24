@@ -1,4 +1,12 @@
 <%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : { panel_data: {} };
+if (!settings.panel_data) settings.panel_data = {};
+nativeReactionRoles = typeof nativeReactionRoles !== 'undefined' && Array.isArray(nativeReactionRoles) ? nativeReactionRoles : [];
+textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
+%>
 <%- include('partials/sidebar', { guild, activeTab: 'reactionroles' }) %>
 
 <main class="app-content">
@@ -14,49 +22,55 @@
         <div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <%= error %></div>
     <% } %>
 
-    <div class="tickets-layout reveal">
+    <div class="tickets-layout">
         <!-- settings form -->
-        <div class="glass-panel">
+        <div class="glass-panel reveal">
             <form action="/dashboard/<%= guild.id %>/reactionroles" method="POST" id="rrForm">
                 <div class="section-title"><i class="fa-solid fa-paintbrush"></i> ١. تصميم لوحة الرتب</div>
                 
-                <div class="form-group mt-2">
-                    <label>عنوان الإمبيد الرئيسي</label>
-                    <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'اختر رتبك المفضلة' %>" required>
+                <div class="grid-form-2 mt-2">
+                    <div class="form-group">
+                        <label>عنوان الإمبيد الرئيسي</label>
+                        <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'اختر رتبك المفضلة' %>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>لون الإمبيد</label>
+                        <input type="color" name="color" id="color" class="glass-input" style="height: 40px; padding: 4px; cursor: pointer;" value="<%= settings.panel_data.color || '#5865F2' %>" data-rr-color>
+                    </div>
                 </div>
+
                 <div class="form-group">
                     <label>وصف الإمبيد</label>
                     <textarea name="description" id="description" class="glass-input" rows="3" required><%= settings.panel_data.description || 'اضغط على الأزرار المخصصة بالأسفل للحصول على رتبتك.' %></textarea>
                 </div>
+                
                 <div class="grid-form-2">
                     <div class="form-group">
-                        <label>لون الإمبيد</label>
-                        <input type="color" name="color" id="color" class="glass-input" style="height: 40px; padding: 4px; cursor: pointer;" value="<%= settings.panel_data.color || '#5865F2' %>" data-rr-color>
+                        <label>رابط الصورة الكبيرة (Banner Image)</label>
+                        <input type="url" name="image" id="image" class="glass-input" placeholder="https://example.com/banner.png" value="<%= settings.panel_data.image || '' %>">
                     </div>
                     <div class="form-group">
                         <label>رابط الصورة المصغرة (Thumbnail)</label>
                         <input type="url" name="thumbnail" id="thumbnail" class="glass-input" placeholder="https://example.com/thumb.png" value="<%= settings.panel_data.thumbnail || '' %>">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>رابط الصورة الكبيرة (Banner Image)</label>
-                    <input type="url" name="image" id="image" class="glass-input" placeholder="https://example.com/banner.png" value="<%= settings.panel_data.image || '' %>">
-                </div>
 
                 <hr class="divider">
 
                 <div class="section-title"><i class="fa-solid fa-layer-group"></i> ٢. نوع المكوّن التفاعلي</div>
-                <div class="form-group mt-2">
-                    <label>عرض الرتب على شكل:</label>
-                    <select name="comp_type" id="comp_type" class="glass-input">
-                        <option value="button" <%= settings.panel_data.comp_type === 'button' ? 'selected' : '' %>>🔘 أزرار منفصلة (Buttons)</option>
-                        <option value="select" <%= settings.panel_data.comp_type === 'select' ? 'selected' : '' %>>🗂️ قائمة منسدلة واحدة (Select Menu)</option>
-                    </select>
+                <div class="grid-form-2 mt-2">
+                    <div class="form-group">
+                        <label>عرض الرتب على شكل:</label>
+                        <select name="comp_type" id="comp_type" class="glass-input">
+                            <option value="button" <%= settings.panel_data.comp_type === 'button' ? 'selected' : '' %>>🔘 أزرار منفصلة (Buttons)</option>
+                            <option value="select" <%= settings.panel_data.comp_type === 'select' ? 'selected' : '' %>>🗂️ قائمة منسدلة واحدة (Select Menu)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <hr class="divider">
 
-                <div class="setting-row" style="margin-bottom:12px;">
+                <div class="setting-row" style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
                     <div class="section-title" style="margin:0;"><i class="fa-solid fa-list-check"></i> ٣. قائمة الرتب المعروضة</div>
                     <button type="button" class="btn btn-secondary btn-sm" onclick="addRoleRow()"><i class="fa-solid fa-plus"></i> إضافة رتبة</button>
                 </div>
@@ -67,19 +81,20 @@
                 <hr class="divider">
 
                 <div class="section-title"><i class="fa-solid fa-paper-plane"></i> ٤. نشر لوحة الرتب</div>
-                <div class="form-group mt-2">
-                    <label>قناة نشر اللوحة</label>
-                    <select name="panel_channel" id="panel_channel" class="glass-input">
-                        <option value="">-- اختر القناة --</option>
-                        <% textChannels.forEach(c => { %>
-                            <option value="<%= c.id %>"># <%= c.name %></option>
-                        <% }) %>
-                    </select>
-                </div>
-
-                <div class="form-group d-flex align-items-center gap-2 mt-2 mb-3">
-                    <input type="checkbox" name="send_panel" id="send_panel" value="yes" style="width:18px;height:18px;accent-color:#fff;cursor:pointer;">
-                    <label for="send_panel" class="cursor-pointer" style="margin:0; font-weight:500; font-size:0.85rem;">إرسال / تحديث اللوحة في القناة الآن</label>
+                <div class="grid-form-2 mt-2">
+                    <div class="form-group">
+                        <label>قناة نشر اللوحة</label>
+                        <select name="panel_channel" id="panel_channel" class="glass-input">
+                            <option value="">-- اختر القناة --</option>
+                            <% textChannels.forEach(c => { %>
+                                <option value="<%= c.id %>"># <%= c.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="form-group d-flex align-items-center gap-2 mb-3" style="margin-top: 32px;">
+                        <input type="checkbox" name="send_panel" id="send_panel" value="yes" style="width:18px;height:18px;accent-color:#fff;cursor:pointer;">
+                        <label for="send_panel" class="cursor-pointer" style="margin:0; font-weight:500; font-size:0.85rem;">إرسال / تحديث اللوحة في القناة الآن</label>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-large btn-block" onclick="prepareSubmit(event)">
@@ -90,25 +105,25 @@
 
         <!-- live preview -->
         <div class="sticky-preview">
-            <div class="glass-panel">
+            <div class="glass-panel reveal" style="animation-delay: 0.1s;">
                 <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة</div>
 
                 <div class="discord-preview-container" style="background:#0c0c0c; border: 1px solid var(--border); border-radius: var(--r-md); padding:16px;">
                     <div class="discord-embed" style="background-color:#141414; max-width:100%; border-radius:var(--r-sm); border:1px solid var(--border); border-right:4px solid #5865F2; border-left:none; padding:16px;">
                         <div class="d-flex gap-2">
-                            <img src="<%= client.user.displayAvatarURL() %>" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--border);">
+                            <img src="<%= (typeof client !== 'undefined' && client?.user && typeof client.user.displayAvatarURL === 'function') ? client.user.displayAvatarURL() : '/images/bot-avatar.png' %>" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--border);" alt="Bot Avatar">
                             <div class="flex-grow-1" style="min-width:0;">
                                 <div class="d-flex align-items-center gap-sm mb-1">
-                                    <span style="color:#fff; font-weight:600; font-size:0.85rem;"><%= client.user.username %></span>
+                                    <span style="color:#fff; font-weight:600; font-size:0.85rem;"><%= (typeof client !== 'undefined' && client?.user?.username) ? client.user.username : 'Bot' %></span>
                                     <span class="bot-tag-preview">BOT</span>
                                 </div>
                                 <div id="preview-embed" style="border-right:4px solid #5865F2; border-left:none; background:#0a0a0a; padding:12px; border-radius:var(--r-sm); border:1px solid var(--border); display:flex; gap:16px; justify-content:space-between;">
                                     <div class="flex-grow-1" style="min-width:0;">
                                         <div id="preview-title" style="color:#fff; font-weight:700; font-size:0.95rem; margin-bottom:6px;"></div>
                                         <div id="preview-desc" style="color:var(--text-2); font-size:0.85rem; line-height:1.5; white-space:pre-wrap;"></div>
-                                        <img id="preview-image" src="" style="max-width:100%; max-height:200px; border-radius:4px; margin-top:10px; object-fit:cover; display:none;">
+                                        <img id="preview-image" src="" style="max-width:100%; max-height:200px; border-radius:4px; margin-top:10px; object-fit:cover; display:none;" alt="Preview Image">
                                     </div>
-                                    <img id="preview-thumb" src="" style="width:60px; height:60px; border-radius:4px; object-fit:contain; display:none; flex-shrink:0;">
+                                    <img id="preview-thumb" src="" style="width:60px; height:60px; border-radius:4px; object-fit:contain; display:none; flex-shrink:0;" alt="Preview Thumbnail">
                                 </div>
                                 <div id="preview-components" class="mt-2 d-flex flex-wrap gap-sm"></div>
                             </div>

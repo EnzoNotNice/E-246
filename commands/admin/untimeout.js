@@ -12,17 +12,25 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 
   async execute(interaction) {
-    const target = interaction.options.getMember('user');
-    const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
-
-    if (!target) return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
-    if (!target.isCommunicationDisabled()) return interaction.reply({ embeds: [error(locale.get('moderation.notTimedOut'))], flags: ['Ephemeral'] });
-
-    await target.timeout(null, reason);
-
-    const logEmbed = modlog('تم رفع الإسكات', { tag: target.user.tag, id: target.id }, interaction.user, reason);
-    await sendLog(interaction.client, interaction.guildId, logEmbed, 'timeout');
-
-    return interaction.reply({ embeds: [success(locale.get('moderation.untimeoutSuccess', { user: target.user.tag }))] });
-  }
+    try {  
+      const target = interaction.options.getMember('user');
+      const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
+  
+      if (!target) return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
+      if (!target.isCommunicationDisabled()) return interaction.reply({ embeds: [error(locale.get('moderation.notTimedOut'))], flags: ['Ephemeral'] });
+  
+      await target.timeout(null, reason);
+  
+      const logEmbed = modlog('تم رفع الإسكات', { tag: target.user.tag, id: target.id }, interaction.user, reason);
+      await sendLog(interaction.client, interaction.guildId, logEmbed, 'timeout');
+  
+      return interaction.reply({ embeds: [success(locale.get('moderation.untimeoutSuccess', { user: target.user.tag }))] });
+    
+    } catch (err) {
+      console.error('[Command Error - untimeout.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
+    }
+}
 };

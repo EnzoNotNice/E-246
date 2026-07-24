@@ -11,14 +11,22 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const user = interaction.options.getUser('user');
-
-    if (user) {
-      db.resetInvites(user.id, interaction.guildId);
-      return interaction.reply({ embeds: [success(locale.get('invites.userReset', { user: user.tag }))] });
+    try {  
+      const user = interaction.options.getUser('user');
+  
+      if (user) {
+        db.resetInvites(user.id, interaction.guildId);
+        return interaction.reply({ embeds: [success(locale.get('invites.userReset', { user: user.tag }))] });
+      }
+  
+      db.resetAllInvites(interaction.guildId);
+      return interaction.reply({ embeds: [success(locale.get('invites.serverReset'))] });
+    
+    } catch (err) {
+      console.error('[Command Error - resetinvites.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
     }
-
-    db.resetAllInvites(interaction.guildId);
-    return interaction.reply({ embeds: [success(locale.get('invites.serverReset'))] });
-  }
+}
 };

@@ -1,5 +1,10 @@
 <%- include('partials/header') %>
-<%- include('partials/sidebar', { activeTab: 'aliases' }) %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+aliases = typeof aliases !== 'undefined' && Array.isArray(aliases) ? aliases : [];
+commands = typeof commands !== 'undefined' && Array.isArray(commands) ? commands : [];
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'aliases' }) %>
 
 <main class="app-content">
     <div class="content-header">
@@ -11,7 +16,7 @@
     <div class="glass-panel reveal">
         <div class="section-title"><i class="fa-solid fa-link"></i> الاختصارات المفعّلة حالياً</div>
 
-        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+        <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
             <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
         <% } %>
 

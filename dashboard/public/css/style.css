@@ -496,14 +496,22 @@ body {
    GLASS PANELS / CARDS
    ============================================================ */
 .glass-panel {
-  background: rgba(255,255,255,0.025);
-  border: 1px solid var(--border);
+  background: rgba(20, 20, 35, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--r-lg);
   padding: 20px;
   margin-bottom: 14px;
-  transition: border-color var(--t-base);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+  transition: border-color var(--t-base), box-shadow var(--t-base);
+  box-sizing: border-box;
+  max-width: 100%;
 }
-.glass-panel:hover { border-color: var(--border-hover); }
+.glass-panel:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
 
 /* ============================================================
    BENTO GRID
@@ -520,25 +528,31 @@ body {
    METRIC CARDS
    ============================================================ */
 .metric-card {
-  background: rgba(255,255,255,0.025);
-  border: 1px solid var(--border);
+  background: rgba(20, 20, 35, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--r-lg);
   padding: 18px;
   position: relative;
   overflow: hidden;
-  transition: border-color var(--t-base), transform var(--t-base);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: border-color var(--t-base), transform var(--t-base), box-shadow var(--t-base);
   cursor: default;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 .metric-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 60%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 60%);
   pointer-events: none;
 }
 .metric-card:hover {
   border-color: var(--border-hover);
   transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 .metric-card .metric-icon {
   width: 38px; height: 38px;
@@ -772,7 +786,7 @@ body {
 }
 .list-item:hover { border-color: var(--border-hover); }
 
-.table { width: 100%; border-collapse: collapse; }
+.table { width: 100%; border-collapse: collapse; min-width: 500px; }
 .table th {
   padding: 10px 12px;
   text-align: right;
@@ -792,9 +806,12 @@ body {
 .table tr:hover td { background: rgba(255,255,255,0.02); }
 
 .table-responsive {
+  width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--r-md);
   border: 1px solid var(--border);
+  box-sizing: border-box;
 }
 
 /* ============================================================

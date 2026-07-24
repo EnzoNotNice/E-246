@@ -12,31 +12,39 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
 
   async execute(interaction) {
-    await interaction.deferReply();
-    const userId = interaction.options.getString('user_id');
-    const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
-
-    if (!userId) {
-      const bans = await interaction.guild.bans.fetch();
-      if (bans.size === 0) return interaction.editReply({ embeds: [error(locale.get('moderation.noBans'))] });
-
-      let count = 0;
-      for (const [, ban] of bans) {
-        await interaction.guild.members.unban(ban.user, reason).catch(() => null);
-        count++;
+    try {  
+      await interaction.deferReply();
+      const userId = interaction.options.getString('user_id');
+      const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
+  
+      if (!userId) {
+        const bans = await interaction.guild.bans.fetch();
+        if (bans.size === 0) return interaction.editReply({ embeds: [error(locale.get('moderation.noBans'))] });
+  
+        let count = 0;
+        for (const [, ban] of bans) {
+          await interaction.guild.members.unban(ban.user, reason).catch(() => null);
+          count++;
+        }
+        const logEmbed = modlog('رفع حظر جماعي', { tag: `${count} عضو`, id: 'غير متاح' }, interaction.user, reason);
+        await sendLog(interaction.client, interaction.guildId, logEmbed, 'unban');
+        return interaction.editReply({ embeds: [success(locale.get('moderation.massUnbanSuccess', { count }))] });
       }
-      const logEmbed = modlog('رفع حظر جماعي', { tag: `${count} عضو`, id: 'غير متاح' }, interaction.user, reason);
+  
+      const ban = await interaction.guild.bans.fetch(userId).catch(() => null);
+      if (!ban) return interaction.editReply({ embeds: [error(locale.get('moderation.notBanned'))] });
+  
+      await interaction.guild.members.unban(userId, reason);
+      const logEmbed = modlog('تم رفع الحظر', { tag: ban.user.tag, id: ban.user.id }, interaction.user, reason);
       await sendLog(interaction.client, interaction.guildId, logEmbed, 'unban');
-      return interaction.editReply({ embeds: [success(locale.get('moderation.massUnbanSuccess', { count }))] });
+  
+      return interaction.editReply({ embeds: [success(locale.get('moderation.unbanSuccess', { user: ban.user.tag }))] });
+    
+    } catch (err) {
+      console.error('[Command Error - unban.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
     }
-
-    const ban = await interaction.guild.bans.fetch(userId).catch(() => null);
-    if (!ban) return interaction.editReply({ embeds: [error(locale.get('moderation.notBanned'))] });
-
-    await interaction.guild.members.unban(userId, reason);
-    const logEmbed = modlog('تم رفع الحظر', { tag: ban.user.tag, id: ban.user.id }, interaction.user, reason);
-    await sendLog(interaction.client, interaction.guildId, logEmbed, 'unban');
-
-    return interaction.editReply({ embeds: [success(locale.get('moderation.unbanSuccess', { user: ban.user.tag }))] });
-  }
+}
 };

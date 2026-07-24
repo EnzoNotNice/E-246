@@ -15,28 +15,36 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const category = interaction.options.getChannel('category');
-    const staffRole = interaction.options.getRole('staff_role');
-    const logChannel = interaction.options.getChannel('log_channel');
-    const feedbacksChannel = interaction.options.getChannel('feedbacks_channel');
-    const ticketMsg = interaction.options.getString('ticket_message');
-
-    const data = {
-      category_id: category.id,
-      staff_role: staffRole.id,
-    };
-    if (logChannel) data.log_channel = logChannel.id;
-    if (feedbacksChannel) data.feedbacks_channel = feedbacksChannel.id;
-    if (ticketMsg) data.ticket_message = ticketMsg;
-
-    await db.updateTicketSettings(interaction.guildId, data);
-
-    return interaction.reply({
-      embeds: [success(locale.get('tickets.setupSuccess', {
-        category: category.name,
-        staffRole,
-        logChannel: logChannel || 'غير محدد'
-      }))]
-    });
-  }
+    try {  
+      const category = interaction.options.getChannel('category');
+      const staffRole = interaction.options.getRole('staff_role');
+      const logChannel = interaction.options.getChannel('log_channel');
+      const feedbacksChannel = interaction.options.getChannel('feedbacks_channel');
+      const ticketMsg = interaction.options.getString('ticket_message');
+  
+      const data = {
+        category_id: category.id,
+        staff_role: staffRole.id,
+      };
+      if (logChannel) data.log_channel = logChannel.id;
+      if (feedbacksChannel) data.feedbacks_channel = feedbacksChannel.id;
+      if (ticketMsg) data.ticket_message = ticketMsg;
+  
+      await db.updateTicketSettings(interaction.guildId, data);
+  
+      return interaction.reply({
+        embeds: [success(locale.get('tickets.setupSuccess', {
+          category: category.name,
+          staffRole,
+          logChannel: logChannel || 'غير محدد'
+        }))]
+      });
+    
+    } catch (err) {
+      console.error('[Command Error - ticket-setup.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
+    }
+}
 };

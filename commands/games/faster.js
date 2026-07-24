@@ -11,6 +11,10 @@ module.exports = {
     .setDescription('لعبة أسرع كتابة'),
 
   async execute(interaction) {
+    if (!interaction.guild || !interaction.channel) {
+      return interaction.reply({ content: 'يمكنك استخدام هذا الأمر داخل السيرفرات فقط', ephemeral: true });
+    }
+
     if (activeGames.has(interaction.channelId)) {
       return interaction.reply({ content: 'هناك لعبة جارية في هذا الروم حالياً', ephemeral: true });
     }
@@ -69,7 +73,7 @@ module.exports = {
       if (players.length < 2) {
         activeGames.delete(interaction.channelId);
         gameActive = false;
-        return interaction.channel.send(`تم إلغاء اللعبة لعدم اكتمال العدد (مطلوب لاعبين على الأقل)`).catch(() => {});
+        return interaction.channel?.send(`تم إلغاء اللعبة لعدم اكتمال العدد (مطلوب لاعبين على الأقل)`).catch(() => {});
       }
 
       const disabledRow = new ActionRowBuilder().addComponents(
@@ -78,7 +82,7 @@ module.exports = {
       );
       await msg.edit({ components: [disabledRow] }).catch(() => {});
 
-      await interaction.channel.send(`تبدأ اللعبة قريباً، ستبدأ الجولة الأولى في غضون 5 ثوانٍ...`).catch(() => {});
+      await interaction.channel?.send(`تبدأ اللعبة قريباً، ستبدأ الجولة الأولى في غضون 5 ثوانٍ...`).catch(() => {});
 
       setTimeout(() => playRound(), 5000);
     });
@@ -93,33 +97,35 @@ module.exports = {
       const imageBuffer = await generateImage(word);
       const attachment = new AttachmentBuilder(imageBuffer, { name: 'faster.png' });
 
-      await interaction.channel.send({
+      await interaction.channel?.send({
         content: `**الجولة ${currentRound}/${totalRounds}**\nاكتب الكلمة الموضحة في الصورة بأسرع ما يمكن`,
         files: [attachment]
       });
 
       let answered = false;
       const filter = m => players.includes(m.author.id) && m.content.trim().toLowerCase() === word.toLowerCase();
-      const wordCollector = interaction.channel.createMessageCollector({ filter, time: 15000 });
+      const wordCollector = interaction.channel?.createMessageCollector({ filter, time: 15000 });
 
-      wordCollector.on('collect', async m => {
-        if (!answered) {
-          answered = true;
-          playerPoints[m.author.id]++;
-          await m.reply(`إجابة صحيحة، حصل <@${m.author.id}> على نقطة.`).catch(() => {});
-          wordCollector.stop('answered');
-        }
-      });
+      if (wordCollector) {
+        wordCollector.on('collect', async m => {
+          if (!answered) {
+            answered = true;
+            playerPoints[m.author.id]++;
+            await m.reply(`إجابة صحيحة، حصل <@${m.author.id}> على نقطة.`).catch(() => {});
+            wordCollector.stop('answered');
+          }
+        });
 
-      wordCollector.on('end', (collected, reason) => {
-        if (reason !== 'answered') {
-          interaction.channel.send(`انتهى وقت الجولة، الكلمة الصحيحة هي: **${word}**`).catch(() => {});
-        }
-        setTimeout(() => {
-          currentRound++;
-          playRound();
-        }, 3000);
-      });
+        wordCollector.on('end', (collected, reason) => {
+          if (reason !== 'answered') {
+            interaction.channel?.send(`انتهى وقت الجولة، الكلمة الصحيحة هي: **${word}**`).catch(() => {});
+          }
+          setTimeout(() => {
+            currentRound++;
+            playRound();
+          }, 3000);
+        });
+      }
     }
 
     async function announceWinners() {
@@ -145,7 +151,7 @@ module.exports = {
         });
       }
 
-      await interaction.channel.send({ embeds: [winEmbed] }).catch(() => {});
+      await interaction.channel?.send({ embeds: [winEmbed] }).catch(() => {});
     }
 
     async function generateImage(word) {
@@ -187,32 +193,35 @@ module.exports = {
       ctx.stroke();
 
       try {
-        const iconUrl = interaction.guild.iconURL({ extension: 'png', size: 256 }) || interaction.client.user.displayAvatarURL({ extension: 'png', size: 256 });
-        const res = await fetch(iconUrl);
-        const arrayBuffer = await res.arrayBuffer();
-        const avatar = await loadImage(Buffer.from(arrayBuffer));
-        
-        if (avatar) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(140, 150, 80, 0, Math.PI * 2, true);
-          ctx.closePath();
-          ctx.clip();
-          ctx.drawImage(avatar, 60, 70, 160, 160);
-          ctx.restore();
+        const iconUrl = interaction.guild?.iconURL({ extension: 'png', size: 256 }) || interaction.client.user?.displayAvatarURL({ extension: 'png', size: 256 });
+        if (iconUrl) {
+          const res = await fetch(iconUrl);
+          const arrayBuffer = await res.arrayBuffer();
+          const avatar = await loadImage(Buffer.from(arrayBuffer));
+          
+          if (avatar) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(140, 150, 80, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(avatar, 60, 70, 160, 160);
+            ctx.restore();
 
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(140, 150, 80, 0, Math.PI * 2, true);
-          ctx.stroke();
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(140, 150, 80, 0, Math.PI * 2, true);
+            ctx.stroke();
+          }
         }
       } catch (err) {}
 
       ctx.font = 'bold 24px "IBMPlexSansArabic", "CustomFont", sans-serif';
       ctx.fillStyle = '#8C52FF';
       ctx.textAlign = 'right';
-      const guildName = interaction.guild.name.length > 18 ? interaction.guild.name.slice(0, 15) + '..' : interaction.guild.name;
+      const rawGuildName = interaction.guild?.name || 'Server';
+      const guildName = rawGuildName.length > 18 ? rawGuildName.slice(0, 15) + '..' : rawGuildName;
       ctx.fillText(guildName, 740, 80);
 
       ctx.font = 'bold 54px "IBMPlexSansArabic", "CustomFont", sans-serif';
@@ -225,7 +234,7 @@ module.exports = {
       ctx.textAlign = 'center';
       ctx.fillText('اكتب الكلمة الموضحة أعلاه بأسرع ما يمكن', 480, 230);
 
-      return canvas.toBuffer();
+    return canvas.toBuffer();
     }
   }
 };

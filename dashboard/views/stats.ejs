@@ -1,4 +1,10 @@
 <%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+topMessages = typeof topMessages !== 'undefined' && Array.isArray(topMessages) ? topMessages : [];
+topVoice = typeof topVoice !== 'undefined' && Array.isArray(topVoice) ? topVoice : [];
+topReactions = typeof topReactions !== 'undefined' && Array.isArray(topReactions) ? topReactions : [];
+%>
 <%- include('partials/sidebar', { guild, activeTab: 'stats' }) %>
 
 <main class="app-content">

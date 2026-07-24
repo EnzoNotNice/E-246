@@ -1,4 +1,8 @@
 <%- include('partials/header') %>
+<%
+bot = typeof bot !== 'undefined' ? bot : null;
+user = typeof user !== 'undefined' ? user : null;
+%>
 <%- include('partials/sidebar', { activeTab: 'home' }) %>
 
 <main class="app-content">

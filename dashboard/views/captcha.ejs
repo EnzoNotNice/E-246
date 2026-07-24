@@ -1,4 +1,13 @@
 <%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : { panel_data: {} };
+if (!settings.panel_data) settings.panel_data = {};
+roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
+textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+client = typeof client !== 'undefined' && client ? client : null;
+botUser = client && client.user ? client.user : { username: 'E-246', displayAvatarURL: () => '/images/bot-avatar.png' };
+%>
 <%- include('partials/sidebar', { guild, activeTab: 'captcha' }) %>
 
 <main class="app-content">
@@ -14,11 +23,11 @@
         <div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <%= error %></div>
     <% } %>
 
-    <div class="tickets-layout reveal">
+    <div class="tickets-layout">
         <!-- settings form -->
-        <div class="glass-panel">
+        <div class="glass-panel reveal">
             <form action="/dashboard/<%= guild.id %>/captcha" method="POST">
-                <div class="section-title"><i class="fa-solid fa-circle-dot"></i> ١. الحالة والرتب</div>
+                <h2 class="section-title"><i class="fa-solid fa-circle-dot"></i> ١. الحالة والرتب</h2>
                 
                 <div class="form-group mt-2">
                     <label>حالة نظام التحقق</label>
@@ -51,7 +60,7 @@
 
                 <hr class="divider">
 
-                <div class="section-title"><i class="fa-solid fa-palette"></i> ٢. تصميم لوحة التحقق</div>
+                <h2 class="section-title"><i class="fa-solid fa-palette"></i> ٢. تصميم لوحة التحقق</h2>
 
                 <div class="form-group mt-2">
                     <label>عنوان الإمبيد</label>
@@ -92,7 +101,7 @@
 
                 <hr class="divider">
 
-                <div class="section-title"><i class="fa-solid fa-paper-plane"></i> ٣. نشر اللوحة</div>
+                <h2 class="section-title"><i class="fa-solid fa-paper-plane"></i> ٣. نشر اللوحة</h2>
 
                 <div class="form-group mt-2">
                     <label>قناة نشر لوحة التحقق</label>
@@ -117,16 +126,16 @@
 
         <!-- live preview -->
         <div class="sticky-preview">
-            <div class="glass-panel">
-                <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة للوحة</div>
+            <div class="glass-panel reveal">
+                <h2 class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة للوحة</h2>
                 
                 <div class="discord-preview-container" style="background:#0c0c0c; border: 1px solid var(--border); border-radius: var(--r-md); padding:16px;">
                     <div class="discord-embed" style="background-color:#141414; max-width:100%; border-radius:var(--r-sm); border:1px solid var(--border);">
                         <div class="d-flex gap-2">
-                            <img src="<%= client.user.displayAvatarURL() %>" style="width: 32px; height: 32px; border-radius: 50%; border:1px solid var(--border);">
+                            <img src="<%= typeof botUser.displayAvatarURL === 'function' ? botUser.displayAvatarURL() : botUser.displayAvatarURL %>" style="width: 32px; height: 32px; border-radius: 50%; border:1px solid var(--border);">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center gap-sm mb-1">
-                                    <span style="color: #fff; font-weight: 600; font-size: 0.85rem;"><%= client.user.username %></span>
+                                    <span style="color: #fff; font-weight: 600; font-size: 0.85rem;"><%= botUser.username %></span>
                                     <span class="bot-tag-preview">BOT</span>
                                 </div>
                                 <div id="preview-embed" style="border-right: 4px solid #57F287; background: #0a0a0a; padding: 12px; border-radius: var(--r-sm); border:1px solid var(--border);">

@@ -11,13 +11,21 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
   async execute(interaction) {
-    const channel = interaction.options.getChannel('channel') || interaction.channel;
-    const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
-
-    await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: null }, { reason });
-
-    return interaction.reply({
-      embeds: [success(locale.get('moderation.unlockSuccess', { channel, reason }))]
-    });
-  }
+    try {  
+      const channel = interaction.options.getChannel('channel') || interaction.channel;
+      const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
+  
+      await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: null }, { reason });
+  
+      return interaction.reply({
+        embeds: [success(locale.get('moderation.unlockSuccess', { channel, reason }))]
+      });
+    
+    } catch (err) {
+      console.error('[Command Error - unlock.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
+    }
+}
 };

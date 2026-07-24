@@ -1,0 +1,163 @@
+<%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+commands = typeof commands !== 'undefined' && Array.isArray(commands) ? commands : [];
+roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'customcmds' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-wand-magic-sparkles"></i> الأوامر المخصصة (Custom Commands)</h1>
+        <p>قم بإنشاء أوامر لا نهائية خاصة بسيرفرك باستخدام المنشئ الذكي</p>
+    </div>
+
+    <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
+    <% } %>
+    <% if (typeof req !== 'undefined' && req && req.query && req.query.error) { %>
+        <div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <%= req.query.error %></div>
+    <% } %>
+
+    <div class="glass-panel reveal mb-4">
+        <form action="/dashboard/<%= guild.id %>/customcmds/add" method="POST" id="builderForm">
+            <div class="section-title"><i class="fa-solid fa-plus"></i> إنشاء أمر جديد</div>
+            
+            <div class="form-group mt-2">
+                <label for="trigger">مُحفز الأمر (Trigger)</label>
+                <input type="text" id="trigger" name="trigger" class="glass-input" placeholder="مثال: تقديم-إدارة" required>
+                <small style="color: var(--text-2);">الكلمة التي سيكتبها العضو لتفعيل الأمر. يجب أن تكون بدون مسافات.</small>
+            </div>
+
+            <hr class="divider">
+            <div class="section-title"><i class="fa-solid fa-layer-group"></i> الإجراءات (Actions)</div>
+            <p style="color:var(--text-2); font-size: 0.85rem; margin-bottom: 16px;">حدد ما سيقوم به البوت عند كتابة الأمر. سيتم التنفيذ بالترتيب. يدعم المتغيرات: <code>{user}</code>, <code>{server}</code>.</p>
+
+            <div id="actionsContainer">
+                <!-- Action Template -->
+                <div class="action-block glass-panel" style="padding: 16px; margin-bottom: 12px; background: rgba(255,255,255,0.02); border: 1px dashed var(--border);">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <strong style="color: #fff;"><i class="fa-solid fa-bolt"></i> إجراء رقم 1</strong>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove(); updateActionNumbers();" style="padding: 4px 8px;"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div class="grid-form-2">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>نوع الإجراء</label>
+                            <select name="action_type[]" class="glass-input action-type-select" required onchange="updateActionInput(this)">
+                                <option value="reply_text">إرسال رسالة نصية</option>
+                                <option value="reply_embed">إرسال إمبيد (بسيط)</option>
+                                <option value="add_role">إعطاء رتبة للعضو</option>
+                                <option value="remove_role">سحب رتبة من العضو</option>
+                                <option value="delete_message">حذف رسالة الأمر</option>
+                            </select>
+                        </div>
+                        <div class="form-group action-value-container" style="margin-bottom: 0;">
+                            <label>القيمة (رسالة / آي دي الرتبة)</label>
+                            <input type="text" name="action_value[]" class="glass-input" placeholder="اكتب النص هنا..." required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-secondary mt-2 mb-3" onclick="addActionBlock()"><i class="fa-solid fa-plus"></i> إضافة إجراء آخر</button>
+
+            <button type="submit" class="btn btn-primary btn-large btn-block">
+                <i class="fa-solid fa-floppy-disk"></i> حفظ الأمر المخصص
+            </button>
+        </form>
+    </div>
+
+    <% if (commands && commands.length > 0) { %>
+        <div class="section-title reveal"><i class="fa-solid fa-list"></i> الأوامر الحالية</div>
+        <div class="grid-form-3 reveal mt-2">
+            <% commands.forEach(cmd => { %>
+                <div class="glass-panel" style="padding: 16px;">
+                    <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 8px;"><code><%= cmd.trigger %></code></h3>
+                    <p style="color: var(--text-2); font-size: 0.85rem; margin-bottom: 12px;">عدد الإجراءات: <%= (cmd && cmd.actions ? cmd.actions : []).length %></p>
+                    <form action="/dashboard/<%= guild.id %>/customcmds/delete" method="POST">
+                        <input type="hidden" name="cmd_id" value="<%= cmd.id %>">
+                        <button type="submit" class="btn btn-danger btn-block"><i class="fa-solid fa-trash"></i> حذف الأمر</button>
+                    </form>
+                </div>
+            <% }) %>
+        </div>
+    <% } else { %>
+        <div class="glass-panel text-center reveal" style="padding: 32px;">
+            <i class="fa-solid fa-box-open" style="font-size: 3rem; color: var(--text-3); margin-bottom: 16px;"></i>
+            <h3 style="color: #fff;">لا توجد أوامر مخصصة</h3>
+            <p style="color: var(--text-2);">ابدأ بإنشاء أول أمر مخصص لسيرفرك الآن!</p>
+        </div>
+    <% } %>
+
+</main>
+
+<!-- Hidden Template for JS -->
+<div id="actionTemplate" style="display: none;">
+    <div class="action-block glass-panel" style="padding: 16px; margin-bottom: 12px; background: rgba(255,255,255,0.02); border: 1px dashed var(--border);">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <strong style="color: #fff;" class="action-number"><i class="fa-solid fa-bolt"></i> إجراء رقم X</strong>
+            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove(); updateActionNumbers();" style="padding: 4px 8px;"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        <div class="grid-form-2">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>نوع الإجراء</label>
+                <select name="action_type[]" class="glass-input action-type-select" required onchange="updateActionInput(this)">
+                    <option value="reply_text">إرسال رسالة نصية</option>
+                    <option value="reply_embed">إرسال إمبيد (بسيط)</option>
+                    <option value="add_role">إعطاء رتبة للعضو</option>
+                    <option value="remove_role">سحب رتبة من العضو</option>
+                    <option value="delete_message">حذف رسالة الأمر</option>
+                </select>
+            </div>
+            <div class="form-group action-value-container" style="margin-bottom: 0;">
+                <label>القيمة (رسالة / آي دي الرتبة)</label>
+                <input type="text" name="action_value[]" class="glass-input" placeholder="اكتب النص هنا..." required>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateActionNumbers() {
+        const blocks = document.querySelectorAll('#actionsContainer .action-block');
+        blocks.forEach((block, index) => {
+            const numLabel = block.querySelector('strong');
+            if (numLabel) numLabel.innerHTML = `<i class="fa-solid fa-bolt"></i> إجراء رقم ${index + 1}`;
+        });
+    }
+
+    function addActionBlock() {
+        const container = document.getElementById('actionsContainer');
+        const template = document.getElementById('actionTemplate').innerHTML;
+        container.insertAdjacentHTML('beforeend', template);
+        updateActionNumbers();
+    }
+
+    function updateActionInput(selectEl) {
+        const val = selectEl.value;
+        const container = selectEl.closest('.grid-form-2').querySelector('.action-value-container');
+        
+        let inputHtml = '';
+        if (val === 'reply_text' || val === 'reply_embed') {
+            inputHtml = `<label>القيمة (رسالة / نص)</label>
+                         <textarea name="action_value[]" class="glass-input" placeholder="اكتب النص هنا..." required style="height: 40px; min-height: 40px;"></textarea>`;
+        } else if (val === 'add_role' || val === 'remove_role') {
+            inputHtml = `<label>الرتبة المستهدفة</label>
+                         <select name="action_value[]" class="glass-input" required>
+                            <option value="">-- اختر رتبة --</option>
+                            <% roles.forEach(r => { %>
+                                <% if(r.name !== '@everyone') { %>
+                                    <option value="<%= r.id %>"><%= r.name %></option>
+                                <% } %>
+                            <% }) %>
+                         </select>`;
+        } else if (val === 'delete_message') {
+            inputHtml = `<label>قيمة الإجراء</label>
+                         <input type="text" name="action_value[]" class="glass-input" value="سيتم حذف رسالة العضو تلقائياً" readonly required style="opacity: 0.5;">`;
+        }
+        
+        container.innerHTML = inputHtml;
+    }
+</script>
+
+<%- include('partials/footer') %>

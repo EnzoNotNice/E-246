@@ -1,0 +1,68 @@
+<%- include('partials/header', { title: 'إعدادات الفلتر الذكي' }) %>
+<%- include('partials/sidebar', { activeTab: 'automod' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-brain"></i> الفلتر الذكي والمنع المتقدم</h1>
+        <p>قم بضبط الفلاتر الآلية لمنع الكلمات البذيئة والروابط والسبام والعناوين المزيفة تلقائياً</p>
+    </div>
+
+    <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
+    <% } %>
+
+    <form action="/dashboard/<%= guild?.id || '' %>/automod" method="POST" class="settings-form">
+        <div class="glass-panel reveal">
+            <div class="section-title"><i class="fa-solid fa-toggle-on"></i> حالة الفلتر العام</div>
+            <div class="form-group">
+                <label for="enabled">تفعيل نظام الفلترة</label>
+                <select id="enabled" name="enabled" class="glass-input">
+                    <option value="1" <%= (typeof settings !== 'undefined' && settings?.enabled) ? 'selected' : '' %>>🟢 مفعّل</option>
+                    <option value="0" <%= (typeof settings !== 'undefined' && !settings?.enabled) ? 'selected' : '' %>>🔴 معطّل</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>نوع العقوبة</label>
+                <select name="action" class="glass-input">
+                    <option value="delete" <%= (typeof settings !== 'undefined' && settings?.action === 'delete') ? 'selected' : '' %>>حذف الرسالة فقط</option>
+                    <option value="warn" <%= (typeof settings !== 'undefined' && settings?.action === 'warn') ? 'selected' : '' %>>حذف وإنذار العضو</option>
+                    <option value="timeout" <%= (typeof settings !== 'undefined' && settings?.action === 'timeout') ? 'selected' : '' %>>حذف وإعطاء تايم أوت (ساعة)</option>
+                </select>
+                <small>الإجراء الذي سيتم اتخاذه عند رصد كلمة ممنوعة.</small>
+            </div>
+        </div>
+
+        <div class="glass-panel reveal" style="animation-delay: 0.1s;">
+            <div class="section-title"><i class="fa-solid fa-list-ul"></i> قائمة الكلمات البذيئة</div>
+            <div class="form-group">
+                <label>الكلمات الممنوعة (افصل بينها بفاصلة)</label>
+                <textarea name="words" class="glass-input" rows="4" placeholder="مثال: كلمة1, كلمة2, كلمة3..."><%= (typeof settings !== 'undefined' && Array.isArray(settings?.words)) ? settings.words.join(', ') : '' %></textarea>
+                <small>الفلتر ذكي جداً، لا تحتاج لكتابة جميع أشكال الكلمة.</small>
+            </div>
+
+            <div class="form-group">
+                <label>رتب مستثناة من الفلتر (Bypass Roles)</label>
+                <select name="bypass_roles" class="glass-input" multiple size="4">
+                    <% 
+                      let currentBypass = (typeof settings !== 'undefined' && Array.isArray(settings?.bypass_roles)) ? settings.bypass_roles : [];
+                      let availableRoles = (typeof roles !== 'undefined' && Array.isArray(roles)) ? roles : [];
+                      availableRoles.forEach(r => { 
+                    %>
+                        <option value="<%= r.id %>" <%= currentBypass.includes(r.id) ? 'selected' : '' %>>
+                            <%= r.name %>
+                        </option>
+                    <% }) %>
+                </select>
+                <small>اضغط Ctrl (أو Cmd) لتحديد أكثر من رتبة. الأعضاء بهذه الرتب لن يطبق عليهم الفلتر.</small>
+            </div>
+        </div>
+
+        <div class="form-actions reveal">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
+            </button>
+        </div>
+    </form>
+</main>
+
+<%- include('partials/footer') %>

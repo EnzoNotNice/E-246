@@ -1,5 +1,9 @@
 <%- include('partials/header') %>
-<%- include('partials/sidebar', { activeTab: 'autoreplies' }) %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+replies = typeof replies !== 'undefined' && Array.isArray(replies) ? replies : [];
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'autoreplies' }) %>
 
 <main class="app-content">
     <div class="content-header">
@@ -11,7 +15,7 @@
     <div class="glass-panel reveal">
         <div class="section-title"><i class="fa-solid fa-inbox"></i> قائمة الردود النشطة</div>
 
-        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+        <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
             <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
         <% } %>
 

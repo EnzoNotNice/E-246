@@ -1,4 +1,10 @@
 <%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : { panel_data: {} };
+if (!settings.panel_data) settings.panel_data = {};
+textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+%>
 <%- include('partials/sidebar', { guild, activeTab: 'forms' }) %>
 
 <main class="app-content">
@@ -16,31 +22,35 @@
 
     <div class="tickets-layout reveal">
         <!-- settings form -->
-        <div class="glass-panel">
+        <div class="glass-panel reveal">
             <form action="/dashboard/<%= guild.id %>/forms" method="POST" id="formsForm">
                 <div class="section-title"><i class="fa-solid fa-paintbrush"></i> ١. تصميم لوحة التقديم</div>
                 
-                <div class="form-group mt-2">
-                    <label>عنوان الإمبيد الرئيسي</label>
-                    <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'التقديم للطاقم الإداري' %>" required>
-                </div>
-                <div class="form-group">
-                    <label>وصف الإمبيد</label>
-                    <textarea name="description" id="description" class="glass-input" rows="3" required><%= settings.panel_data.description || 'اضغط على الزر أدناه لبدء تعبئة نموذج التقديم.' %></textarea>
-                </div>
-                <div class="grid-form-2">
+                <div class="grid-form-2 mt-2">
+                    <div class="form-group">
+                        <label>عنوان الإمبيد الرئيسي</label>
+                        <input type="text" name="title" id="title" class="glass-input" value="<%= settings.panel_data.title || 'التقديم للطاقم الإداري' %>" required>
+                    </div>
                     <div class="form-group">
                         <label>لون الإمبيد</label>
                         <input type="color" name="color" id="color" class="glass-input" style="height: 40px; padding: 4px; cursor: pointer;" value="<%= settings.panel_data.color || '#5865F2' %>">
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label>وصف الإمبيد</label>
+                    <textarea name="description" id="description" class="glass-input" rows="3" required><%= settings.panel_data.description || 'اضغط على الزر أدناه لبدء تعبئة نموذج التقديم.' %></textarea>
+                </div>
+                
+                <div class="grid-form-2">
                     <div class="form-group">
                         <label>رابط الصورة المصغرة (Thumbnail)</label>
                         <input type="url" name="thumbnail" id="thumbnail" class="glass-input" placeholder="https://example.com/thumb.png" value="<%= settings.panel_data.thumbnail || '' %>">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>رابط الصورة الكبيرة (Banner Image)</label>
-                    <input type="url" name="image" id="image" class="glass-input" placeholder="https://example.com/banner.png" value="<%= settings.panel_data.image || '' %>">
+                    <div class="form-group">
+                        <label>رابط الصورة الكبيرة (Banner Image)</label>
+                        <input type="url" name="image" id="image" class="glass-input" placeholder="https://example.com/banner.png" value="<%= settings.panel_data.image || '' %>">
+                    </div>
                 </div>
 
                 <hr class="divider">
@@ -95,16 +105,16 @@
 
         <!-- live preview -->
         <div class="sticky-preview">
-            <div class="glass-panel">
+            <div class="glass-panel reveal">
                 <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة</div>
 
                 <div class="discord-preview-container" style="background:#0c0c0c; border: 1px solid var(--border); border-radius: var(--r-md); padding:16px;">
                     <div class="discord-embed" style="background-color:#141414; max-width:100%; border-radius:var(--r-sm); border:1px solid var(--border); border-right:4px solid #5865F2; border-left:none; padding:16px;">
                         <div class="d-flex gap-2">
-                            <img src="<%= client.user.displayAvatarURL() %>" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--border);">
+                            <img src="<%= (typeof client !== 'undefined' && client?.user && typeof client.user.displayAvatarURL === 'function') ? client.user.displayAvatarURL() : '/images/bot-avatar.png' %>" style="width:32px; height:32px; border-radius:50%; border:1px solid var(--border);">
                             <div class="flex-grow-1" style="min-width:0;">
                                 <div class="d-flex align-items-center gap-sm mb-1">
-                                    <span style="color:#fff; font-weight:600; font-size:0.85rem;"><%= client.user.username %></span>
+                                    <span style="color:#fff; font-weight:600; font-size:0.85rem;"><%= (typeof client !== 'undefined' && client?.user?.username) ? client.user.username : 'Bot' %></span>
                                     <span class="bot-tag-preview">BOT</span>
                                 </div>
                                 <div id="preview-embed" style="border-right:4px solid #5865F2; border-left:none; background:#0a0a0a; padding:12px; border-radius:var(--r-sm); border:1px solid var(--border); display:flex; gap:16px; justify-content:space-between;">

@@ -11,10 +11,18 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const ch = interaction.options.getChannel('channel');
-    const settings = db.getGreetSettings(interaction.guildId);
-
-    db.db.prepare('UPDATE greet_settings SET channel = ?, enabled = 1 WHERE guildId = ?').run(ch.id, interaction.guildId);
-    return interaction.reply({ embeds: [success(locale.get('greet.greetEnabled', { channel: ch }))] });
-  }
+    try {  
+      const ch = interaction.options.getChannel('channel');
+      const settings = db.getGreetSettings(interaction.guildId);
+  
+      db.db.prepare('UPDATE greet_settings SET channel = ?, enabled = 1 WHERE guildId = ?').run(ch.id, interaction.guildId);
+      return interaction.reply({ embeds: [success(locale.get('greet.greetEnabled', { channel: ch }))] });
+    
+    } catch (err) {
+      console.error('[Command Error - greet.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
+    }
+}
 };

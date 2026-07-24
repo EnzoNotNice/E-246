@@ -1,0 +1,16 @@
+<%- include('partials/header') %>
+<main class="app-content">
+    <div class="hero-section" style="padding: 60px 24px;">
+        <div class="hero-avatar-placeholder" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h1 class="hero-name" style="margin-top: 20px;"><%= typeof error !== 'undefined' && error ? (error.message || error) : 'Internal Server Error' %></h1>
+        <p class="hero-sub">حدث خطأ في النظام. يرجى المحاولة لاحقاً.</p>
+        <div class="hero-actions">
+            <a href="/dashboard" class="btn btn-primary btn-large hero-btn">
+                <i class="fa-solid fa-house"></i> العودة للوحة التحكم
+            </a>
+        </div>
+    </div>
+</main>
+<%- include('partials/footer') %>

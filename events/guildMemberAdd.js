@@ -10,213 +10,218 @@ const raidJoins = new Map();
 module.exports = {
   name: 'guildMemberAdd',
   async execute(member) {
-    const guild = member.guild;
-    const guildId = guild.id;
-    const client = member.client;
+    try {
+      if (!member?.guild) return;
+      const guild = member.guild;
+      const guildId = guild.id;
+      const client = member.client;
 
-    const protection = db.getProtection(guildId);
-    if (protection && protection.antiraid && !member.user.bot) {
-      const now = Date.now();
-      let joins = raidJoins.get(guildId) || [];
-      joins = joins.filter(t => now - t < 10000);
-      joins.push(now);
-      raidJoins.set(guildId, joins);
-      if (joins.length >= 8) {
-        await member.kick('Anti-Raid').catch(() => null);
-        const embed = new EmbedBuilder()
-          .setTitle('{emoji:shieldlock} حماية الرايد')
-          .setColor(0xFF0000)
-          .setDescription(`تم طرد <@${member.id}> بسبب انضمام جماعي مريب`)
-          .setTimestamp();
-        await sendLog(client, guildId, embed, 'protection');
-        return;
-      }
-    }
-
-    if (member.user.bot) {
-      const auditLogs = await guild.fetchAuditLogs({ type: AuditLogEvent.BotAdd, limit: 1 }).catch(() => null);
-      const entry = auditLogs ? auditLogs.entries.first() : null;
-      if (entry && entry.targetId === member.id && entry.executor) {
-        const executor = entry.executor;
-        if (executor.id !== guild.ownerId && !db.isWhitelisted(guildId, executor.id) && executor.id !== client.user.id) {
-          await member.kick('إضافة بوت غير مصرح به').catch(() => null);
-          const executorMember = await guild.members.fetch(executor.id).catch(() => null);
-          if (executorMember) {
-            await executorMember.roles.set([]).catch(() => null);
-          }
+      const protection = db.getProtection(guildId);
+      if (protection && protection.antiraid && !member.user?.bot) {
+        const now = Date.now();
+        let joins = raidJoins.get(guildId) || [];
+        joins = joins.filter(t => now - t < 10000);
+        joins.push(now);
+        raidJoins.set(guildId, joins);
+        if (joins.length >= 8) {
+          await member.kick('Anti-Raid').catch(() => null);
           const embed = new EmbedBuilder()
-            .setTitle('{emoji:shield} إضافة بوت غير مصرح به')
+            .setTitle('{emoji:shieldlock} حماية الرايد')
             .setColor(0xFF0000)
-            .addFields(
-              { name: 'البوت المضاف', value: `<@${member.id}>`, inline: true },
-              { name: 'الفاعل (المشرف)', value: `<@${executor.id}>`, inline: true },
-              { name: 'الإجراء المتخذ', value: 'تم طرد البوت المضاف، وتجريد المشرف من كافة رتبه', inline: false }
-            )
+            .setDescription(`تم طرد <@${member.id}> بسبب انضمام جماعي مريب`)
             .setTimestamp();
           await sendLog(client, guildId, embed, 'protection');
           return;
         }
       }
-    }
 
-    db.incrementDailyJoins(guildId);
-
-    
-    try {
-      const cachedInvites = client.inviteCache.get(guildId) || new Map();
-      const newInvites = await guild.invites.fetch();
-
-      let usedInvite = null;
-      for (const [code, invite] of newInvites) {
-        const cachedUses = cachedInvites.get(code) || 0;
-        if (invite.uses > cachedUses) {
-          usedInvite = invite;
-          break;
+      if (member.user?.bot) {
+        const auditLogs = await guild.fetchAuditLogs({ type: AuditLogEvent.BotAdd, limit: 1 }).catch(() => null);
+        const entry = auditLogs ? auditLogs.entries.first() : null;
+        if (entry && entry.targetId === member.id && entry.executor) {
+          const executor = entry.executor;
+          if (executor.id !== guild.ownerId && !db.isWhitelisted(guildId, executor.id) && executor.id !== client.user?.id) {
+            await member.kick('إضافة بوت غير مصرح به').catch(() => null);
+            const executorMember = await guild.members.fetch(executor.id).catch(() => null);
+            if (executorMember) {
+              await executorMember.roles.set([]).catch(() => null);
+            }
+            const embed = new EmbedBuilder()
+              .setTitle('{emoji:shield} إضافة بوت غير مصرح به')
+              .setColor(0xFF0000)
+              .addFields(
+                { name: 'البوت المضاف', value: `<@${member.id}>`, inline: true },
+                { name: 'الفاعل (المشرف)', value: `<@${executor.id}>`, inline: true },
+                { name: 'الإجراء المتخذ', value: 'تم طرد البوت المضاف، وتجريد المشرف من كافة رتبه', inline: false }
+              )
+              .setTimestamp();
+            await sendLog(client, guildId, embed, 'protection');
+            return;
+          }
         }
       }
 
+      db.incrementDailyJoins(guildId);
+
       
-      client.inviteCache.set(guildId, new Map(newInvites.map(i => [i.code, i.uses])));
+      try {
+        const cachedInvites = client.inviteCache.get(guildId) || new Map();
+        const newInvites = await guild.invites.fetch();
 
-      if (usedInvite && usedInvite.inviter) {
-        const inviterId = usedInvite.inviter.id;
-        db.updateInvites(inviterId, guildId, 'total', 1);
-
-        
-        const accountAge = Date.now() - member.user.createdTimestamp;
-        if (accountAge < 7 * 24 * 60 * 60 * 1000) {
-          db.updateInvites(inviterId, guildId, 'fake', 1);
-        }
-
-        
-        const inviterData = db.getInvites(inviterId, guildId);
-        const real = inviterData.total - inviterData.fake - inviterData.left;
-        const ranks = db.getInviteRanks(guildId);
-
-        for (const rank of ranks) {
-          if (real >= rank.count) {
-            const inviterMember = await guild.members.fetch(inviterId).catch(() => null);
-            if (inviterMember && !inviterMember.roles.cache.has(rank.roleId)) {
-              inviterMember.roles.add(rank.roleId).catch(() => null);
-            }
+        let usedInvite = null;
+        for (const [code, invite] of newInvites) {
+          const cachedUses = cachedInvites.get(code) || 0;
+          if (invite.uses > cachedUses) {
+            usedInvite = invite;
+            break;
           }
         }
 
         
-        const inviteLogs = db.getInviteLogs(guildId);
-        if (inviteLogs?.channelId) {
-          const logCh = await client.channels.fetch(inviteLogs.channelId).catch(() => null);
-          if (logCh) {
-            const invEmbed = new EmbedBuilder()
-              .setColor(0x57F287)
-              .setTitle('{emoji:mail} انضمام عضو')
-              .setThumbnail(member.user.displayAvatarURL())
-              .setDescription(`${member} انضم\n**تمت دعوته بواسطة** <@${inviterId}> (${real} دعوات حقيقية)\n**كود الدعوة** \`${usedInvite.code}\``)
-              .setTimestamp();
-            logCh.send({ embeds: [invEmbed] }).catch(() => null);
+        client.inviteCache.set(guildId, new Map(newInvites.map(i => [i.code, i.uses])));
+
+        if (usedInvite && usedInvite.inviter) {
+          const inviterId = usedInvite.inviter.id;
+          db.updateInvites(inviterId, guildId, 'total', 1);
+
+          
+          const accountAge = Date.now() - (member.user?.createdTimestamp || Date.now());
+          if (accountAge < 7 * 24 * 60 * 60 * 1000) {
+            db.updateInvites(inviterId, guildId, 'fake', 1);
+          }
+
+          
+          const inviterData = db.getInvites(inviterId, guildId);
+          const real = inviterData.total - inviterData.fake - inviterData.left;
+          const ranks = db.getInviteRanks(guildId);
+
+          for (const rank of ranks) {
+            if (real >= rank.count) {
+              const inviterMember = await guild.members.fetch(inviterId).catch(() => null);
+              if (inviterMember && !inviterMember.roles.cache.has(rank.roleId)) {
+                inviterMember.roles.add(rank.roleId).catch(() => null);
+              }
+            }
+          }
+
+          
+          const inviteLogs = db.getInviteLogs(guildId);
+          if (inviteLogs?.channelId) {
+            const logCh = await client.channels.fetch(inviteLogs.channelId).catch(() => null);
+            if (logCh) {
+              const invEmbed = new EmbedBuilder()
+                .setColor(0x57F287)
+                .setTitle('{emoji:mail} انضمام عضو')
+                .setThumbnail(member.user?.displayAvatarURL())
+                .setDescription(`${member} انضم\n**تمت دعوته بواسطة** <@${inviterId}> (${real} دعوات حقيقية)\n**كود الدعوة** \`${usedInvite.code}\``)
+                .setTimestamp();
+              logCh.send({ embeds: [invEmbed] }).catch(() => null);
+            }
           }
         }
-      }
-    } catch (e) {
-      
-    }
-
-    
-    const greet = db.getGreetSettings(guildId);
-    if (greet.enabled && greet.channel) {
-      const greetChannel = await client.channels.fetch(greet.channel).catch(() => null);
-      if (greetChannel) {
-        const message = (greet.message || 'Welcome {user} to **{server}**')
-          .replace(/{user}/g, member.toString())
-          .replace(/{server}/g, guild.name)
-          .replace(/{count}/g, guild.memberCount.toString());
-
-        let imagePathOrUrl = greet.image_url;
-        if (imagePathOrUrl && imagePathOrUrl.startsWith('/uploads/')) {
-            const cleanPath = imagePathOrUrl.split('?')[0];
-            const fileName = cleanPath.substring('/uploads/'.length);
-            imagePathOrUrl = path.join(__dirname, '..', 'database', 'uploads', fileName);
-        }
-
-        let attachment;
-        if (greet.image_url) {
-            try {
-                const bg = await Canvas.loadImage(imagePathOrUrl);
-                const canvas = Canvas.createCanvas(bg.width, bg.height);
-                const ctx = canvas.getContext('2d');
-
-                
-                ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-
-                
-                const avatar = await Canvas.loadImage(member.user.displayAvatarURL({ extension: 'png', size: 1024 }));
-                const avatarSize = greet.avatar_size || 150;
-                const ax = greet.avatar_x || 100;
-                const ay = greet.avatar_y || 100;
-
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2, true);
-                ctx.closePath();
-                ctx.clip();
-                ctx.drawImage(avatar, ax, ay, avatarSize, avatarSize);
-                ctx.restore();
-
-                
-                const ux = greet.username_x || 100;
-                const uy = greet.username_y || 300;
-                const uSize = greet.username_size || 40;
-                const uColor = greet.username_color || '#ffffff';
-
-                ctx.font = `${uSize}px CustomFont`;
-                ctx.fillStyle = uColor;
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-                ctx.shadowBlur = 4;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 2;
-                
-                ctx.fillText(member.user.username, ux, uy);
-
-                attachment = new AttachmentBuilder(canvas.toBuffer(), { name: 'welcome.png' });
-            } catch (err) {
-                console.error('Welcome Image Error:', err);
-            }
-        }
-
-        let sent;
-        if (attachment) {
-            sent = await greetChannel.send({ content: message, files: [attachment] }).catch(() => null);
-        } else {
-            const greetEmbed = new EmbedBuilder()
-              .setColor(0x57F287)
-              .setDescription(message)
-              .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
-              .setTimestamp();
-            sent = await greetChannel.send({ embeds: [greetEmbed] }).catch(() => null);
-        }
-
-        if (sent && greet.delete_after > 0) {
-          setTimeout(() => sent.delete().catch(() => null), greet.delete_after * 1000);
-        }
+      } catch (e) {
+        
       }
 
       
-      if (greet.dm_message) {
-        const dm = greet.dm_message
-          .replace('{user}', member.user.username)
-          .replace('{server}', guild.name);
-        member.user.send({ content: dm }).catch(() => null);
+      const greet = db.getGreetSettings(guildId);
+      if (greet.enabled && greet.channel) {
+        const greetChannel = await client.channels.fetch(greet.channel).catch(() => null);
+        if (greetChannel) {
+          const message = (greet.message || 'Welcome {user} to **{server}**')
+            .replace(/{user}/g, member.toString())
+            .replace(/{server}/g, guild.name)
+            .replace(/{count}/g, guild.memberCount.toString());
+
+          let imagePathOrUrl = greet.image_url;
+          if (imagePathOrUrl && imagePathOrUrl.startsWith('/uploads/')) {
+              const cleanPath = imagePathOrUrl.split('?')[0];
+              const fileName = cleanPath.substring('/uploads/'.length);
+              imagePathOrUrl = path.join(__dirname, '..', 'database', 'uploads', fileName);
+          }
+
+          let attachment;
+          if (greet.image_url) {
+              try {
+                  const bg = await Canvas.loadImage(imagePathOrUrl);
+                  const canvas = Canvas.createCanvas(bg.width, bg.height);
+                  const ctx = canvas.getContext('2d');
+
+                  
+                  ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+
+                  
+                  const avatar = await Canvas.loadImage(member.user.displayAvatarURL({ extension: 'png', size: 1024 }));
+                  const avatarSize = greet.avatar_size || 150;
+                  const ax = greet.avatar_x || 100;
+                  const ay = greet.avatar_y || 100;
+
+                  ctx.save();
+                  ctx.beginPath();
+                  ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2, true);
+                  ctx.closePath();
+                  ctx.clip();
+                  ctx.drawImage(avatar, ax, ay, avatarSize, avatarSize);
+                  ctx.restore();
+
+                  
+                  const ux = greet.username_x || 100;
+                  const uy = greet.username_y || 300;
+                  const uSize = greet.username_size || 40;
+                  const uColor = greet.username_color || '#ffffff';
+
+                  ctx.font = `${uSize}px CustomFont`;
+                  ctx.fillStyle = uColor;
+                  ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                  ctx.shadowBlur = 4;
+                  ctx.shadowOffsetX = 2;
+                  ctx.shadowOffsetY = 2;
+                  
+                  ctx.fillText(member.user?.username || '', ux, uy);
+
+                  attachment = new AttachmentBuilder(canvas.toBuffer(), { name: 'welcome.png' });
+              } catch (err) {
+                  console.error('Welcome Image Error:', err);
+              }
+          }
+
+          let sent;
+          if (attachment) {
+              sent = await greetChannel.send({ content: message, files: [attachment] }).catch(() => null);
+          } else {
+              const greetEmbed = new EmbedBuilder()
+                .setColor(0x57F287)
+                .setDescription(message)
+                .setThumbnail(member.user?.displayAvatarURL({ size: 256 }))
+                .setTimestamp();
+              sent = await greetChannel.send({ embeds: [greetEmbed] }).catch(() => null);
+          }
+
+          if (sent && greet.delete_after > 0) {
+            setTimeout(() => sent.delete().catch(() => null), greet.delete_after * 1000);
+          }
+        }
+
+        
+        if (greet.dm_message && member.user) {
+          const dm = greet.dm_message
+            .replace('{user}', member.user.username || '')
+            .replace('{server}', guild.name);
+          member.user.send({ content: dm }).catch(() => null);
+        }
       }
+
+      
+      const logEmbed = new EmbedBuilder()
+        .setColor(0x57F287)
+        .setTitle('{emoji:mail} انضمام عضو')
+        .setDescription(`${member} انضم للسيرفر\n**تاريخ إنشاء الحساب** <t:${Math.floor((member.user?.createdTimestamp || Date.now()) / 1000)}:F>\n**عدد الأعضاء** ${guild.memberCount}`)
+        .setThumbnail(member.user?.displayAvatarURL())
+        .setTimestamp();
+
+      await sendLog(client, guildId, logEmbed, 'member_join');
+    } catch (err) {
+      console.error('Error in guildMemberAdd event:', err);
     }
-
-    
-    const logEmbed = new EmbedBuilder()
-      .setColor(0x57F287)
-      .setTitle('{emoji:mail} انضمام عضو')
-      .setDescription(`${member} انضم للسيرفر\n**تاريخ إنشاء الحساب** <t:${Math.floor(member.user.createdTimestamp / 1000)}:F>\n**عدد الأعضاء** ${guild.memberCount}`)
-      .setThumbnail(member.user.displayAvatarURL())
-      .setTimestamp();
-
-    await sendLog(client, guildId, logEmbed, 'member_join');
   }
 };

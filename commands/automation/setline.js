@@ -11,14 +11,22 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const link = interaction.options.getString('linkimg');
-
-    if (!link.startsWith('http')) {
-      return interaction.reply({ embeds: [error('رابط غير صالح', 'يرجى تقديم رابط صورة صحيح')], flags: ['Ephemeral'] });
+    try {  
+      const link = interaction.options.getString('linkimg');
+  
+      if (!link.startsWith('http')) {
+        return interaction.reply({ embeds: [error('رابط غير صالح', 'يرجى تقديم رابط صورة صحيح')], flags: ['Ephemeral'] });
+      }
+  
+      db.setGuildSetting(interaction.guildId, 'line_image', link);
+  
+      return interaction.reply({ embeds: [success('تم تعيين صورة الفاصل', `تم تحديث صورة الفاصل التلقائي بنجاح`)] });
+    
+    } catch (err) {
+      console.error('[Command Error - setline.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
     }
-
-    db.setGuildSetting(interaction.guildId, 'line_image', link);
-
-    return interaction.reply({ embeds: [success('تم تعيين صورة الفاصل', `تم تحديث صورة الفاصل التلقائي بنجاح`)] });
-  }
+}
 };

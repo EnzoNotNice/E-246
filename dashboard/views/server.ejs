@@ -1,8 +1,16 @@
 <%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : {};
+textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+memberStats = typeof memberStats !== 'undefined' && Array.isArray(memberStats) ? memberStats : [];
+voiceStats = typeof voiceStats !== 'undefined' && Array.isArray(voiceStats) ? voiceStats : [];
+messageStats = typeof messageStats !== 'undefined' && Array.isArray(messageStats) ? messageStats : [];
+%>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <!-- Sidebar -->
-<%- include('partials/sidebar', { activeTab: 'general' }) %>
+<%- include('partials/sidebar', { guild, activeTab: 'general' }) %>
 
 <main class="app-content">
     <div class="content-header mb-2">
@@ -41,7 +49,7 @@
         <div class="section-title"><i class="fa-solid fa-sliders"></i> الإعدادات العامة</div>
         <p class="text-muted mb-2">تكوين الإعدادات الأساسية لقنوات البوت وردوده</p>
 
-        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+        <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
             <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
         <% } %>
 

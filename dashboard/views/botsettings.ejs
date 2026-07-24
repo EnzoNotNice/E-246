@@ -1,4 +1,8 @@
 <%- include('partials/header') %>
+<%
+bot = typeof bot !== 'undefined' && bot ? bot : { username: 'E-246', displayAvatarURL: () => '/images/bot-avatar.png' };
+settings = typeof settings !== 'undefined' && settings ? settings : { status: 'online', activity_type: 'Playing', activity_name: '', emoji_color: 'blue' };
+%>
 <%- include('partials/sidebar', { activeTab: 'botsettings' }) %>
 
 <main class="app-content">
@@ -7,7 +11,7 @@
         <p>تغيير حالة البوت ونشاطه وإعدادات الإيموجيات لجميع السيرفرات</p>
     </div>
 
-    <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+    <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
         <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
     <% } %>
 
@@ -18,19 +22,19 @@
             <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة</div>
             <div class="bot-preview-card">
                 <div class="bot-preview-avatar">
-                    <img src="<%= bot.displayAvatarURL({ extension: 'png', size: 128 }) %>" alt="Bot Avatar">
+                    <img src="<%= (typeof bot !== 'undefined' && bot && typeof bot.displayAvatarURL === 'function') ? bot.displayAvatarURL({ extension: 'png', size: 128 }) : '/assets/emojis/ProBot.gif' %>" alt="Bot Avatar">
                     <div class="bot-preview-status-ring">
-                        <div id="preview-status" class="bps-indicator bps-<%= settings.status %>"></div>
+                        <div id="preview-status" class="bps-indicator bps-<%= (typeof settings !== 'undefined' && settings?.status) ? settings.status : 'online' %>"></div>
                     </div>
                 </div>
                 <div class="bot-preview-info">
                     <div class="bot-preview-name">
-                        <%= bot.username %>
+                        <%= (typeof bot !== 'undefined' && bot?.username) ? bot.username : 'Bot' %>
                         <span class="bot-tag"><i class="fa-solid fa-check" style="font-size:0.55rem;"></i> APP</span>
                     </div>
                     <div class="bot-preview-activity">
-                        <span id="preview-type-text" class="bpa-type"><%= settings.activity_type === 'Playing' ? 'Playing' : (settings.activity_type === 'Listening' ? 'Listening to' : (settings.activity_type === 'Watching' ? 'Watching' : (settings.activity_type === 'Competing' ? 'Competing in' : ''))) %></span>
-                        <strong id="preview-activity-name"><%= settings.activity_name %></strong>
+                        <span id="preview-type-text" class="bpa-type"><%= (typeof settings !== 'undefined' && settings?.activity_type === 'Playing') ? 'Playing' : ((typeof settings !== 'undefined' && settings?.activity_type === 'Listening') ? 'Listening to' : ((typeof settings !== 'undefined' && settings?.activity_type === 'Watching') ? 'Watching' : ((typeof settings !== 'undefined' && settings?.activity_type === 'Competing') ? 'Competing in' : ''))) %></span>
+                        <strong id="preview-activity-name"><%= (typeof settings !== 'undefined' && settings?.activity_name) ? settings.activity_name : '' %></strong>
                     </div>
                 </div>
             </div>

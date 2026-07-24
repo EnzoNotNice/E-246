@@ -1,5 +1,11 @@
 <%- include('partials/header') %>
-<%- include('partials/sidebar', { activeTab: 'alerts' }) %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : {};
+alerts = typeof alerts !== 'undefined' && Array.isArray(alerts) ? alerts : [];
+textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'alerts' }) %>
 
 <main class="app-content">
     <div class="content-header">
@@ -11,10 +17,10 @@
     <div class="glass-panel reveal">
         <div class="section-title"><i class="fa-solid fa-bell"></i> التنبيهات المفعّلة حالياً</div>
 
-        <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+        <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
             <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
         <% } %>
-        <% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
+        <% if (typeof req !== 'undefined' && req && req.query && req.query.error) { %>
             <div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <%= req.query.error %></div>
         <% } %>
 
@@ -40,7 +46,7 @@
                             <div class="aid-row">
                                 <span class="text-muted">روم النشر:</span>
                                 <strong class="text-main" style="margin-right: 8px;">
-                                    <% const ch = guild.channels.cache.get(alert.channelId); %>
+                                    <% const ch = guild?.channels?.cache?.get ? guild.channels.cache.get(alert.channelId) : (typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels.find(c => c.id === alert.channelId) : null); %>
                                     <%= ch ? '#' + ch.name : 'قناة محذوفة ⚠️' %>
                                 </strong>
                             </div>

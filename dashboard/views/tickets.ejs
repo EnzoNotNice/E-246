@@ -1,7 +1,11 @@
 <%- include('partials/header') %>
 
 <%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
 settings = typeof settings !== 'undefined' && settings ? settings : {};
+categories = typeof categories !== 'undefined' && Array.isArray(categories) ? categories : [];
+roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
+channels = typeof channels !== 'undefined' && Array.isArray(channels) ? channels : [];
 let pData = {};
 try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
 %>
@@ -26,7 +30,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
             <form action="/dashboard/<%= guild.id %>/tickets" method="POST" class="settings-form">
 
                 <!-- 1. Basic Settings -->
-                <div class="glass-panel">
+                <div class="glass-panel reveal">
                     <div class="section-title"><i class="fa-solid fa-sliders"></i> ١. الإعدادات الأساسية</div>
                     
                     <div class="grid-form-2 mt-2">
@@ -106,10 +110,10 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                 </div>
 
                 <!-- 2. Interactive Component -->
-                <div class="glass-panel mt-3">
+                <div class="glass-panel reveal mt-3">
                     <div class="section-title"><i class="fa-solid fa-layer-group"></i> ٢. نوع المكوّن التفاعلي</div>
                     
-                    <div class="grid-form-2 mt-2">
+                    <div class="grid-form-3 mt-2">
                         <div class="form-group">
                             <label>نوع المكوّن</label>
                             <select id="comp_type" name="comp_type" class="glass-input">
@@ -121,15 +125,15 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                             <label>نص الزر/الخيار</label>
                             <input type="text" id="comp_label" name="comp_label" class="glass-input" value="<%= pData.label || 'افتح تذكرة' %>">
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>إيموجي الزر/الخيار</label>
-                        <input type="text" id="comp_emoji" name="comp_emoji" class="glass-input" value="<%= pData.emoji || '🎫' %>">
+                        <div class="form-group">
+                            <label>إيموجي الزر/الخيار</label>
+                            <input type="text" id="comp_emoji" name="comp_emoji" class="glass-input" value="<%= pData.emoji || '🎫' %>">
+                        </div>
                     </div>
                 </div>
 
                 <!-- 3. Panel Embed Design -->
-                <div class="glass-panel mt-3">
+                <div class="glass-panel reveal mt-3">
                     <div class="section-title"><i class="fa-solid fa-palette"></i> ٣. تصميم إمبيد اللوحة</div>
                     
                     <div class="grid-form-2 mt-2">
@@ -159,7 +163,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                 </div>
 
                 <!-- 4. Ticket Control Panel -->
-                <div class="glass-panel mt-3">
+                <div class="glass-panel reveal mt-3">
                     <div class="section-title"><i class="fa-solid fa-toolbox"></i> ٤. لوحة التحكم داخل التذكرة</div>
                     
                     <div class="form-group mt-2">
@@ -181,67 +185,67 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                     </div>
 
                     <div id="advanced_panel_box" class="mt-2" style="display:none;">
-                        <div class="glass-panel" style="background:rgba(255,255,255,0.01);">
+                        <div class="glass-panel reveal" style="background:rgba(255,255,255,0.01);">
                             <h4 class="mb-2" style="font-size:0.9rem; font-weight:600;"><i class="fa-solid fa-list-check"></i> إعدادات الأزرار الجاهزة للوحة المتقدمة</h4>
-                            <div class="preset-actions-list">
-                                <div class="preset-row">
-                                    <span>نداء العضو صاحب التذكرة</span>
+                            <div class="preset-actions-list grid-form-2">
+                                <div class="form-group">
+                                    <label>نداء العضو صاحب التذكرة</label>
                                     <select name="call_user" class="glass-input action-display" data-action="call_user">
                                         <option value="none" <%= pData.call_user === 'none' ? 'selected' : '' %>>إخفاء</option>
                                         <option value="button" <%= pData.call_user === 'button' ? 'selected' : '' %>>زر منفصل</option>
                                         <option value="menu" <%= pData.call_user === 'menu' ? 'selected' : '' %>>خيار قائمة</option>
                                     </select>
                                 </div>
-                                <div class="preset-row">
-                                    <span>نداء طاقم الدعم الفني</span>
+                                <div class="form-group">
+                                    <label>نداء طاقم الدعم الفني</label>
                                     <select name="call_support" class="glass-input action-display" data-action="call_support">
                                         <option value="none" <%= pData.call_support === 'none' ? 'selected' : '' %>>إخفاء</option>
                                         <option value="button" <%= pData.call_support === 'button' ? 'selected' : '' %>>زر منفصل</option>
                                         <option value="menu" <%= pData.call_support === 'menu' ? 'selected' : '' %>>خيار قائمة</option>
                                     </select>
                                 </div>
-                                <div class="preset-row">
-                                    <span>نداء الإدارة العليا للتحكيم</span>
+                                <div class="form-group">
+                                    <label>نداء الإدارة العليا للتحكيم</label>
                                     <select name="call_owners" class="glass-input action-display" data-action="call_owners">
                                         <option value="none" <%= pData.call_owners === 'none' ? 'selected' : '' %>>إخفاء</option>
                                         <option value="button" <%= pData.call_owners === 'button' ? 'selected' : '' %>>زر منفصل</option>
                                         <option value="menu" <%= pData.call_owners === 'menu' ? 'selected' : '' %>>خيار قائمة</option>
                                     </select>
                                 </div>
-                                <div class="preset-row">
-                                    <span>إرسال تحذير للعضو بالتذكرة</span>
+                                <div class="form-group">
+                                    <label>إرسال تحذير للعضو بالتذكرة</label>
                                     <select name="warn_user" class="glass-input action-display" data-action="warn_user">
                                         <option value="none" <%= pData.warn_user === 'none' ? 'selected' : '' %>>إخفاء</option>
                                         <option value="button" <%= pData.warn_user === 'button' ? 'selected' : '' %>>زر منفصل</option>
                                         <option value="menu" <%= pData.warn_user === 'menu' ? 'selected' : '' %>>خيار قائمة</option>
                                     </select>
                                 </div>
-                                <div class="preset-row">
-                                    <span>إضافة العضو للقائمة السوداء للتذاكر</span>
+                                <div class="form-group">
+                                    <label>إضافة العضو للقائمة السوداء للتذاكر</label>
                                     <select name="blacklist_user" class="glass-input action-display" data-action="blacklist_user">
                                         <option value="none" <%= pData.blacklist_user === 'none' ? 'selected' : '' %>>إخفاء</option>
                                         <option value="button" <%= pData.blacklist_user === 'button' ? 'selected' : '' %>>زر منفصل</option>
                                         <option value="menu" <%= pData.blacklist_user === 'menu' ? 'selected' : '' %>>خيار قائمة</option>
                                     </select>
                                 </div>
-                                <div class="preset-row">
-                                    <span>تغيير اسم التذكرة سريعاً</span>
+                                <div class="form-group">
+                                    <label>تغيير اسم التذكرة سريعاً</label>
                                     <select name="rename_ticket" class="glass-input action-display" data-action="rename_ticket">
                                         <option value="none" <%= pData.rename_ticket === 'none' ? 'selected' : '' %>>إخفاء</option>
                                         <option value="button" <%= pData.rename_ticket === 'button' ? 'selected' : '' %>>زر منفصل</option>
                                         <option value="menu" <%= pData.rename_ticket === 'menu' ? 'selected' : '' %>>خيار قائمة</option>
                                     </select>
                                 </div>
-                                <div class="preset-row">
-                                    <span>قفل التذكرة لمنع الكتابة (Lock)</span>
+                                <div class="form-group">
+                                    <label>قفل التذكرة لمنع الكتابة (Lock)</label>
                                     <select name="lock_ticket" class="glass-input action-display" data-action="lock_ticket">
                                         <option value="none" <%= pData.lock_ticket === 'none' ? 'selected' : '' %>>إخفاء</option>
                                         <option value="button" <%= pData.lock_ticket === 'button' ? 'selected' : '' %>>زر منفصل</option>
                                         <option value="menu" <%= pData.lock_ticket === 'menu' ? 'selected' : '' %>>خيار قائمة</option>
                                     </select>
                                 </div>
-                                <div class="preset-row">
-                                    <span>إلغاء قفل التذكرة (Unlock)</span>
+                                <div class="form-group">
+                                    <label>إلغاء قفل التذكرة (Unlock)</label>
                                     <select name="unlock_ticket" class="glass-input action-display" data-action="unlock_ticket">
                                         <option value="none" <%= pData.unlock_ticket === 'none' ? 'selected' : '' %>>إخفاء</option>
                                         <option value="button" <%= pData.unlock_ticket === 'button' ? 'selected' : '' %>>زر منفصل</option>
@@ -254,7 +258,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                 </div>
 
                 <!-- Custom Buttons inside Ticket -->
-                <div class="glass-panel mt-3">
+                <div class="glass-panel reveal mt-3">
                     <div class="setting-row">
                         <div class="section-title" style="margin:0;"><i class="fa-solid fa-circle-dot"></i> أزرار ترحيب مخصصة داخل التذكرة (٣ كحد أقصى)</div>
                         <button type="button" id="add_custom_button" class="btn btn-secondary btn-sm">
@@ -266,7 +270,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                 </div>
 
                 <!-- Custom Menus inside Ticket -->
-                <div class="glass-panel mt-3">
+                <div class="glass-panel reveal mt-3">
                     <div class="setting-row">
                         <div class="section-title" style="margin:0;"><i class="fa-solid fa-list"></i> قوائم خيارات ترحيب مخصصة (٣ كحد أقصى)</div>
                         <button type="button" id="add_custom_menu" class="btn btn-secondary btn-sm">
@@ -278,7 +282,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                 </div>
 
                 <!-- Welcome Message Style inside Ticket -->
-                <div class="glass-panel mt-3">
+                <div class="glass-panel reveal mt-3">
                     <div class="section-title"><i class="fa-solid fa-palette"></i> ٥. شكل الرسالة الترحيبية داخل التذكرة</div>
                     
                     <div class="form-group mt-2">
@@ -338,28 +342,30 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
 
                     <!-- Container Settings -->
                     <div id="ticket_container_settings" class="mt-2" style="display:none; background:rgba(255,255,255,0.015); border:1px solid var(--border); border-radius:var(--r-md); padding:14px;">
-                        <div class="form-group">
-                            <label>عنوان حاوية الترحيب</label>
-                            <input type="text" id="ticket_container_title" class="glass-input" value="<%= pData.ticket_message_style?.container?.title || '' %>" placeholder="مثال: معلومات التذكرة">
-                        </div>
-                        <div class="form-group">
-                            <label>وصف الحاوية</label>
-                            <textarea id="ticket_container_description" class="glass-input" rows="3" placeholder="محتوى الترحيب..."><%= pData.ticket_message_style?.container?.description || '' %></textarea>
+                        <div class="grid-form-2">
+                            <div class="form-group">
+                                <label>عنوان حاوية الترحيب</label>
+                                <input type="text" id="ticket_container_title" class="glass-input" value="<%= pData.ticket_message_style?.container?.title || '' %>" placeholder="مثال: معلومات التذكرة">
+                            </div>
+                            <div class="form-group">
+                                <label>لون الحاشية/الحافة (Accent Color)</label>
+                                <select id="ticket_container_accent" class="glass-input">
+                                    <option value="Blue" <%= pData.ticket_message_style?.container?.accent === 'Blue' ? 'selected' : '' %>>الأزرق</option>
+                                    <option value="Green" <%= pData.ticket_message_style?.container?.accent === 'Green' ? 'selected' : '' %>>الأخضر</option>
+                                    <option value="Red" <%= pData.ticket_message_style?.container?.accent === 'Red' ? 'selected' : '' %>>الأحمر</option>
+                                    <option value="Yellow" <%= pData.ticket_message_style?.container?.accent === 'Yellow' ? 'selected' : '' %>>الأصفر</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-group" style="margin:0;">
-                            <label>لون الحاشية/الحافة (Accent Color)</label>
-                            <select id="ticket_container_accent" class="glass-input">
-                                <option value="Blue" <%= pData.ticket_message_style?.container?.accent === 'Blue' ? 'selected' : '' %>>الأزرق</option>
-                                <option value="Green" <%= pData.ticket_message_style?.container?.accent === 'Green' ? 'selected' : '' %>>الأخضر</option>
-                                <option value="Red" <%= pData.ticket_message_style?.container?.accent === 'Red' ? 'selected' : '' %>>الأحمر</option>
-                                <option value="Yellow" <%= pData.ticket_message_style?.container?.accent === 'Yellow' ? 'selected' : '' %>>الأصفر</option>
-                            </select>
+                            <label>وصف الحاوية</label>
+                            <textarea id="ticket_container_description" class="glass-input" rows="3" placeholder="محتوى الترحيب..."><%= pData.ticket_message_style?.container?.description || '' %></textarea>
                         </div>
                     </div>
                 </div>
 
                 <!-- Submit / Send Toggle -->
-                <div class="glass-panel mt-3">
+                <div class="glass-panel reveal mt-3">
                     <div class="form-group d-flex align-items-center gap-2 mb-3">
                         <input type="checkbox" id="send_panel" name="send_panel" value="yes" style="width: 20px; height: 20px; accent-color: #fff; cursor: pointer;">
                         <label for="send_panel" style="margin:0;" class="fw-bold text-success cursor-pointer">إرسال / تحديث لوحة التذاكر في القناة الآن</label>
@@ -375,7 +381,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
         <!-- Preview Section (Left Column with sticky behavior) -->
         <div class="sticky-preview">
             
-            <div class="glass-panel">
+            <div class="glass-panel reveal">
                 <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة لوحة فتح التذاكر</div>
                 
                 <div class="discord-preview-container" style="background:#0c0c0c; border:1px solid var(--border); border-radius:var(--r-md); padding:16px;">
@@ -407,7 +413,7 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
                 </div>
             </div>
 
-            <div class="glass-panel mt-3">
+            <div class="glass-panel reveal mt-3">
                 <div class="section-title"><i class="fa-solid fa-ticket"></i> معاينة الترحيب داخل التذكرة</div>
                 
                 <div class="discord-preview-container" style="background:#0c0c0c; border:1px solid var(--border); border-radius:var(--r-md); padding:16px;">

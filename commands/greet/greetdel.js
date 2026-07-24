@@ -11,11 +11,19 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   async execute(interaction) {
-    const secs = interaction.options.getInteger('seconds');
-    db.getGreetSettings(interaction.guildId);
-    db.db.prepare('UPDATE greet_settings SET delete_after = ? WHERE guildId = ?').run(secs, interaction.guildId);
-    return interaction.reply({
-      embeds: [success(secs ? locale.get('greet.autoDeleteSet', { secs }) : locale.get('greet.autoDeleteDisabled'))]
-    });
-  }
+    try {  
+      const secs = interaction.options.getInteger('seconds');
+      db.getGreetSettings(interaction.guildId);
+      db.db.prepare('UPDATE greet_settings SET delete_after = ? WHERE guildId = ?').run(secs, interaction.guildId);
+      return interaction.reply({
+        embeds: [success(secs ? locale.get('greet.autoDeleteSet', { secs }) : locale.get('greet.autoDeleteDisabled'))]
+      });
+    
+    } catch (err) {
+      console.error('[Command Error - greetdel.js]:', err);
+      if (interaction && typeof interaction.reply === 'function') {
+        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+      }
+    }
+}
 };
