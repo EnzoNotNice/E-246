@@ -19,7 +19,9 @@ module.exports = {
     let emojis = {};
     try {
       emojis = JSON.parse(fs.readFileSync(path.join(__dirname, '../../utils/emojis.json'), 'utf8'));
-    } catch (e) {}
+    } catch (e) {
+      console.error('[chairs] Failed to load emojis.json:', e.message);
+    }
 
     const starEmoji = emojis.star || '⭐';
     const clockEmoji = emojis.clock || '⏱️';

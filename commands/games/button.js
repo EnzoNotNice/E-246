@@ -12,7 +12,9 @@ module.exports = {
     let emojis = {};
     try {
       emojis = JSON.parse(fs.readFileSync(path.join(__dirname, '../../utils/emojis.json'), 'utf8'));
-    } catch (e) {}
+    } catch (e) {
+      console.error('[button] Failed to load emojis.json:', e.message);
+    }
 
     const clockEmoji = emojis.clock || '⏱️';
     const checkEmoji = emojis.circlecheck || '🟢';

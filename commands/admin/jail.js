@@ -116,7 +116,9 @@ module.exports = {
       if (jailedData && jailedData.oldRoles) {
         try {
           rolesToRestore = JSON.parse(jailedData.oldRoles);
-        } catch (e) {}
+        } catch (e) {
+          console.error('[jail] Failed to parse oldRoles:', e.message);
+        }
       }
 
       try {

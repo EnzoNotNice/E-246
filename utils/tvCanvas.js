@@ -5,7 +5,9 @@ const fs = require('fs');
 
 try {
   GlobalFonts.registerFromPath(path.join(__dirname, '../assets/fonts/IBMPlexSansArabic-Bold.ttf'), 'IBMPlexSansArabic');
-} catch (e) {}
+} catch (e) {
+  console.error('[tvCanvas] Failed to register font:', e.message);
+}
 
 async function generateTVControlPanel() {
   const canvas = createCanvas(800, 700);

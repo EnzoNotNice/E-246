@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('./utils/env-config');
 
 if (!process.env.FONTCONFIG_PATH && !process.env.FONTCONFIG_FILE) {
   const fc = pathJoinSafeFontconfig();

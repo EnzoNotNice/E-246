@@ -126,7 +126,9 @@ async function createRankCard(user, textXp, textLevel, voiceTime, voiceLevel, me
     try {
         const textIcon = await loadImage(path.join(__dirname, '../assets/text_icon.svg'));
         ctx.drawImage(textIcon, 260, 130, 24, 24);
-    } catch (e) {}
+    } catch (e) {
+        console.error('[canvas] Failed to load text_icon.svg:', e.message);
+    }
     ctx.fillText(`مستوى الكتابة ${textLevel}`, 295, 150);
     ctx.font = '18px "IBMPlexSansArabic", "CustomFont", sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
@@ -139,7 +141,9 @@ async function createRankCard(user, textXp, textLevel, voiceTime, voiceLevel, me
     try {
         const voiceIcon = await loadImage(path.join(__dirname, '../assets/voice_icon.svg'));
         ctx.drawImage(voiceIcon, 260, 200, 24, 24);
-    } catch (e) {}
+    } catch (e) {
+        console.error('[canvas] Failed to load voice_icon.svg:', e.message);
+    }
     ctx.fillText(`مستوى الصوت ${voiceLevel}`, 295, 220);
     ctx.font = '18px "IBMPlexSansArabic", "CustomFont", sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
@@ -195,7 +199,9 @@ async function createLeaderboardCanvas(guild, topUsers, requestingUserRank = nul
     try {
         textIcon = await loadImage(path.join(__dirname, '../assets/text_icon.svg'));
         voiceIcon = await loadImage(path.join(__dirname, '../assets/voice_icon.svg'));
-    } catch (e) {}
+    } catch (e) {
+        console.error('[canvas] Failed to load leaderboard icons:', e.message);
+    }
 
     async function drawUserCard(userRecord, x, y, rank) {
         ctx.save();
