@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const logger = require('winston');
+const logger = require('./logger');
 
 class EnvConfig {
   constructor() {
