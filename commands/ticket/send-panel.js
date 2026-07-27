@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 const locale = require('../../utils/locale');
 const { success, error } = require('../../utils/embeds');
 const db = require('../../database/db');
@@ -14,32 +14,40 @@ module.exports = {
 
   async execute(interaction) {
     try {  
-      const settings = db.getTicketSettings(interaction.guildId);
-      if (!settings.category_id || !settings.staff_role) {
-        return interaction.reply({ embeds: [error(locale.get('tickets.notSetup'))], flags: ['Ephemeral'] });
+      const categories = db.getTicketCategories(interaction.guildId);
+      if (!categories.length) {
+        return interaction.reply({ embeds: [error('يرجى إضافة تصنيفات تذاكر أولاً باستخدام `/ticket-setup add-category`')], flags: ['Ephemeral'] });
       }
   
       const channel = interaction.options.getChannel('channel') || interaction.channel;
       const title = interaction.options.getString('title') || '{emoji:ticket} نظام التذاكر';
-      const description = interaction.options.getString('description') || settings.support_message || 'اضغط على الزر أدناه لفتح تذكرة دعم وسيتواصل معك فريقنا قريبا';
-  
+      const description = interaction.options.getString('description') || 'اختر نوع التذكرة من القائمة أدناه';
+
       const panelEmbed = new EmbedBuilder()
         .setColor(0x00B0F4)
         .setTitle(title)
         .setDescription(description)
         .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() })
         .setTimestamp();
-  
-      const emojis = require('../../utils/emojis.json');
-      const button = new ButtonBuilder()
-        .setCustomId('ticket_create_btn')
-        .setLabel('افتح تذكرة').setEmoji(emojis.mail || '<:mail:1525592275218731059>')
-        .setStyle(ButtonStyle.Primary);
-  
-      const row = new ActionRowBuilder().addComponents(button);
-  
+
+      const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('ticket_category_select')
+        .setPlaceholder('اختر نوع التذكرة');
+
+      for (const cat of categories) {
+        selectMenu.addOptions(
+          new StringSelectMenuOptionBuilder()
+            .setLabel(cat.name)
+            .setValue(cat.name)
+            .setDescription(`فتح تذكرة ${cat.name}`)
+            .setEmoji(cat.emoji)
+        );
+      }
+
+      const row = new ActionRowBuilder().addComponents(selectMenu);
+
       await channel.send({ embeds: [panelEmbed], components: [row] });
-      return interaction.reply({ embeds: [success(locale.get('tickets.panelSent'))], flags: ['Ephemeral'] });
+      return interaction.reply({ embeds: [success('تم إرسال بانل التذاكر بنجاح')], flags: ['Ephemeral'] });
     
     } catch (err) {
       console.error('[Command Error - send-panel.js]:', err);

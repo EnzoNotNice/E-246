@@ -165,7 +165,8 @@ module.exports = {
         const cooldownKey = `cooldown_daily_${userId}`;
         const lastUsed = await db.getKV(cooldownKey);
         const now = Date.now();
-        const cooldownTime = 172800000;
+        const bankSettings = db.getBankSettings(interaction.guildId);
+        const cooldownTime = bankSettings.dailyCooldown || 172800000;
   
         if (lastUsed && (now - lastUsed) < cooldownTime) {
           const remaining = cooldownTime - (now - lastUsed);
@@ -221,7 +222,8 @@ module.exports = {
         const cooldownKey = `cooldown_salary_${userId}`;
         const lastUsed = await db.getKV(cooldownKey);
         const now = Date.now();
-        const cooldownTime = 86400000;
+        const bankSettings = db.getBankSettings(interaction.guildId);
+        const cooldownTime = bankSettings.salaryCooldown || 86400000;
   
         if (lastUsed && (now - lastUsed) < cooldownTime) {
           const remaining = cooldownTime - (now - lastUsed);
@@ -355,7 +357,8 @@ module.exports = {
         const cooldownKey = `cooldown_invest_${userId}`;
         const lastUsed = await db.getKV(cooldownKey);
         const now = Date.now();
-        const cooldownTime = 14400000;
+        const bankSettings = db.getBankSettings(interaction.guildId);
+        const cooldownTime = bankSettings.investCooldown || 10800000;
   
         if (lastUsed && (now - lastUsed) < cooldownTime) {
           const remaining = cooldownTime - (now - lastUsed);
@@ -394,7 +397,8 @@ module.exports = {
         const cooldownKey = `cooldown_trade_${userId}`;
         const lastUsed = await db.getKV(cooldownKey);
         const now = Date.now();
-        const cooldownTime = 14400000;
+        const bankSettings = db.getBankSettings(interaction.guildId);
+        const cooldownTime = bankSettings.tradeCooldown || 10800000;
   
         if (lastUsed && (now - lastUsed) < cooldownTime) {
           const remaining = cooldownTime - (now - lastUsed);
@@ -505,7 +509,8 @@ module.exports = {
         const cooldownKey = `cooldown_gamble_${userId}`;
         const lastUsed = await db.getKV(cooldownKey);
         const now = Date.now();
-        const cooldownTime = 14400000;
+        const bankSettings = db.getBankSettings(interaction.guildId);
+        const cooldownTime = bankSettings.gambleCooldown || 14400000;
   
         if (lastUsed && (now - lastUsed) < cooldownTime) {
           const remaining = cooldownTime - (now - lastUsed);
@@ -544,7 +549,8 @@ module.exports = {
         const cooldownKey = `cooldown_dice_${userId}`;
         const lastUsed = await db.getKV(cooldownKey);
         const now = Date.now();
-        const cooldownTime = 14400000;
+        const bankSettings = db.getBankSettings(interaction.guildId);
+        const cooldownTime = bankSettings.diceCooldown || 14400000;
   
         if (lastUsed && (now - lastUsed) < cooldownTime) {
           const remaining = cooldownTime - (now - lastUsed);
@@ -582,7 +588,8 @@ module.exports = {
         const cooldownKey = `cooldown_coin_${userId}`;
         const lastUsed = await db.getKV(cooldownKey);
         const now = Date.now();
-        const cooldownTime = 7200000;
+        const bankSettings = db.getBankSettings(interaction.guildId);
+        const cooldownTime = bankSettings.coinflipCooldown || 7200000;
   
         if (lastUsed && (now - lastUsed) < cooldownTime) {
           const remaining = cooldownTime - (now - lastUsed);

@@ -32,6 +32,24 @@ module.exports = {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
 
+      // Check command restrictions
+      const restrictions = db.getCommandRestrictions(interaction.guildId, interaction.commandName);
+      if (restrictions) {
+        // Check role restrictions
+        if (restrictions.allowedRoles && Array.isArray(restrictions.allowedRoles) && restrictions.allowedRoles.length > 0) {
+          const hasRole = interaction.member.roles.cache.some(role => restrictions.allowedRoles.includes(role.id));
+          if (!hasRole) {
+            return interaction.reply({ content: '{emoji:circlex} ليس لديك الرتبة المطلوبة لاستخدام هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+          }
+        }
+        // Check channel restrictions
+        if (restrictions.allowedChannels && Array.isArray(restrictions.allowedChannels) && restrictions.allowedChannels.length > 0) {
+          if (!restrictions.allowedChannels.includes(interaction.channelId)) {
+            return interaction.reply({ content: '{emoji:circlex} هذا الأمر غير متاح في هذا الروم.', flags: ['Ephemeral'] }).catch(() => null);
+          }
+        }
+      }
+
       try {
         await command.execute(interaction);
       } catch (e) {

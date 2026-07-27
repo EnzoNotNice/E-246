@@ -35,6 +35,11 @@ const cache = {
   levels: new Map(),
   level_settings: new Map(),
   greet_settings: new Map(),
+  feelings_settings: new Map(),
+  boost_settings: new Map(),
+  bank_settings: new Map(),
+  active_games: new Map(),
+  command_restrictions: [],
   automation: [],
   giveaways: new Map(),
   protection_settings: new Map(),
@@ -46,6 +51,7 @@ const cache = {
   invite_logs: new Map(),
   tickets: [],
   ticket_settings: new Map(),
+  ticket_categories: [],
   ticket_blacklist: [],
   ticket_warnings: [],
   reaction_roles: new Map(),
@@ -98,6 +104,10 @@ async function loadMongoCache() {
     { name: 'levels', key: d => `${d.userId}_${d.guildId}` },
     { name: 'level_settings', key: d => d.guildId },
     { name: 'greet_settings', key: d => d.guildId },
+    { name: 'feelings_settings', key: d => d.guildId },
+    { name: 'boost_settings', key: d => d.guildId },
+    { name: 'bank_settings', key: d => d.guildId },
+    { name: 'active_games', key: d => d.channelId },
     { name: 'giveaways', key: d => d.messageId },
     { name: 'protection_settings', key: d => d.guildId },
     { name: 'invites', key: d => `${d.userId}_${d.guildId}` },
@@ -126,7 +136,7 @@ async function loadMongoCache() {
   const arrayCollections = [
     'warnings', 'automation', 'whitelist', 'blacklist', 'invite_ranks',
     'tickets', 'auto_reply', 'reactroles', 'aliases', 'social_alerts',
-    'ticket_blacklist', 'ticket_warnings', 'custom_commands'
+    'ticket_blacklist', 'ticket_warnings', 'custom_commands', 'ticket_categories', 'command_restrictions'
   ];
 
   for (const col of mapCollections) {
@@ -529,11 +539,95 @@ const helpers = {
   getGuildSettings(guildId) {
     let row = cache.guild_settings.get(guildId);
     if (!row) {
-      row = { guildId, prefix: '#', giveaway_emoji: '🎉', reply_type: 'embed' };
+      row = { guildId, prefix: '#', giveaway_emoji: '🎉', reply_type: 'embed', tax_line_image: null };
       cache.guild_settings.set(guildId, row);
       safeCollection('guild_settings').insertOne(row).catch(() => null);
     }
     return row;
+  },
+  getFeelingsSettings(guildId) {
+    let row = cache.feelings_settings.get(guildId);
+    if (!row) {
+      row = { guildId, channelId: null, anonymous: false };
+      cache.feelings_settings.set(guildId, row);
+      safeCollection('feelings_settings').insertOne(row).catch(() => null);
+    }
+    return row;
+  },
+  setFeelingsSettings(guildId, channelId, anonymous) {
+    const doc = { guildId, channelId, anonymous };
+    cache.feelings_settings.set(guildId, doc);
+    return safeCollection('feelings_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+  },
+  getBoostSettings(guildId) {
+    let row = cache.boost_settings.get(guildId);
+    if (!row) {
+      row = { guildId, channelId: null, message: null, useEmbed: false };
+      cache.boost_settings.set(guildId, row);
+      safeCollection('boost_settings').insertOne(row).catch(() => null);
+    }
+    return row;
+  },
+  setBoostSettings(guildId, channelId, message, useEmbed) {
+    const doc = { guildId, channelId, message, useEmbed };
+    cache.boost_settings.set(guildId, doc);
+    return safeCollection('boost_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+  },
+  getBankSettings(guildId) {
+    let row = cache.bank_settings.get(guildId);
+    if (!row) {
+      row = { 
+        guildId, 
+        tradeCooldown: 10800000, // 3 hours default
+        investCooldown: 10800000, // 3 hours default
+        dailyCooldown: 172800000, // 48 hours default
+        salaryCooldown: 86400000, // 24 hours default
+        gambleCooldown: 14400000, // 4 hours default
+        diceCooldown: 14400000, // 4 hours default
+        coinflipCooldown: 7200000 // 2 hours default
+      };
+      cache.bank_settings.set(guildId, row);
+      safeCollection('bank_settings').insertOne(row).catch(() => null);
+    }
+    return row;
+  },
+  setBankSettings(guildId, settings) {
+    const doc = { guildId, ...settings };
+    cache.bank_settings.set(guildId, doc);
+    return safeCollection('bank_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+  },
+  addActiveGame(channelId, guildId, gameType, participants) {
+    const doc = { channelId, guildId, gameType, participants, startTime: Date.now() };
+    cache.active_games.set(channelId, doc);
+    safeCollection('active_games').insertOne(doc).catch(console.error);
+    return { changes: 1 };
+  },
+  removeActiveGame(channelId, guildId) {
+    cache.active_games.delete(channelId);
+    safeCollection('active_games').deleteMany({ channelId, guildId }).catch(console.error);
+    return { changes: 1 };
+  },
+  getActiveGame(channelId) {
+    return cache.active_games.get(channelId);
+  },
+  getCommandRestrictions(guildId, commandName) {
+    return cache.command_restrictions.find(r => r.guildId === guildId && r.commandName === commandName);
+  },
+  setCommandRestrictions(guildId, commandName, allowedRoles, allowedChannels) {
+    const existingIndex = cache.command_restrictions.findIndex(r => r.guildId === guildId && r.commandName === commandName);
+    const doc = { guildId, commandName, allowedRoles, allowedChannels };
+    if (existingIndex !== -1) {
+      cache.command_restrictions[existingIndex] = doc;
+    } else {
+      cache.command_restrictions.push(doc);
+    }
+    safeCollection('command_restrictions').updateOne({ guildId, commandName }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    return { changes: 1 };
+  },
+  removeCommandRestrictions(guildId, commandName) {
+    cache.command_restrictions = cache.command_restrictions.filter(r => !(r.guildId === guildId && r.commandName === commandName));
+    safeCollection('command_restrictions').deleteMany({ guildId, commandName }).catch(console.error);
+    return { changes: 1 };
   },
   setGuildSetting(guildId, key, value) {
     const allowed = ['prefix', 'giveaway_emoji', 'log_channel', 'setlog_channel', 'line_image', 'autoboost_channel', 'autoboost_message', 'reply_type', 'bank_channel'];
@@ -625,12 +719,18 @@ const helpers = {
       row = {
         guildId, channel: null, message: 'Welcome {user} to {server}!', dm_message: null, delete_after: 0,
         enabled: 0, image_url: null, avatar_x: 100, avatar_y: 100, avatar_size: 150,
-        username_x: 100, username_y: 300, username_color: '#ffffff', username_size: 40
+        username_x: 100, username_y: 300, username_color: '#ffffff', username_size: 40,
+        image_scale_mode: 'fit', avatar_x_mm: 0, avatar_y_mm: 0, avatar_size_mm: 0,
+        username_x_mm: 0, username_y_mm: 0, username_size_mm: 0
       };
       cache.greet_settings.set(guildId, row);
       safeCollection('greet_settings').insertOne(row).catch(() => null);
     }
     return row;
+  },
+  updateGreetSettings(guildId, settings) {
+    cache.greet_settings.set(guildId, settings);
+    return safeCollection('greet_settings').updateOne({ guildId }, { $set: stripId(settings) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
   getAutomation(guildId, channelId) {
     return cache.automation.filter(a => a.guildId === guildId && a.channelId === channelId);
@@ -695,7 +795,8 @@ const helpers = {
     if (!row) {
       row = {
         guildId, enabled: 0, antilink: 0, antispam: 0, antiraid: 0, bypass_role: null,
-        ban_limit: 3, kick_limit: 3, channel_limit: 3, role_limit: 3, webhook_limit: 3, action: 'ban'
+        ban_limit: 3, kick_limit: 3, channel_limit: 3, role_limit: 3, webhook_limit: 3, action: 'ban',
+        antilink_channels: []
       };
       cache.protection_settings.set(guildId, row);
       safeCollection('protection_settings').insertOne(row).catch(() => null);
@@ -706,7 +807,7 @@ const helpers = {
     let current = this.getProtection(guildId);
     const fields = [
       'enabled', 'antilink', 'antispam', 'antiraid', 'bypass_role',
-      'ban_limit', 'kick_limit', 'channel_limit', 'role_limit', 'webhook_limit', 'action'
+      'ban_limit', 'kick_limit', 'channel_limit', 'role_limit', 'webhook_limit', 'action', 'antilink_channels'
     ];
     for (const key of fields) {
       if (data[key] !== undefined) current[key] = data[key];
@@ -834,6 +935,23 @@ const helpers = {
     cache.ticket_settings.set(guildId, current);
     return safeCollection('ticket_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },
+  getTicketCategories(guildId) {
+    return cache.ticket_categories ? cache.ticket_categories.filter(c => c.guildId === guildId) : [];
+  },
+  addTicketCategory(guildId, category) {
+    if (!cache.ticket_categories) cache.ticket_categories = [];
+    const newDoc = { guildId, ...category };
+    cache.ticket_categories.push(newDoc);
+    safeCollection('ticket_categories').insertOne(newDoc).catch(console.error);
+    return { changes: 1 };
+  },
+  removeTicketCategory(guildId, name) {
+    if (cache.ticket_categories) {
+      cache.ticket_categories = cache.ticket_categories.filter(c => !(c.guildId === guildId && c.name === name));
+    }
+    safeCollection('ticket_categories').deleteMany({ guildId, name }).catch(console.error);
+    return { changes: 1 };
+  },
   createTicket(guildId, userId, channelId, category) {
     const timestamp = Math.floor(Date.now() / 1000);
     const doc = { guildId, userId, channelId, status: 'open', category, created_at: timestamp };
@@ -943,8 +1061,8 @@ getTicketWarnings(guildId, userId) {
   getAutoReplies(guildId) {
     return cache.auto_reply.filter(a => a.guildId === guildId);
   },
-  addAutoReply(guildId, trigger, response, deleteTrigger = 0) {
-    const doc = { guildId, trigger, response, deleteTrigger: Number(deleteTrigger) };
+  addAutoReply(guildId, trigger, response, deleteTrigger = 0, mode = 'reply') {
+    const doc = { guildId, trigger, response, deleteTrigger: Number(deleteTrigger), mode };
     cache.auto_reply.push(doc);
     safeCollection('auto_reply').insertOne(doc).catch(console.error);
     return { changes: 1 };
@@ -1088,8 +1206,8 @@ getTicketWarnings(guildId, userId) {
     }
     return row;
   },
-  setJailSettings(guildId, roleId, channelId, staffVoiceId) {
-    const doc = { guildId, jailRoleId: roleId, jailChannelId: channelId, staffVoiceId };
+  setJailSettings(guildId, roleId, channelId, staffVoiceId, staffRoleId) {
+    const doc = { guildId, jailRoleId: roleId, jailChannelId: channelId, staffVoiceId, staffRoleId };
     cache.jail_settings.set(guildId, doc);
     return safeCollection('jail_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
   },

@@ -137,6 +137,24 @@ module.exports = {
 
       let cmd = client.prefixCommands.get(commandName) || client.prefixCommands.find(c => c.aliases && c.aliases.includes(commandName));
       if (cmd) {
+        // Check command restrictions
+        const restrictions = db.getCommandRestrictions(guildId, commandName);
+        if (restrictions) {
+          // Check role restrictions
+          if (restrictions.allowedRoles && Array.isArray(restrictions.allowedRoles) && restrictions.allowedRoles.length > 0) {
+            const hasRole = message.member.roles.cache.some(role => restrictions.allowedRoles.includes(role.id));
+            if (!hasRole) {
+              return message.reply({ content: '{emoji:circlex} ليس لديك الرتبة المطلوبة لاستخدام هذا الأمر.' }).catch(() => null);
+            }
+          }
+          // Check channel restrictions
+          if (restrictions.allowedChannels && Array.isArray(restrictions.allowedChannels) && restrictions.allowedChannels.length > 0) {
+            if (!restrictions.allowedChannels.includes(channelId)) {
+              return message.reply({ content: '{emoji:circlex} هذا الأمر غير متاح في هذا الروم.' }).catch(() => null);
+            }
+          }
+        }
+
         try {
           await cmd.execute(message, args);
         } catch (e) {
@@ -161,18 +179,31 @@ module.exports = {
       }
 
       if (slashCmd) {
+        const requiredPerms = slashCmd.data?.defaultMemberPermissions;
+        if (requiredPerms && message.member && !message.member.permissions.has(requiredPerms)) {
+          return message.reply({ content: '{emoji:circlex} ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
+        }
         await runSlash(slashCmd, runArgs);
         return;
       }
     }
 
     if ([8, 9, 10, 11].includes(message.type)) {
-      const settings = db.getGuildSettings(guildId);
-      if (settings.autoboost_channel && settings.autoboost_message) {
-        const boostChannel = message.guild.channels.cache.get(settings.autoboost_channel);
+      const boostSettings = db.getBoostSettings(guildId);
+      if (boostSettings.channelId && boostSettings.message) {
+        const boostChannel = message.guild.channels.cache.get(boostSettings.channelId);
         if (boostChannel) {
-          const msg = settings.autoboost_message.replace(/{user}/g, `<@${message.author.id}>`);
-          boostChannel.send(msg).catch(() => null);
+          const msg = boostSettings.message.replace(/{user}/g, `<@${message.author.id}>`);
+          if (boostSettings.useEmbed) {
+            const { EmbedBuilder } = require('discord.js');
+            const embed = new EmbedBuilder()
+              .setColor(0xFF73E1)
+              .setDescription(msg)
+              .setTimestamp();
+            boostChannel.send({ embeds: [embed] }).catch(() => null);
+          } else {
+            boostChannel.send(msg).catch(() => null);
+          }
         }
       }
     }
@@ -184,7 +215,11 @@ module.exports = {
     for (const r of replies) {
       const trigger = String(r.trigger || '').toLowerCase();
       if (trigger && contentLower.includes(trigger)) {
-        message.reply({ content: r.response }).catch(() => null);
+        if (r.mode === 'message') {
+          message.channel.send({ content: r.response }).catch(() => null);
+        } else {
+          message.reply({ content: r.response }).catch(() => null);
+        }
         if (r.deleteTrigger) {
           setTimeout(() => {
             message.delete().catch(() => null);
@@ -192,6 +227,27 @@ module.exports = {
         }
         break;
       }
+    }
+
+    // Feelings room logic
+    const feelingsSettings = db.getFeelingsSettings(guildId);
+    if (feelingsSettings.channelId === channelId) {
+      const { EmbedBuilder } = require('discord.js');
+      const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setDescription(message.content)
+        .setTimestamp();
+
+      if (!feelingsSettings.anonymous) {
+        embed.setAuthor({
+          name: message.author.username,
+          iconURL: message.author.displayAvatarURL()
+        });
+      }
+
+      await message.delete().catch(() => null);
+      await message.channel.send({ embeds: [embed] }).catch(() => null);
+      return;
     }
 
     const automations = db.getAutomation(guildId, channelId);
@@ -235,6 +291,14 @@ module.exports = {
         if (!isNaN(amount) && amount > 0) {
             const tax = Math.floor(amount * (20 / 19) + 1);
             message.reply({ content: `{emoji:ProBot} **${tax}**` }).catch(() => null);
+            
+            // Send line separator after tax if configured
+            const settings = db.getGuildSettings(guildId);
+            if (settings.tax_line_image) {
+                setTimeout(() => {
+                    message.channel.send({ content: settings.tax_line_image }).catch(() => null);
+                }, 500);
+            }
         }
       }
       if (a.type === 'react' && a.value) {
@@ -250,7 +314,11 @@ module.exports = {
 
       if (!hasBypass && protection.antilink) {
         const linkRegex = /https?:\/\/[^\s]+/i;
-        if (linkRegex.test(message.content)) {
+        // Check if channel is in antilink_channels or if antilink is server-wide (no channels specified)
+        const antilinkChannels = protection.antilink_channels || [];
+        const shouldBlock = antilinkChannels.length === 0 || antilinkChannels.includes(channelId);
+        
+        if (shouldBlock && linkRegex.test(message.content)) {
           await message.delete().catch(() => null);
           const warnMsg = await message.channel.send({ content: `${message.author}, {emoji:circlex} ممنوع إرسال الروابط هنا` });
           setTimeout(() => warnMsg.delete().catch(() => null), 5000);

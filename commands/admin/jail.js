@@ -13,6 +13,7 @@ module.exports = {
         .addRoleOption(o => o.setName('role').setDescription('رتبة السجن').setRequired(true))
         .addChannelOption(o => o.setName('channel').setDescription('روم السجن').addChannelTypes(ChannelType.GuildText).setRequired(true))
         .addChannelOption(o => o.setName('staff_voice').setDescription('روم الاستدعاء الصوتي').addChannelTypes(ChannelType.GuildVoice).setRequired(false))
+        .addRoleOption(o => o.setName('staff_role').setDescription('رتبة المسؤولين الذين يمكنهم استخدام أوامر السجن').setRequired(false))
     )
     .addSubcommand(sub =>
       sub
@@ -43,17 +44,23 @@ module.exports = {
       const role = interaction.options.getRole('role');
       const channel = interaction.options.getChannel('channel');
       const staffVoice = interaction.options.getChannel('staff_voice');
+      const staffRole = interaction.options.getRole('staff_role');
 
-      db.setJailSettings(guild.id, role.id, channel.id, staffVoice ? staffVoice.id : null);
+      db.setJailSettings(guild.id, role.id, channel.id, staffVoice ? staffVoice.id : null, staffRole ? staffRole.id : null);
 
       return interaction.reply({
-        embeds: [success(`تم إعداد نظام السجن بنجاح\n\n**الرتبة** <@&${role.id}>\n**روم السجن** <#${channel.id}>\n**روم الاستدعاء** ${staffVoice ? `<#${staffVoice.id}>` : 'غير محدد'}`)]
+        embeds: [success(`تم إعداد نظام السجن بنجاح\n\n**رتبة السجن** <@&${role.id}>\n**روم السجن** <#${channel.id}>\n**روم الاستدعاء** ${staffVoice ? `<#${staffVoice.id}>` : 'غير محدد'}\n**رتبة المسؤولين** ${staffRole ? `<@&${staffRole.id}>` : 'يعتمد على الصلاحيات'}`)]
       });
     }
 
     const settings = db.getJailSettings(guild.id);
     if (!settings || !settings.jailRoleId || !settings.jailChannelId) {
       return interaction.reply({ embeds: [error('يرجى إعداد نظام السجن أولاً باستخدام `/jail setup`')], flags: ['Ephemeral'] });
+    }
+
+    // Check if user has staff role or is admin
+    if (settings.staffRoleId && !interaction.member.roles.cache.has(settings.staffRoleId) && !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ embeds: [error('ليس لديك الصلاحية لاستخدام هذا الأمر')], flags: ['Ephemeral'] });
     }
 
     const targetUser = interaction.options.getUser('user');

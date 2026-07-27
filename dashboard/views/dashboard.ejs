@@ -93,9 +93,9 @@ user = typeof user !== 'undefined' ? user : null;
                         <i class="fa-solid fa-sliders"></i> إدارة السيرفر
                     </a>
                 <% } else { %>
-                    <span class="btn btn-secondary btn-large disabled" style="opacity:0.35; cursor:not-allowed; width: 100%; margin-top: auto;">
-                        <i class="fa-solid fa-robot"></i> البوت غير موجود
-                    </span>
+                    <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands&guild_id=<%= guild.id %>&disable_guild_select=true" class="btn btn-success btn-large" style="width: 100%; margin-top: auto;">
+                        <i class="fa-solid fa-plus"></i> إضافة البوت
+                    </a>
                 <% } %>
             </div>
         <% }) %>

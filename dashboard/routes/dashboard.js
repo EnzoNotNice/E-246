@@ -103,6 +103,61 @@ module.exports = (client) => {
         }
     });
 
+    router.get('/:id/bank', checkAuth, checkGuildAccess, async (req, res, next) => {
+        try {
+            const guild = req.guild;
+            const bankSettings = db.getBankSettings(guild.id);
+            
+            res.render('bank', {
+                guild,
+                settings: bankSettings
+            });
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    router.post('/:id/bank', checkAuth, checkGuildAccess, async (req, res, next) => {
+        try {
+            const guild = req.guild;
+            
+            const tradeCooldownVal = parseInt(req.body.tradeCooldown);
+            const tradeCooldown = isNaN(tradeCooldownVal) ? 10800000 : tradeCooldownVal * 60000;
+            
+            const investCooldownVal = parseInt(req.body.investCooldown);
+            const investCooldown = isNaN(investCooldownVal) ? 10800000 : investCooldownVal * 60000;
+            
+            const dailyCooldownVal = parseInt(req.body.dailyCooldown);
+            const dailyCooldown = isNaN(dailyCooldownVal) ? 172800000 : dailyCooldownVal * 3600000;
+            
+            const salaryCooldownVal = parseInt(req.body.salaryCooldown);
+            const salaryCooldown = isNaN(salaryCooldownVal) ? 86400000 : salaryCooldownVal * 3600000;
+            
+            const gambleCooldownVal = parseInt(req.body.gambleCooldown);
+            const gambleCooldown = isNaN(gambleCooldownVal) ? 14400000 : gambleCooldownVal * 60000;
+            
+            const diceCooldownVal = parseInt(req.body.diceCooldown);
+            const diceCooldown = isNaN(diceCooldownVal) ? 14400000 : diceCooldownVal * 60000;
+            
+            const coinflipCooldownVal = parseInt(req.body.coinflipCooldown);
+            const coinflipCooldown = isNaN(coinflipCooldownVal) ? 7200000 : coinflipCooldownVal * 60000;
+
+            db.setBankSettings(guild.id, {
+                tradeCooldown,
+                investCooldown,
+                dailyCooldown,
+                salaryCooldown,
+                gambleCooldown,
+                diceCooldown,
+                coinflipCooldown
+            });
+
+            res.redirect(`/dashboard/${guild.id}/bank?success=1`);
+        } catch (err) {
+            next(err);
+        }
+    });
+
     router.get('/admin/botsettings', checkAuth, async (req, res, next) => {
         try {
             let isOwner = false;
@@ -238,18 +293,37 @@ module.exports = (client) => {
         }
     });
 
-    router.post('/:id/welcome', checkAuth, checkGuildAccess, (req, res, next) => {
+    router.post('/:id/welcome', checkAuth, checkGuildAccess, async (req, res, next) => {
         try {
-            const { enabled, channel, message, image_url, avatar_x, avatar_y, avatar_size, username_x, username_y, username_color, username_size } = req.body;
-            db.db.prepare(`
-                INSERT INTO greet_settings (guildId, enabled, channel, message, image_url, avatar_x, avatar_y, avatar_size, username_x, username_y, username_color, username_size)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(guildId) DO UPDATE SET
-                enabled = ?, channel = ?, message = ?, image_url = ?, avatar_x = ?, avatar_y = ?, avatar_size = ?, username_x = ?, username_y = ?, username_color = ?, username_size = ?
-            `).run(
-                req.guild.id, parseInt(enabled), channel || null, message, image_url || null, parseInt(avatar_x) || 100, parseInt(avatar_y) || 100, parseInt(avatar_size) || 150, parseInt(username_x) || 100, parseInt(username_y) || 300, username_color || '#ffffff', parseInt(username_size) || 40,
-                parseInt(enabled), channel || null, message, image_url || null, parseInt(avatar_x) || 100, parseInt(avatar_y) || 100, parseInt(avatar_size) || 150, parseInt(username_x) || 100, parseInt(username_y) || 300, username_color || '#ffffff', parseInt(username_size) || 40
-            );
+            const { enabled, channel, message, image_url, scale_mode, avatar_x_mm, avatar_y_mm, avatar_size_mm, username_x_mm, username_y_mm, username_size_mm } = req.body;
+            
+            const settings = db.getGreetSettings(req.guild.id);
+            settings.enabled = parseInt(enabled) || 0;
+            settings.channel = channel || null;
+            settings.message = message || '';
+            settings.image_url = image_url || null;
+            
+            const avatarXVal = parseInt(avatar_x_mm);
+            settings.avatar_x_mm = isNaN(avatarXVal) ? 0 : avatarXVal;
+            
+            const avatarYVal = parseInt(avatar_y_mm);
+            settings.avatar_y_mm = isNaN(avatarYVal) ? 0 : avatarYVal;
+            
+            const avatarSizeVal = parseInt(avatar_size_mm);
+            settings.avatar_size_mm = isNaN(avatarSizeVal) ? 0 : avatarSizeVal;
+            
+            const usernameXVal = parseInt(username_x_mm);
+            settings.username_x_mm = isNaN(usernameXVal) ? 0 : usernameXVal;
+            
+            const usernameYVal = parseInt(username_y_mm);
+            settings.username_y_mm = isNaN(usernameYVal) ? 0 : usernameYVal;
+            
+            const usernameSizeVal = parseInt(username_size_mm);
+            settings.username_size_mm = isNaN(usernameSizeVal) ? 0 : usernameSizeVal;
+            
+            settings.image_scale_mode = scale_mode || 'fit';
+
+            await db.updateGreetSettings(req.guild.id, settings);
             res.redirect(`/dashboard/${req.guild.id}/welcome?success=تم+تحديث+إعدادات+الترحيب`);
         } catch (err) {
             next(err);

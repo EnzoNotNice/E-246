@@ -10,6 +10,10 @@ module.exports = {
     .addStringOption(o => o.setName('trigger').setDescription('نص التشغيل').setRequired(true))
     .addStringOption(o => o.setName('response').setDescription('نص الرد').setRequired(true))
     .addBooleanOption(o => o.setName('delete_message').setDescription('مسح رسالة العضو بعد الرد'))
+    .addStringOption(o => o.setName('mode').setDescription('طريقة الرد').addChoices(
+      { name: 'رد (Reply)', value: 'reply' },
+      { name: 'رسالة منفصلة (Message)', value: 'message' }
+    ))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {
@@ -17,11 +21,12 @@ module.exports = {
       const trigger = interaction.options.getString('trigger').toLowerCase();
       const response = interaction.options.getString('response');
       const deleteTrigger = interaction.options.getBoolean('delete_message') ? 1 : 0;
-  
+      const mode = interaction.options.getString('mode') || 'reply';
+
       const existing = db.getAutoReplies(interaction.guildId).find(r => r.trigger === trigger);
       if (existing) return interaction.reply({ embeds: [error(locale.get('general.alreadyExists'))], flags: ['Ephemeral'] });
-  
-      db.addAutoReply(interaction.guildId, trigger, response, deleteTrigger);
+
+      db.addAutoReply(interaction.guildId, trigger, response, deleteTrigger, mode);
       return interaction.reply({ embeds: [success(locale.get('moderation.autoReplyAdded', { trigger, response }))] });
     
     } catch (err) {

@@ -128,7 +128,7 @@ module.exports = {
       if (greet.enabled && greet.channel) {
         const greetChannel = await client.channels.fetch(greet.channel).catch(() => null);
         if (greetChannel) {
-          const message = (greet.message || 'Welcome {user} to **{server}**')
+          const message = (greet.message || 'Welcome {user} to **{server}**! Member count: **{count}**')
             .replace(/{user}/g, member.toString())
             .replace(/{server}/g, guild.name)
             .replace(/{count}/g, guild.memberCount.toString());
@@ -144,18 +144,53 @@ module.exports = {
           if (greet.image_url) {
               try {
                   const bg = await Canvas.loadImage(imagePathOrUrl);
-                  const canvas = Canvas.createCanvas(bg.width, bg.height);
+                  const scaleMode = greet.image_scale_mode || 'fit';
+                  let canvasWidth = bg.width;
+                  let canvasHeight = bg.height;
+
+                  // Intelligent scaling based on scale mode
+                  if (scaleMode === 'cover') {
+                      const maxDimension = 1920;
+                      const ratio = Math.min(maxDimension / canvasWidth, maxDimension / canvasHeight);
+                      canvasWidth = Math.floor(canvasWidth * ratio);
+                      canvasHeight = Math.floor(canvasHeight * ratio);
+                  } else if (scaleMode === 'stretch') {
+                      canvasWidth = 1920;
+                      canvasHeight = 1080;
+                  }
+
+                  const canvas = Canvas.createCanvas(canvasWidth, canvasHeight);
                   const ctx = canvas.getContext('2d');
 
-                  
-                  ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+                  // Draw background with proper scaling
+                  if (scaleMode === 'cover') {
+                      const ratio = Math.max(canvasWidth / bg.width, canvasHeight / bg.height);
+                      const drawWidth = bg.width * ratio;
+                      const drawHeight = bg.height * ratio;
+                      const drawX = (canvasWidth - drawWidth) / 2;
+                      const drawY = (canvasHeight - drawHeight) / 2;
+                      ctx.drawImage(bg, drawX, drawY, drawWidth, drawHeight);
+                  } else if (scaleMode === 'stretch') {
+                      ctx.drawImage(bg, 0, 0, canvasWidth, canvasHeight);
+                  } else {
+                      // fit mode - maintain aspect ratio
+                      const ratio = Math.min(canvasWidth / bg.width, canvasHeight / bg.height);
+                      const drawWidth = bg.width * ratio;
+                      const drawHeight = bg.height * ratio;
+                      const drawX = (canvasWidth - drawWidth) / 2;
+                      const drawY = (canvasHeight - drawHeight) / 2;
+                      ctx.drawImage(bg, drawX, drawY, drawWidth, drawHeight);
+                  }
 
+                  // Convert mm to pixels (96 DPI = 37.795 pixels per mm)
+                  const mmToPx = 37.795;
                   
+                  // Avatar positioning with mm support
+                  const avatarSize = (greet.avatar_size_mm || 0) * mmToPx || (greet.avatar_size || 150);
+                  const ax = (greet.avatar_x_mm || 0) * mmToPx || (greet.avatar_x || 100);
+                  const ay = (greet.avatar_y_mm || 0) * mmToPx || (greet.avatar_y || 100);
+
                   const avatar = await Canvas.loadImage(member.user.displayAvatarURL({ extension: 'png', size: 1024 }));
-                  const avatarSize = greet.avatar_size || 150;
-                  const ax = greet.avatar_x || 100;
-                  const ay = greet.avatar_y || 100;
-
                   ctx.save();
                   ctx.beginPath();
                   ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2, true);
@@ -164,10 +199,10 @@ module.exports = {
                   ctx.drawImage(avatar, ax, ay, avatarSize, avatarSize);
                   ctx.restore();
 
-                  
-                  const ux = greet.username_x || 100;
-                  const uy = greet.username_y || 300;
-                  const uSize = greet.username_size || 40;
+                  // Username positioning with mm support
+                  const ux = (greet.username_x_mm || 0) * mmToPx || (greet.username_x || 100);
+                  const uy = (greet.username_y_mm || 0) * mmToPx || (greet.username_y || 300);
+                  const uSize = (greet.username_size_mm || 0) * mmToPx || (greet.username_size || 40);
                   const uColor = greet.username_color || '#ffffff';
 
                   ctx.font = `${uSize}px CustomFont`;
