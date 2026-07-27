@@ -1,7 +1,7 @@
 <%- include('partials/header') %>
 <%
 guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
-channels = typeof channels !== 'undefined' && Array.isArray(channels) ? channels : [];
+channels = channels && (Array.isArray(channels) || typeof channels.forEach === 'function') ? channels : [];
 %>
 <%- include('partials/sidebar', { guild, activeTab: 'embed' }) %>
 

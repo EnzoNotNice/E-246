@@ -286,7 +286,8 @@ module.exports = (client) => {
         try {
             res.render('welcome', {
                 guild: req.guild,
-                settings: db.getGreetSettings(req.guild.id)
+                settings: db.getGreetSettings(req.guild.id),
+                textChannels: Array.from(req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5).values())
             });
         } catch (err) {
             next(err);
@@ -295,33 +296,22 @@ module.exports = (client) => {
 
     router.post('/:id/welcome', checkAuth, checkGuildAccess, async (req, res, next) => {
         try {
-            const { enabled, channel, message, image_url, scale_mode, avatar_x_mm, avatar_y_mm, avatar_size_mm, username_x_mm, username_y_mm, username_size_mm } = req.body;
+            const { enabled, channel, message, image_url, scale_mode, avatar_x, avatar_y, avatar_size, username_x, username_y, username_size, username_color } = req.body;
             
             const settings = db.getGreetSettings(req.guild.id);
             settings.enabled = parseInt(enabled) || 0;
             settings.channel = channel || null;
             settings.message = message || '';
             settings.image_url = image_url || null;
+            settings.scale_mode = scale_mode || 'fit';
+            settings.username_color = username_color || '#ffffff';
             
-            const avatarXVal = parseInt(avatar_x_mm);
-            settings.avatar_x_mm = isNaN(avatarXVal) ? 0 : avatarXVal;
-            
-            const avatarYVal = parseInt(avatar_y_mm);
-            settings.avatar_y_mm = isNaN(avatarYVal) ? 0 : avatarYVal;
-            
-            const avatarSizeVal = parseInt(avatar_size_mm);
-            settings.avatar_size_mm = isNaN(avatarSizeVal) ? 0 : avatarSizeVal;
-            
-            const usernameXVal = parseInt(username_x_mm);
-            settings.username_x_mm = isNaN(usernameXVal) ? 0 : usernameXVal;
-            
-            const usernameYVal = parseInt(username_y_mm);
-            settings.username_y_mm = isNaN(usernameYVal) ? 0 : usernameYVal;
-            
-            const usernameSizeVal = parseInt(username_size_mm);
-            settings.username_size_mm = isNaN(usernameSizeVal) ? 0 : usernameSizeVal;
-            
-            settings.image_scale_mode = scale_mode || 'fit';
+            settings.avatar_x = parseInt(avatar_x) || 100;
+            settings.avatar_y = parseInt(avatar_y) || 100;
+            settings.avatar_size = parseInt(avatar_size) || 150;
+            settings.username_x = parseInt(username_x) || 100;
+            settings.username_y = parseInt(username_y) || 300;
+            settings.username_size = parseInt(username_size) || 40;
 
             await db.updateGreetSettings(req.guild.id, settings);
             res.redirect(`/dashboard/${req.guild.id}/welcome?success=تم+تحديث+إعدادات+الترحيب`);
@@ -845,7 +835,8 @@ module.exports = (client) => {
                 color: safeColor(b.color),
                 thumbnail: safeUrl(b.thumbnail),
                 image: safeUrl(b.image),
-                comp_type: b.comp_type || 'button'
+                comp_type: b.comp_type || 'button',
+                panel_channel: b.panel_channel || ''
             };
 
             const rolesData = b.roles_data || '[]';

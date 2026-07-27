@@ -2,8 +2,8 @@
 <%
 guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
 settings = typeof settings !== 'undefined' && settings ? settings : {};
-alerts = typeof alerts !== 'undefined' && Array.isArray(alerts) ? alerts : [];
-textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+alerts = alerts && (Array.isArray(alerts) || typeof alerts.forEach === 'function') ? alerts : [];
+textChannels = textChannels && (Array.isArray(textChannels) || typeof textChannels.forEach === 'function') ? textChannels : [];
 %>
 <%- include('partials/sidebar', { guild, activeTab: 'alerts' }) %>
 
@@ -46,7 +46,7 @@ textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels
                             <div class="aid-row">
                                 <span class="text-muted">روم النشر:</span>
                                 <strong class="text-main" style="margin-right: 8px;">
-                                    <% const ch = guild?.channels?.cache?.get ? guild.channels.cache.get(alert.channelId) : (typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels.find(c => c.id === alert.channelId) : null); %>
+                                    <% const ch = guild?.channels?.cache?.get ? guild.channels.cache.get(alert.channelId) : (textChannels && (Array.isArray(textChannels) || typeof textChannels.forEach === 'function') ? textChannels.find(c => c.id === alert.channelId) : null); %>
                                     <%= ch ? '#' + ch.name : 'قناة محذوفة ⚠️' %>
                                 </strong>
                             </div>

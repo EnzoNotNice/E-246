@@ -2,7 +2,7 @@
 <%
 guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
 settings = typeof settings !== 'undefined' && settings ? settings : {};
-textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+textChannels = textChannels && (Array.isArray(textChannels) || typeof textChannels.forEach === 'function') ? textChannels : [];
 memberStats = typeof memberStats !== 'undefined' && Array.isArray(memberStats) ? memberStats : [];
 voiceStats = typeof voiceStats !== 'undefined' && Array.isArray(voiceStats) ? voiceStats : [];
 messageStats = typeof messageStats !== 'undefined' && Array.isArray(messageStats) ? messageStats : [];

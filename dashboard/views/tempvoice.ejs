@@ -2,8 +2,8 @@
 <%
 guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
 settings = typeof settings !== 'undefined' && settings ? settings : {};
-channels = typeof channels !== 'undefined' && Array.isArray(channels) ? channels : [];
-categories = typeof categories !== 'undefined' && Array.isArray(categories) ? categories : [];
+channels = channels && (Array.isArray(channels) || typeof channels.forEach === 'function') ? channels : [];
+categories = categories && (Array.isArray(categories) || typeof categories.forEach === 'function') ? categories : [];
 %>
 <%- include('partials/sidebar', { guild, activeTab: 'tempvoice' }) %>
 

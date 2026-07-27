@@ -4,8 +4,8 @@ guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server'
 settings = typeof settings !== 'undefined' && settings ? settings : { panel_data: {} };
 if (!settings.panel_data) settings.panel_data = {};
 nativeReactionRoles = typeof nativeReactionRoles !== 'undefined' && Array.isArray(nativeReactionRoles) ? nativeReactionRoles : [];
-textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
-roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
+textChannels = textChannels && (Array.isArray(textChannels) || typeof textChannels.forEach === 'function') ? textChannels : [];
+roles = roles && (Array.isArray(roles) || typeof roles.forEach === 'function') ? roles : [];
 %>
 <%- include('partials/sidebar', { guild, activeTab: 'reactionroles' }) %>
 
@@ -87,7 +87,7 @@ roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
                         <select name="panel_channel" id="panel_channel" class="glass-input">
                             <option value="">-- اختر القناة --</option>
                             <% textChannels.forEach(c => { %>
-                                <option value="<%= c.id %>"># <%= c.name %></option>
+                                <option value="<%= c.id %>" <%= settings.panel_data.panel_channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
                             <% }) %>
                         </select>
                     </div>

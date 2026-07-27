@@ -3,9 +3,9 @@
 <%
 guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
 settings = typeof settings !== 'undefined' && settings ? settings : {};
-categories = typeof categories !== 'undefined' && Array.isArray(categories) ? categories : [];
-roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
-channels = typeof channels !== 'undefined' && Array.isArray(channels) ? channels : [];
+categories = categories && (Array.isArray(categories) || typeof categories.forEach === 'function') ? categories : [];
+roles = roles && (Array.isArray(roles) || typeof roles.forEach === 'function') ? roles : [];
+channels = channels && (Array.isArray(channels) || typeof channels.forEach === 'function') ? channels : [];
 let pData = {};
 try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
 %>

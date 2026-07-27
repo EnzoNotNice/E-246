@@ -3,8 +3,8 @@
 guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
 settings = typeof settings !== 'undefined' && settings ? settings : { panel_data: {} };
 if (!settings.panel_data) settings.panel_data = {};
-roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
-textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+roles = roles && (Array.isArray(roles) || typeof roles.forEach === 'function') ? roles : [];
+textChannels = textChannels && (Array.isArray(textChannels) || typeof textChannels.forEach === 'function') ? textChannels : [];
 client = typeof client !== 'undefined' && client ? client : null;
 botUser = client && client.user ? client.user : { username: 'E-246', displayAvatarURL: () => '/images/bot-avatar.png' };
 %>

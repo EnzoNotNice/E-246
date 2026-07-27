@@ -3,7 +3,7 @@
 guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
 settings = typeof settings !== 'undefined' && settings ? settings : { panel_data: {} };
 if (!settings.panel_data) settings.panel_data = {};
-textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+textChannels = textChannels && (Array.isArray(textChannels) || typeof textChannels.forEach === 'function') ? textChannels : [];
 %>
 <%- include('partials/sidebar', { guild, activeTab: 'forms' }) %>
 

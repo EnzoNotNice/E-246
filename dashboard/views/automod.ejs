@@ -45,7 +45,7 @@
                 <select name="bypass_roles" class="glass-input" multiple size="4">
                     <% 
                       let currentBypass = (typeof settings !== 'undefined' && Array.isArray(settings?.bypass_roles)) ? settings.bypass_roles : [];
-                      let availableRoles = (typeof roles !== 'undefined' && Array.isArray(roles)) ? roles : [];
+                      let availableRoles = (typeof roles !== 'undefined' && (Array.isArray(roles) || typeof roles.forEach === 'function')) ? roles : [];
                       availableRoles.forEach(r => { 
                     %>
                         <option value="<%= r.id %>" <%= currentBypass.includes(r.id) ? 'selected' : '' %>>

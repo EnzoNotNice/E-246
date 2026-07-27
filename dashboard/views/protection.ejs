@@ -2,7 +2,7 @@
 <%
 guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
 settings = typeof settings !== 'undefined' && settings ? settings : {};
-roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
+roles = roles && (Array.isArray(roles) || typeof roles.forEach === 'function') ? roles : [];
 %>
 <%- include('partials/sidebar', { guild, activeTab: 'protection' }) %>
 
