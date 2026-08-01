@@ -1,6 +1,6 @@
 <div align="center">
 
-# E-246 System — ديسكورد بوت متكامل للإنتاج والبرودكشن
+# E-246 System — ديسكورد بوت متكامل
 
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white) ![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white) ![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white) ![Version](https://img.shields.io/badge/Version-1.0.5-blueviolet?style=for-the-badge)
 
