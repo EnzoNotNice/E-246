@@ -7,8 +7,8 @@
   function animateCounter(el) {
     const target = parseFloat(el.dataset.count);
     if (isNaN(target)) return;
-    const prefix  = el.dataset.prefix  || '';
-    const suffix  = el.dataset.suffix  || '';
+    const prefix = el.dataset.prefix || '';
+    const suffix = el.dataset.suffix || '';
     const decimals = (String(target).split('.')[1] || '').length;
     const duration = reduced ? 0 : 1000;
     const start = performance.now();
@@ -22,8 +22,9 @@
 
     function step(now) {
       const progress = Math.min((now - start) / duration, 1);
-      const eased    = 1 - Math.pow(1 - progress, 4);
-      el.textContent = prefix + Number(eased * target).toLocaleString('ar-EG', { maximumFractionDigits: decimals }) + suffix;
+      const eased = 1 - Math.pow(1 - progress, 4);
+      el.textContent =
+        prefix + Number(eased * target).toLocaleString('ar-EG', { maximumFractionDigits: decimals }) + suffix;
       if (progress < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
@@ -35,20 +36,23 @@
     if (!els.length) return;
 
     if (reduced) {
-      els.forEach(el => el.classList.add('visible'));
+      els.forEach((el) => el.classList.add('visible'));
       return;
     }
 
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          io.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: '0px 0px -32px 0px' }
+    );
 
-    els.forEach(el => io.observe(el));
+    els.forEach((el) => io.observe(el));
   }
 
   /* ─── Page transition ────────────────────────────────────── */
@@ -57,12 +61,20 @@
 
     const overlay = document.createElement('div');
     overlay.className = 'page-transition-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9999;opacity:0;pointer-events:none;transition:opacity 0.15s ease;';
+    overlay.style.cssText =
+      'position:fixed;inset:0;background:#000;z-index:9999;opacity:0;pointer-events:none;transition:opacity 0.15s ease;';
     document.body.appendChild(overlay);
 
-    document.querySelectorAll('a[href]').forEach(link => {
+    document.querySelectorAll('a[href]').forEach((link) => {
       const href = link.getAttribute('href');
-      if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('//') || href.startsWith('javascript')) return;
+      if (
+        !href ||
+        href.startsWith('#') ||
+        href.startsWith('http') ||
+        href.startsWith('//') ||
+        href.startsWith('javascript')
+      )
+        return;
       link.addEventListener('click', (e) => {
         if (e.ctrlKey || e.metaKey || e.target.closest('[target="_blank"]')) return;
         overlay.style.opacity = '1';
@@ -93,7 +105,7 @@
       const y = e.clientY - rect.top;
 
       const ripple = document.createElement('span');
-      const size   = Math.max(rect.width, rect.height) * 2;
+      const size = Math.max(rect.width, rect.height) * 2;
       ripple.style.cssText = `
         position: absolute;
         width: ${size}px;
@@ -121,7 +133,7 @@
 
   /* ─── Input focus glow ─────────────────────────────────── */
   function initInputEffects() {
-    document.querySelectorAll('.glass-input').forEach(input => {
+    document.querySelectorAll('.glass-input').forEach((input) => {
       input.addEventListener('focus', () => {
         const label = input.closest('.form-group')?.querySelector('label');
         if (label) label.style.color = '#fff';
@@ -140,7 +152,7 @@
 
     const updateTooltips = () => {
       const collapsed = sidebar.classList.contains('collapsed');
-      sidebar.querySelectorAll('.nav-link').forEach(link => {
+      sidebar.querySelectorAll('.nav-link').forEach((link) => {
         const text = link.querySelector('.sidebar-text');
         if (text) link.title = collapsed ? text.textContent.trim() : '';
       });
@@ -165,9 +177,10 @@
 
   /* ─── Auto-hide alerts ──────────────────────────────────── */
   function initAutoHideAlerts() {
-    document.querySelectorAll('.alert').forEach(alert => {
+    document.querySelectorAll('.alert').forEach((alert) => {
       setTimeout(() => {
-        alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease, max-height 0.4s ease, padding 0.4s ease, margin 0.4s ease';
+        alert.style.transition =
+          'opacity 0.5s ease, transform 0.5s ease, max-height 0.4s ease, padding 0.4s ease, margin 0.4s ease';
         alert.style.opacity = '0';
         alert.style.transform = 'translateY(-8px)';
         alert.style.maxHeight = '0';
@@ -181,7 +194,7 @@
   /* ─── Active nav link highlight ────────────────────────── */
   function initActiveNav() {
     const path = window.location.pathname;
-    document.querySelectorAll('.nav-link').forEach(link => {
+    document.querySelectorAll('.nav-link').forEach((link) => {
       const href = link.getAttribute('href');
       if (href && href !== '/' && path.startsWith(href)) {
         link.classList.add('active');
@@ -193,11 +206,11 @@
   function initCardTilt() {
     if (reduced) return;
 
-    document.querySelectorAll('.guild-card').forEach(card => {
+    document.querySelectorAll('.guild-card').forEach((card) => {
       card.addEventListener('mousemove', (e) => {
         const rect = card.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width  - 0.5;
-        const y = (e.clientY - rect.top)  / rect.height - 0.5;
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
         card.style.transform = `translateY(-2px) rotateY(${x * 4}deg) rotateX(${-y * 4}deg)`;
       });
       card.addEventListener('mouseleave', () => {
@@ -209,15 +222,18 @@
   /* ─── Init ──────────────────────────────────────────────── */
   document.addEventListener('DOMContentLoaded', () => {
     /* Counters */
-    const counterObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          animateCounter(entry.target);
-          counterObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.5 });
-    document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
+    const counterObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            animateCounter(entry.target);
+            counterObserver.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+    document.querySelectorAll('[data-count]').forEach((el) => counterObserver.observe(el));
 
     initScrollReveal();
     initPageTransition();
@@ -235,7 +251,7 @@
       content.style.opacity = '0';
       content.style.transform = 'translateY(15px)';
       content.style.transition = 'opacity 0.4s cubic-bezier(0.16,1,0.3,1), transform 0.4s cubic-bezier(0.16,1,0.3,1)';
-      
+
       // Fallback to ensure it never gets stuck hidden
       const fallback = setTimeout(() => {
         content.style.opacity = '1';

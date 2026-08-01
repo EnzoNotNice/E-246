@@ -1,6 +1,7 @@
 const rateLimit = require('express-rate-limit');
 const { RedisStore } = require('rate-limit-redis');
 const Redis = require('ioredis');
+const logger = require('./logger');
 
 let redisClient = null;
 
@@ -13,18 +14,18 @@ if (process.env.REDIS_HOST) {
       lazyConnect: true,
       retryStrategy: (times) => {
         if (times > 10) {
-          console.error('Redis connection failed after 10 attempts; continuing without Redis rate-limit store');
+          logger.error('Redis connection failed after 10 attempts; continuing without Redis rate-limit store');
           return null;
         }
         return Math.min(times * 100, 3000);
       }
     });
 
-    redisClient.on('error', (err) => console.error('Redis connection error:', err.message));
-    redisClient.on('connect', () => console.log('Redis connected successfully'));
+    redisClient.on('error', (err) => logger.error('Redis connection error:', err.message));
+    redisClient.on('connect', () => logger.info('Redis connected successfully'));
   } catch (err) {
     redisClient = null;
-    console.warn('Redis not available, using memory store:', err.message);
+    logger.warn('Redis not available, using memory store:', err.message);
   }
 }
 

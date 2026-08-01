@@ -2,12 +2,13 @@ const { EmbedBuilder, ApplicationCommandOptionType } = require('discord.js');
 const db = require('../database/db');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 function getEmojisJson() {
   try {
     return JSON.parse(fs.readFileSync(path.join(__dirname, 'emojis.json'), 'utf8'));
   } catch (e) {
-    console.error('[commandHelp] Failed to parse emojis.json, falling back to empty:', e);
+    logger.error('[commandHelp] Failed to parse emojis.json, falling back to empty:', e);
     return {};
   }
 }
@@ -108,7 +109,7 @@ function buildCommandHelpEmbed(cmd, guildId, prefix = '#') {
   const aliases = getAliasesForCommand(guildId, name, prefix);
 
   const embed = new EmbedBuilder()
-    .setColor(0x5865F2)
+    .setColor(0x5865f2)
     .setTitle(`${resolveEmoji('list', '📋')} Command: \`${name}\``)
     .setDescription(description)
     .addFields(

@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const logger = require('./logger');
 
 class EnvConfig {
@@ -41,16 +39,20 @@ class EnvConfig {
       if (rules.type === 'number' && isNaN(parseFloat(value))) {
         errors.push(`Invalid number type for ${key}: ${value}`);
       }
+
+      if (rules.minLength && value.length < rules.minLength) {
+        errors.push(`${key} must be at least ${rules.minLength} characters long`);
+      }
     }
 
     if (errors.length > 0) {
-      console.error('\n=== Environment Validation Errors ===');
-      errors.forEach((err, i) => console.error(`${i + 1}. ${err}`));
-      console.error('\nPlease update your .env file and try again.\n');
+      logger.error('\n=== Environment Validation Errors ===');
+      errors.forEach((err, i) => logger.error(`${i + 1}. ${err}`));
+      logger.error('\nPlease update your .env file and try again.\n');
       process.exit(1);
     }
 
-    logger.info('Environment validation passed');
+    logger.debug('Environment validation passed');
   }
 
   load() {
@@ -61,7 +63,7 @@ class EnvConfig {
 
       if (rules.default && !process.env[key]) {
         process.env[key] = rules.default;
-        logger.info(`Using default value for ${key}: ${rules.default}`);
+        logger.debug(`Using default value for ${key}: ${rules.default}`);
       }
     });
   }

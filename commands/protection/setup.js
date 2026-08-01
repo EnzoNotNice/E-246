@@ -2,66 +2,89 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const locale = require('../../utils/locale');
 const { success } = require('../../utils/embeds');
 const db = require('../../database/db');
+const logger = require('../../utils/logger');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setup')
     .setDescription('خيارات حماية السيرفر')
-    .addSubcommand(s => s.setName('enable').setDescription('تفعيل نظام الحماية'))
-    .addSubcommand(s => s.setName('disable').setDescription('تعطيل نظام الحماية'))
-    .addSubcommand(s => s.setName('show').setDescription('حالة نظام الحماية'))
-    .addSubcommand(s => s.setName('action').setDescription('إجراء تجاوز الحد')
-      .addStringOption(o => o.setName('action').setDescription('الإجراء').setRequired(true).addChoices(
-        { name: 'Ban', value: 'ban' },
-        { name: 'Kick', value: 'kick' },
-        { name: 'Remove Roles', value: 'removeroles' }
-      )))
+    .addSubcommand((s) => s.setName('enable').setDescription('تفعيل نظام الحماية'))
+    .addSubcommand((s) => s.setName('disable').setDescription('تعطيل نظام الحماية'))
+    .addSubcommand((s) => s.setName('show').setDescription('حالة نظام الحماية'))
+    .addSubcommand((s) =>
+      s
+        .setName('action')
+        .setDescription('إجراء تجاوز الحد')
+        .addStringOption((o) =>
+          o
+            .setName('action')
+            .setDescription('الإجراء')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Ban', value: 'ban' },
+              { name: 'Kick', value: 'kick' },
+              { name: 'Remove Roles', value: 'removeroles' }
+            )
+        )
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
-    try {  
+    try {
       const sub = interaction.options.getSubcommand();
       const prot = db.getProtection(interaction.guildId);
-  
+
       if (sub === 'enable') {
-        db.db.prepare('UPDATE protection_settings SET enabled = 1 WHERE guildId = ?').run(interaction.guildId);
+        db.updateProtection(interaction.guildId, { enabled: 1 });
         return interaction.reply({ embeds: [success(locale.get('protection.enabled'))] });
       }
-  
+
       if (sub === 'disable') {
-        db.db.prepare('UPDATE protection_settings SET enabled = 0 WHERE guildId = ?').run(interaction.guildId);
+        db.updateProtection(interaction.guildId, { enabled: 0 });
         return interaction.reply({ embeds: [success(locale.get('protection.disabled'))] });
       }
-  
+
       if (sub === 'action') {
         const action = interaction.options.getString('action');
-        db.db.prepare('UPDATE protection_settings SET action = ? WHERE guildId = ?').run(action, interaction.guildId);
+        db.updateProtection(interaction.guildId, { action });
         return interaction.reply({ embeds: [success(locale.get('protection.actionSet', { action }))] });
       }
-  
+
       if (sub === 'show') {
         const wl = db.getWhitelist(interaction.guildId);
         const embed = new EmbedBuilder()
-          .setColor(0xFF6B6B)
+          .setColor(0xff6b6b)
           .setTitle('{emoji:shield} نظام الحماية')
           .addFields(
-            { name: '{emoji:chartpie} الحالة', value: prot.enabled ? '{emoji:circlecheck} نشط' : '{emoji:circlex} معطل', inline: true },
-            { name: '{emoji:bolt} الإجراء', value: prot.action === 'ban' ? 'باند' : prot.action === 'kick' ? 'طرد' : 'سحب رتب', inline: true },
+            {
+              name: '{emoji:chartpie} الحالة',
+              value: prot.enabled ? '{emoji:circlecheck} نشط' : '{emoji:circlex} معطل',
+              inline: true
+            },
+            {
+              name: '{emoji:bolt} الإجراء',
+              value: prot.action === 'ban' ? 'باند' : prot.action === 'kick' ? 'طرد' : 'سحب رتب',
+              inline: true
+            },
             { name: '{emoji:shieldlock} حد الباند', value: String(prot.ban_limit), inline: true },
             { name: '{emoji:circlex} حد الطرد', value: String(prot.kick_limit), inline: true },
             { name: '{emoji:folder} حد القنوات', value: String(prot.channel_limit), inline: true },
             { name: '{emoji:user} حد الرتب', value: String(prot.role_limit), inline: true },
-            { name: '{emoji:heart} القائمة البيضاء', value: wl.length ? wl.map(w => `<@${w.targetId}>`).join(', ') : 'لا يوجد' }
+            {
+              name: '{emoji:heart} القائمة البيضاء',
+              value: wl.length ? wl.map((w) => `<@${w.targetId}>`).join(', ') : 'لا يوجد'
+            }
           )
           .setTimestamp();
         return interaction.reply({ embeds: [embed] });
       }
-    
     } catch (err) {
-      console.error('[Command Error - setup.js]:', err);
+      logger.error('[Command Error - setup.js]:', err);
       if (interaction && typeof interaction.reply === 'function') {
-        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+        await interaction
+          .reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] })
+          .catch(() => null);
       }
     }
-}
+  }
 };

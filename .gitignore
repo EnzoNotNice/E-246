@@ -1,4 +1,3 @@
-.env.*
 !.env.schema.json
 node_modules/
 database/*.db
@@ -9,3 +8,5 @@ npm-debug.log*
 .DS_Store
 enzo.txt
 scratch/
+package-lock.json
+.env

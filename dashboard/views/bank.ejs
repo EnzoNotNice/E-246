@@ -3,189 +3,198 @@
 guild = typeof guild !== 'undefined' ? guild : null;
 settings = typeof settings !== 'undefined' ? settings : { tradeCooldown: 10800000, investCooldown: 10800000 };
 %>
-<%- include('partials/sidebar', { activeTab: 'bank', guildId: guild ? guild.id : null }) %>
+<%- include('partials/sidebar', { activeTab: 'bank', guild }) %>
 
 <main class="app-content">
     <!-- Page Header -->
     <div class="content-header">
-        <h1><i class="fa-solid fa-building-columns"></i> إعدادات البنك</h1>
-        <p>تحكم في إعدادات نظام البنك</p>
+        <h1><i class="fa-solid fa-piggy-bank"></i> إعدادات البنك والعمليات المالية</h1>
+        <p>قم بضبط أوقات الانتظار (Cooldowns) للعمليات والأنشطة المالية والألعاب الخاصة بالبنك في السيرفر</p>
     </div>
+
+    <!-- Alert Messages -->
+    <% if (typeof success !== 'undefined' && success) { %>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> تم حفظ إعدادات البنك بنجاح</div>
+    <% } %>
 
     <!-- Bank Settings Form -->
     <div class="glass-panel reveal" style="max-width: 800px;">
         <form method="POST" action="/dashboard/<%= guild.id %>/bank" class="settings-form">
             
-            <!-- Trade Cooldown -->
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fa-solid fa-clock"></i>
-                    وقت انتظار التداول (بالدقائق)
-                </label>
-                <input 
-                    type="number" 
-                    name="tradeCooldown" 
-                    value="<%= Math.floor(settings.tradeCooldown / 60000) %>" 
-                    class="form-input"
-                    min="1"
-                    max="1440"
-                    required
-                >
-                <small class="form-hint">الوقت الذي يجب انتظاره بين عمليات التداول (الافتراضي: 180 دقيقة)</small>
+            <div class="grid-form-2">
+                <!-- Trade Cooldown -->
+                <div class="form-group">
+                    <label>
+                        <i class="fa-solid fa-clock text-secondary"></i>
+                        وقت انتظار التداول (بالدقائق)
+                    </label>
+                    <input 
+                        type="number" 
+                        name="tradeCooldown" 
+                        value="<%= Math.floor((settings.tradeCooldown || 10800000) / 60000) %>" 
+                        class="glass-input"
+                        min="1"
+                        max="1440"
+                        required
+                    >
+                    <small>الوقت الذي يجب انتظاره بين عمليات التداول (الافتراضي: 180 دقيقة)</small>
+                </div>
+
+                <!-- Investment Cooldown -->
+                <div class="form-group">
+                    <label>
+                        <i class="fa-solid fa-chart-line text-secondary"></i>
+                        وقت انتظار الاستثمار (بالدقائق)
+                    </label>
+                    <input 
+                        type="number" 
+                        name="investCooldown" 
+                        value="<%= Math.floor((settings.investCooldown || 10800000) / 60000) %>" 
+                        class="glass-input"
+                        min="1"
+                        max="1440"
+                        required
+                    >
+                    <small>الوقت الذي يجب انتظاره بين عمليات الاستثمار (الافتراضي: 180 دقيقة)</small>
+                </div>
             </div>
 
-            <!-- Investment Cooldown -->
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fa-solid fa-chart-line"></i>
-                    وقت انتظار الاستثمار (بالدقائق)
-                </label>
-                <input 
-                    type="number" 
-                    name="investCooldown" 
-                    value="<%= Math.floor(settings.investCooldown / 60000) %>" 
-                    class="form-input"
-                    min="1"
-                    max="1440"
-                    required
-                >
-                <small class="form-hint">الوقت الذي يجب انتظاره بين عمليات الاستثمار (الافتراضي: 180 دقيقة)</small>
+            <div class="grid-form-2 mt-2">
+                <!-- Daily Cooldown -->
+                <div class="form-group">
+                    <label>
+                        <i class="fa-solid fa-calendar-day text-secondary"></i>
+                        وقت انتظار الهدية اليومية (بالساعات)
+                    </label>
+                    <input 
+                        type="number" 
+                        name="dailyCooldown" 
+                        value="<%= Math.floor((settings.dailyCooldown || 172800000) / 3600000) %>" 
+                        class="glass-input"
+                        min="1"
+                        max="168"
+                        required
+                    >
+                    <small>الوقت الذي يجب انتظاره للحصول على الهدية اليومية (الافتراضي: 48 ساعة)</small>
+                </div>
+
+                <!-- Salary Cooldown -->
+                <div class="form-group">
+                    <label>
+                        <i class="fa-solid fa-money-bill text-secondary"></i>
+                        وقت انتظار الراتب (بالساعات)
+                    </label>
+                    <input 
+                        type="number" 
+                        name="salaryCooldown" 
+                        value="<%= Math.floor((settings.salaryCooldown || 86400000) / 3600000) %>" 
+                        class="glass-input"
+                        min="1"
+                        max="168"
+                        required
+                    >
+                    <small>الوقت الذي يجب انتظاره لاستلام الراتب (الافتراضي: 24 ساعة)</small>
+                </div>
             </div>
 
-            <!-- Daily Cooldown -->
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fa-solid fa-calendar-day"></i>
-                    وقت انتظار الهدية اليومية (بالساعات)
-                </label>
-                <input 
-                    type="number" 
-                    name="dailyCooldown" 
-                    value="<%= Math.floor(settings.dailyCooldown / 3600000) %>" 
-                    class="form-input"
-                    min="1"
-                    max="168"
-                    required
-                >
-                <small class="form-hint">الوقت الذي يجب انتظاره للحصول على الهدية اليومية (الافتراضي: 48 ساعة)</small>
-            </div>
+            <div class="grid-form-3 mt-2">
+                <!-- Gamble Cooldown -->
+                <div class="form-group">
+                    <label>
+                        <i class="fa-solid fa-dice text-secondary"></i>
+                        وقت انتظار المقامرة (دقائق)
+                    </label>
+                    <input 
+                        type="number" 
+                        name="gambleCooldown" 
+                        value="<%= Math.floor((settings.gambleCooldown || 14400000) / 60000) %>" 
+                        class="glass-input"
+                        min="1"
+                        max="1440"
+                        required
+                    >
+                    <small>الانتظار للمقامرة (الافتراضي: 240 دقيقة)</small>
+                </div>
 
-            <!-- Salary Cooldown -->
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fa-solid fa-money-bill"></i>
-                    وقت انتظار الراتب (بالساعات)
-                </label>
-                <input 
-                    type="number" 
-                    name="salaryCooldown" 
-                    value="<%= Math.floor(settings.salaryCooldown / 3600000) %>" 
-                    class="form-input"
-                    min="1"
-                    max="168"
-                    required
-                >
-                <small class="form-hint">الوقت الذي يجب انتظاره لاستلام الراتب (الافتراضي: 24 ساعة)</small>
-            </div>
+                <!-- Dice Cooldown -->
+                <div class="form-group">
+                    <label>
+                        <i class="fa-solid fa-dice-d20 text-secondary"></i>
+                        وقت انتظار النرد (دقائق)
+                    </label>
+                    <input 
+                        type="number" 
+                        name="diceCooldown" 
+                        value="<%= Math.floor((settings.diceCooldown || 14400000) / 60000) %>" 
+                        class="glass-input"
+                        min="1"
+                        max="1440"
+                        required
+                    >
+                    <small>الانتظار للعب النرد (الافتراضي: 240 دقيقة)</small>
+                </div>
 
-            <!-- Gamble Cooldown -->
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fa-solid fa-dice"></i>
-                    وقت انتظار المقامرة (بالدقائق)
-                </label>
-                <input 
-                    type="number" 
-                    name="gambleCooldown" 
-                    value="<%= Math.floor(settings.gambleCooldown / 60000) %>" 
-                    class="form-input"
-                    min="1"
-                    max="1440"
-                    required
-                >
-                <small class="form-hint">الوقت الذي يجب انتظاره للمقامرة (الافتراضي: 240 دقيقة)</small>
-            </div>
-
-            <!-- Dice Cooldown -->
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fa-solid fa-dice-d20"></i>
-                    وقت انتظار النرد (بالدقائق)
-                </label>
-                <input 
-                    type="number" 
-                    name="diceCooldown" 
-                    value="<%= Math.floor(settings.diceCooldown / 60000) %>" 
-                    class="form-input"
-                    min="1"
-                    max="1440"
-                    required
-                >
-                <small class="form-hint">الوقت الذي يجب انتظاره للعب النرد (الافتراضي: 240 دقيقة)</small>
-            </div>
-
-            <!-- Coinflip Cooldown -->
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fa-solid fa-coins"></i>
-                    وقت انتظار رمي العملة (بالدقائق)
-                </label>
-                <input 
-                    type="number" 
-                    name="coinflipCooldown" 
-                    value="<%= Math.floor(settings.coinflipCooldown / 60000) %>" 
-                    class="form-input"
-                    min="1"
-                    max="1440"
-                    required
-                >
-                <small class="form-hint">الوقت الذي يجب انتظاره لرمي العملة (الافتراضي: 120 دقيقة)</small>
+                <!-- Coinflip Cooldown -->
+                <div class="form-group">
+                    <label>
+                        <i class="fa-solid fa-coins text-secondary"></i>
+                        وقت رمي العملة (دقائق)
+                    </label>
+                    <input 
+                        type="number" 
+                        name="coinflipCooldown" 
+                        value="<%= Math.floor((settings.coinflipCooldown || 7200000) / 60000) %>" 
+                        class="glass-input"
+                        min="1"
+                        max="1440"
+                        required
+                    >
+                    <small>الانتظار لرمي العملة (الافتراضي: 120 دقيقة)</small>
+                </div>
             </div>
 
             <!-- Submit Button -->
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-save"></i> حفظ الإعدادات
-                </button>
-            </div>
+            <button type="submit" class="btn btn-primary mt-3">
+                <i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات البنك
+            </button>
         </form>
     </div>
 
-    <!-- Bank Stats -->
-    <div class="section-divider reveal">
-        <span>إحصائيات البنك</span>
-    </div>
+    <!-- Bank Stats Divider -->
+    <hr class="reveal">
 
+    <!-- Bank Stats Cards -->
+    <div class="section-title mb-2 reveal"><i class="fa-solid fa-chart-pie"></i> إحصائيات البنك في السيرفر</div>
     <div class="bento-grid cols-3">
         <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
-                <i class="fa-solid fa-wallet"></i>
+                <i class="fa-solid fa-wallet text-secondary"></i>
             </div>
             <div class="metric-value" id="totalBalance">—</div>
-            <div class="metric-label">إجمالي الأرصدة</div>
+            <div class="metric-label">إجمالي الأرصدة المتداولة</div>
         </div>
 
         <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
-                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                <i class="fa-solid fa-arrow-right-arrow-left text-secondary"></i>
             </div>
             <div class="metric-value" id="totalTrades">—</div>
-            <div class="metric-label">عمليات التداول</div>
+            <div class="metric-label">إجمالي عمليات التداول</div>
         </div>
 
         <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
-                <i class="fa-solid fa-piggy-bank"></i>
+                <i class="fa-solid fa-hand-holding-dollar text-secondary"></i>
             </div>
             <div class="metric-value" id="totalInvestments">—</div>
-            <div class="metric-label">الاستثمارات</div>
+            <div class="metric-label">إجمالي الاستثمارات النشطة</div>
         </div>
     </div>
 
 </main>
 
 <script>
-// Load bank stats
+// Load bank stats via api
 fetch(`/api/bank/stats/<%= guild.id %>`)
     .then(res => res.json())
     .then(data => {
@@ -201,3 +210,5 @@ fetch(`/api/bank/stats/<%= guild.id %>`)
     })
     .catch(err => console.error('Failed to load bank stats:', err));
 </script>
+
+<%- include('partials/footer') %>

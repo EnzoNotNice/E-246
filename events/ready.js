@@ -2,27 +2,27 @@ const { Events } = require('discord.js');
 const emojiSetup = require('../utils/emojiSetup');
 const db = require('../database/db');
 const { checkLevelUp } = require('../utils/levels');
+const { logger } = require('../utils/logger');
 
 module.exports = {
   name: Events.ClientReady,
   once: true,
   async execute(client) {
     try {
-      console.log(`Logged in as ${client?.user?.tag}`);
-      console.log(`Serving ${client?.guilds?.cache?.size || 0} server(s)`);
-      console.log(`Watching ${client?.users?.cache?.size || 0} user(s)`);
+      logger.info(`Logged in as ${client?.user?.tag}`);
+      logger.info(`Serving ${client?.guilds?.cache?.size || 0} server(s)`);
+      logger.info(`Watching ${client?.users?.cache?.size || 0} user(s)`);
 
       if (client?.manager) {
         try {
           client.manager.init({ id: client.user.id, username: client.user.username });
           client.on('raw', (d) => client.manager.sendRawData(d));
         } catch (e) {
-          console.error('[Lavalink Init Error]', e);
+          logger.error('[Lavalink Init Error]', e);
         }
       }
 
-      
-      await emojiSetup(client).catch((e) => console.error('[Emoji Setup Error]', e));
+      await emojiSetup(client).catch((e) => logger.error('[Emoji Setup Error]', e));
 
       const { getBotSettings } = require('../database/db');
       const botSettings = getBotSettings();
@@ -30,20 +30,22 @@ module.exports = {
       const actType = ActivityType[botSettings.activity_type] || ActivityType.Playing;
 
       try {
-          client.user.setPresence({
-              activities: [{ name: botSettings.activity_name, type: actType }],
-              status: botSettings.status,
-          });
+        client.user.setPresence({
+          activities: [{ name: botSettings.activity_name, type: actType }],
+          status: botSettings.status
+        });
       } catch (err) {
-          console.error('[Ready] Failed to set bot presence:', err.message || err);
+        logger.error('[Ready] Failed to set bot presence:', err.message || err);
       }
 
       if (client.guilds?.cache) {
         for (const [, guild] of client.guilds.cache) {
           try {
             const invites = await guild.invites.fetch();
-            client.inviteCache.set(guild.id, new Map(invites.map(i => [i.code, i.uses])));
-          } catch (e) {
+            client.inviteCache.set(guild.id, new Map(invites.map((i) => [i.code, i.uses])));
+          } catch (error) {
+            // Ignore errors in fetching invites - not critical for bot operation
+            logger.debug('Could not fetch invites for guild:', error.message);
           }
         }
       }
@@ -52,7 +54,13 @@ module.exports = {
         for (const [, guild] of client.guilds.cache) {
           for (const [, voiceState] of guild.voiceStates.cache) {
             if (!voiceState.member || voiceState.member.user?.bot) continue;
-            const isActive = voiceState.channelId && voiceState.channelId !== guild.afkChannelId && !voiceState.selfMute && !voiceState.serverMute && !voiceState.selfDeaf && !voiceState.serverDeaf;
+            const isActive =
+              voiceState.channelId &&
+              voiceState.channelId !== guild.afkChannelId &&
+              !voiceState.selfMute &&
+              !voiceState.serverMute &&
+              !voiceState.selfDeaf &&
+              !voiceState.serverDeaf;
             if (isActive) {
               const sessionKey = `${guild.id}:${voiceState.member.id}`;
               client.voiceSessions.set(sessionKey, Date.now());
@@ -61,7 +69,7 @@ module.exports = {
           }
         }
       }
-      console.log(`Initialized ${voiceCount} voice session(s)`);
+      logger.info(`Initialized ${voiceCount} voice session(s)`);
 
       const { getAllActiveGiveaways } = require('../database/db');
       const { endGiveawayTimer } = require('../utils/giveaway');
@@ -75,12 +83,12 @@ module.exports = {
             try {
               await endGiveawayTimer(client, g);
             } catch (err) {
-              console.error('[Giveaway Timer Error]:', err);
+              logger.error('[Giveaway Timer Error]:', err);
             }
           }, remaining);
         }
       }
-      console.log(`Resumed ${giveaways.length} active giveaway(s)`);
+      logger.info(`Resumed ${giveaways.length} active giveaway(s)`);
 
       setInterval(async () => {
         try {
@@ -92,7 +100,14 @@ module.exports = {
             const member = guild ? guild.members.cache.get(userId) : null;
             const voiceState = member ? member.voice : null;
 
-            const isActive = voiceState && voiceState.channelId && voiceState.channelId !== guild.afkChannelId && !voiceState.selfMute && !voiceState.serverMute && !voiceState.selfDeaf && !voiceState.serverDeaf;
+            const isActive =
+              voiceState &&
+              voiceState.channelId &&
+              voiceState.channelId !== guild.afkChannelId &&
+              !voiceState.selfMute &&
+              !voiceState.serverMute &&
+              !voiceState.selfDeaf &&
+              !voiceState.serverDeaf;
 
             if (!isActive) {
               client.voiceSessions.delete(sessionKey);
@@ -108,11 +123,18 @@ module.exports = {
             }
           }
         } catch (err) {
-          console.error('Error in ready voice XP interval:', err);
+          logger.error('Error in ready voice XP interval:', err);
         }
       }, 60000);
+
+      try {
+        const { initBackupScheduler } = require('../utils/backupScheduler');
+        initBackupScheduler();
+      } catch (err) {
+        logger.error('[Ready] Failed to initialize database backup scheduler:', err);
+      }
     } catch (err) {
-      console.error('Error in ready event execute:', err);
+      logger.error('Error in ready event execute:', err);
     }
   }
 };

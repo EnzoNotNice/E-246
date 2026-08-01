@@ -1,6 +1,14 @@
 const { EmbedBuilder, AttachmentBuilder, AuditLogEvent } = require('discord.js');
-const Canvas = require('canvas');
+const Canvas = require('@napi-rs/canvas');
 const path = require('path');
+Canvas.registerFont = (fontPath, options) => {
+  try {
+    const { GlobalFonts } = require('@napi-rs/canvas');
+    GlobalFonts.registerFromPath(fontPath, options.family);
+  } catch (e) {
+    logger.error('Failed to register font with napi-rs:', e);
+  }
+};
 Canvas.registerFont(path.join(__dirname, '..', 'assets', 'font.ttf'), { family: 'CustomFont' });
 const db = require('../database/db');
 const { sendLog } = require('../utils/logger');
@@ -20,14 +28,14 @@ module.exports = {
       if (protection && protection.antiraid && !member.user?.bot) {
         const now = Date.now();
         let joins = raidJoins.get(guildId) || [];
-        joins = joins.filter(t => now - t < 10000);
+        joins = joins.filter((t) => now - t < 10000);
         joins.push(now);
         raidJoins.set(guildId, joins);
         if (joins.length >= 8) {
           await member.kick('Anti-Raid').catch(() => null);
           const embed = new EmbedBuilder()
             .setTitle('{emoji:shieldlock} حماية الرايد')
-            .setColor(0xFF0000)
+            .setColor(0xff0000)
             .setDescription(`تم طرد <@${member.id}> بسبب انضمام جماعي مريب`)
             .setTimestamp();
           await sendLog(client, guildId, embed, 'protection');
@@ -40,7 +48,11 @@ module.exports = {
         const entry = auditLogs ? auditLogs.entries.first() : null;
         if (entry && entry.targetId === member.id && entry.executor) {
           const executor = entry.executor;
-          if (executor.id !== guild.ownerId && !db.isWhitelisted(guildId, executor.id) && executor.id !== client.user?.id) {
+          if (
+            executor.id !== guild.ownerId &&
+            !db.isWhitelisted(guildId, executor.id) &&
+            executor.id !== client.user?.id
+          ) {
             await member.kick('إضافة بوت غير مصرح به').catch(() => null);
             const executorMember = await guild.members.fetch(executor.id).catch(() => null);
             if (executorMember) {
@@ -48,7 +60,7 @@ module.exports = {
             }
             const embed = new EmbedBuilder()
               .setTitle('{emoji:shield} إضافة بوت غير مصرح به')
-              .setColor(0xFF0000)
+              .setColor(0xff0000)
               .addFields(
                 { name: 'البوت المضاف', value: `<@${member.id}>`, inline: true },
                 { name: 'الفاعل (المشرف)', value: `<@${executor.id}>`, inline: true },
@@ -63,7 +75,6 @@ module.exports = {
 
       db.incrementDailyJoins(guildId);
 
-      
       try {
         const cachedInvites = client.inviteCache.get(guildId) || new Map();
         const newInvites = await guild.invites.fetch();
@@ -77,20 +88,17 @@ module.exports = {
           }
         }
 
-        
-        client.inviteCache.set(guildId, new Map(newInvites.map(i => [i.code, i.uses])));
+        client.inviteCache.set(guildId, new Map(newInvites.map((i) => [i.code, i.uses])));
 
         if (usedInvite && usedInvite.inviter) {
           const inviterId = usedInvite.inviter.id;
           db.updateInvites(inviterId, guildId, 'total', 1);
 
-          
           const accountAge = Date.now() - (member.user?.createdTimestamp || Date.now());
           if (accountAge < 7 * 24 * 60 * 60 * 1000) {
             db.updateInvites(inviterId, guildId, 'fake', 1);
           }
 
-          
           const inviterData = db.getInvites(inviterId, guildId);
           const real = inviterData.total - inviterData.fake - inviterData.left;
           const ranks = db.getInviteRanks(guildId);
@@ -104,26 +112,26 @@ module.exports = {
             }
           }
 
-          
           const inviteLogs = db.getInviteLogs(guildId);
           if (inviteLogs?.channelId) {
             const logCh = await client.channels.fetch(inviteLogs.channelId).catch(() => null);
             if (logCh) {
               const invEmbed = new EmbedBuilder()
-                .setColor(0x57F287)
+                .setColor(0x57f287)
                 .setTitle('{emoji:mail} انضمام عضو')
                 .setThumbnail(member.user?.displayAvatarURL())
-                .setDescription(`${member} انضم\n**تمت دعوته بواسطة** <@${inviterId}> (${real} دعوات حقيقية)\n**كود الدعوة** \`${usedInvite.code}\``)
+                .setDescription(
+                  `${member} انضم\n**تمت دعوته بواسطة** <@${inviterId}> (${real} دعوات حقيقية)\n**كود الدعوة** \`${usedInvite.code}\``
+                )
                 .setTimestamp();
               logCh.send({ embeds: [invEmbed] }).catch(() => null);
             }
           }
         }
       } catch (e) {
-        
+        // Ignore errors in invite tracking
       }
 
-      
       const greet = db.getGreetSettings(guildId);
       if (greet.enabled && greet.channel) {
         const greetChannel = await client.channels.fetch(greet.channel).catch(() => null);
@@ -131,105 +139,71 @@ module.exports = {
           const message = (greet.message || 'Welcome {user} to **{server}**! Member count: **{count}**')
             .replace(/{user}/g, member.toString())
             .replace(/{server}/g, guild.name)
-            .replace(/{count}/g, guild.memberCount.toString());
+            .replace(/{count}|{memberCount}|{members}|{total}/gi, guild.memberCount.toString());
 
           let imagePathOrUrl = greet.image_url;
           if (imagePathOrUrl && imagePathOrUrl.startsWith('/uploads/')) {
-              const cleanPath = imagePathOrUrl.split('?')[0];
-              const fileName = cleanPath.substring('/uploads/'.length);
-              imagePathOrUrl = path.join(__dirname, '..', 'database', 'uploads', fileName);
+            const cleanPath = imagePathOrUrl.split('?')[0];
+            const fileName = cleanPath.substring('/uploads/'.length);
+            imagePathOrUrl = path.join(__dirname, '..', 'database', 'uploads', fileName);
           }
 
           let attachment;
           if (greet.image_url) {
-              try {
-                  const bg = await Canvas.loadImage(imagePathOrUrl);
-                  const scaleMode = greet.image_scale_mode || 'fit';
-                  let canvasWidth = bg.width;
-                  let canvasHeight = bg.height;
+            try {
+              const bg = await Canvas.loadImage(imagePathOrUrl);
+              const canvasWidth = bg.width;
+              const canvasHeight = bg.height;
 
-                  // Intelligent scaling based on scale mode
-                  if (scaleMode === 'cover') {
-                      const maxDimension = 1920;
-                      const ratio = Math.min(maxDimension / canvasWidth, maxDimension / canvasHeight);
-                      canvasWidth = Math.floor(canvasWidth * ratio);
-                      canvasHeight = Math.floor(canvasHeight * ratio);
-                  } else if (scaleMode === 'stretch') {
-                      canvasWidth = 1920;
-                      canvasHeight = 1080;
-                  }
+              const canvas = Canvas.createCanvas(canvasWidth, canvasHeight);
+              const ctx = canvas.getContext('2d');
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(bg, 0, 0, canvasWidth, canvasHeight);
 
-                  const canvas = Canvas.createCanvas(canvasWidth, canvasHeight);
-                  const ctx = canvas.getContext('2d');
+              const ax = greet.avatar_x !== null && greet.avatar_x !== undefined ? greet.avatar_x : 100;
+              const ay = greet.avatar_y !== null && greet.avatar_y !== undefined ? greet.avatar_y : 100;
+              const avatarSize =
+                greet.avatar_size !== null && greet.avatar_size !== undefined ? greet.avatar_size : 150;
 
-                  // Draw background with proper scaling
-                  if (scaleMode === 'cover') {
-                      const ratio = Math.max(canvasWidth / bg.width, canvasHeight / bg.height);
-                      const drawWidth = bg.width * ratio;
-                      const drawHeight = bg.height * ratio;
-                      const drawX = (canvasWidth - drawWidth) / 2;
-                      const drawY = (canvasHeight - drawHeight) / 2;
-                      ctx.drawImage(bg, drawX, drawY, drawWidth, drawHeight);
-                  } else if (scaleMode === 'stretch') {
-                      ctx.drawImage(bg, 0, 0, canvasWidth, canvasHeight);
-                  } else {
-                      // fit mode - maintain aspect ratio
-                      const ratio = Math.min(canvasWidth / bg.width, canvasHeight / bg.height);
-                      const drawWidth = bg.width * ratio;
-                      const drawHeight = bg.height * ratio;
-                      const drawX = (canvasWidth - drawWidth) / 2;
-                      const drawY = (canvasHeight - drawHeight) / 2;
-                      ctx.drawImage(bg, drawX, drawY, drawWidth, drawHeight);
-                  }
+              const avatar = await Canvas.loadImage(member.user.displayAvatarURL({ extension: 'png', size: 1024 }));
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2, true);
+              ctx.closePath();
+              ctx.clip();
+              ctx.drawImage(avatar, ax, ay, avatarSize, avatarSize);
+              ctx.restore();
 
-                  // Convert mm to pixels (96 DPI = 37.795 pixels per mm)
-                  const mmToPx = 37.795;
-                  
-                  // Avatar positioning with mm support
-                  const avatarSize = (greet.avatar_size_mm || 0) * mmToPx || (greet.avatar_size || 150);
-                  const ax = (greet.avatar_x_mm || 0) * mmToPx || (greet.avatar_x || 100);
-                  const ay = (greet.avatar_y_mm || 0) * mmToPx || (greet.avatar_y || 100);
+              const ux = greet.username_x !== null && greet.username_x !== undefined ? greet.username_x : 100;
+              const uy = greet.username_y !== null && greet.username_y !== undefined ? greet.username_y : 300;
+              const uSize =
+                greet.username_size !== null && greet.username_size !== undefined ? greet.username_size : 40;
+              const uColor = greet.username_color || '#ffffff';
 
-                  const avatar = await Canvas.loadImage(member.user.displayAvatarURL({ extension: 'png', size: 1024 }));
-                  ctx.save();
-                  ctx.beginPath();
-                  ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2, true);
-                  ctx.closePath();
-                  ctx.clip();
-                  ctx.drawImage(avatar, ax, ay, avatarSize, avatarSize);
-                  ctx.restore();
+              ctx.font = `${Math.round(uSize)}px CustomFont`;
+              ctx.fillStyle = uColor;
+              ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+              ctx.shadowBlur = 4;
+              ctx.shadowOffsetX = 2;
+              ctx.shadowOffsetY = 2;
 
-                  // Username positioning with mm support
-                  const ux = (greet.username_x_mm || 0) * mmToPx || (greet.username_x || 100);
-                  const uy = (greet.username_y_mm || 0) * mmToPx || (greet.username_y || 300);
-                  const uSize = (greet.username_size_mm || 0) * mmToPx || (greet.username_size || 40);
-                  const uColor = greet.username_color || '#ffffff';
+              ctx.fillText(member.user?.username || '', ux, uy);
 
-                  ctx.font = `${uSize}px CustomFont`;
-                  ctx.fillStyle = uColor;
-                  ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-                  ctx.shadowBlur = 4;
-                  ctx.shadowOffsetX = 2;
-                  ctx.shadowOffsetY = 2;
-                  
-                  ctx.fillText(member.user?.username || '', ux, uy);
-
-                  attachment = new AttachmentBuilder(canvas.toBuffer(), { name: 'welcome.png' });
-              } catch (err) {
-                  console.error('Welcome Image Error:', err);
-              }
+              attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: 'welcome.png' });
+            } catch (err) {
+              logger.warn(
+                '[Welcome] Custom image rendering failed, sending text message instead:',
+                err.message || err
+              );
+            }
           }
 
           let sent;
           if (attachment) {
-              sent = await greetChannel.send({ content: message, files: [attachment] }).catch(() => null);
+            sent = await greetChannel.send({ content: message, files: [attachment] }).catch(() => null);
           } else {
-              const greetEmbed = new EmbedBuilder()
-                .setColor(0x57F287)
-                .setDescription(message)
-                .setThumbnail(member.user?.displayAvatarURL({ size: 256 }))
-                .setTimestamp();
-              sent = await greetChannel.send({ embeds: [greetEmbed] }).catch(() => null);
+            sent = await greetChannel.send({ content: message }).catch(() => null);
           }
 
           if (sent && greet.delete_after > 0) {
@@ -237,26 +211,36 @@ module.exports = {
           }
         }
 
-        
         if (greet.dm_message && member.user) {
-          const dm = greet.dm_message
-            .replace('{user}', member.user.username || '')
-            .replace('{server}', guild.name);
+          const dm = greet.dm_message.replace('{user}', member.user.username || '').replace('{server}', guild.name);
           member.user.send({ content: dm }).catch(() => null);
+        }
+
+        const autoRoleId = greet.auto_role || greet.role;
+        if (autoRoleId) {
+          const roleObj = guild.roles.cache.get(autoRoleId);
+          if (roleObj) {
+            await member.roles.add(roleObj).catch((err) => logger.error('[Welcome] Failed to give auto-role:', err));
+          }
         }
       }
 
-      
+      const createdUnix = Math.floor((member.user?.createdTimestamp || Date.now()) / 1000);
       const logEmbed = new EmbedBuilder()
-        .setColor(0x57F287)
-        .setTitle('{emoji:mail} انضمام عضو')
-        .setDescription(`${member} انضم للسيرفر\n**تاريخ إنشاء الحساب** <t:${Math.floor((member.user?.createdTimestamp || Date.now()) / 1000)}:F>\n**عدد الأعضاء** ${guild.memberCount}`)
-        .setThumbnail(member.user?.displayAvatarURL())
+        .setColor(0x57f287)
+        .setTitle('{emoji:mail} انضمام عضو جديد')
+        .setThumbnail(member.user?.displayAvatarURL({ size: 256 }))
+        .addFields(
+          { name: 'العضو', value: `${member} (${member.user?.tag || 'مجهول'})`, inline: true },
+          { name: 'معرف العضو', value: `\`${member.id}\``, inline: true },
+          { name: 'تاريخ إنشاء الحساب', value: `<t:${createdUnix}:R> (<t:${createdUnix}:F>)`, inline: false },
+          { name: 'إجمالي أعضاء السيرفر', value: `\`${guild.memberCount}\``, inline: true }
+        )
         .setTimestamp();
 
       await sendLog(client, guildId, logEmbed, 'member_join');
     } catch (err) {
-      console.error('Error in guildMemberAdd event:', err);
+      logger.error('Error in guildMemberAdd event:', err);
     }
   }
 };

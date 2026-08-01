@@ -1,6 +1,5 @@
 {
     "__color__": "blue",
-    "ProBot": "<a:b_ProBot:1527430581271658706>",
     "adjustments": "<:b_adjustments:1527430583721136158>",
     "alerttriangle": "<:b_alerttriangle:1527430586887704587>",
     "bell": "<:b_bell:1527430590612373595>",
@@ -82,6 +81,7 @@
     "playerpause": "<:b_playerpause:1527430847676944437>",
     "playerplay": "<:b_playerplay:1527430850247921840>",
     "playerstop": "<:b_playerstop:1527430852739465318>",
+    "ProBot": "<a:b_ProBot:1527430581271658706>",
     "settings": "<:b_settings:1527430854786154539>",
     "shield": "<:b_shield:1527430857118453973>",
     "shieldcheck": "<:b_shieldcheck:1527430859290972281>",

@@ -110,46 +110,59 @@ textChannels = textChannels && (Array.isArray(textChannels) || typeof textChanne
                     font-family: 'CustomFont';
                     src: url('/fonts/font.ttf') format('truetype');
                 }
+                .canvas-workspace {
+                    overflow: auto;
+                    width: 100%;
+                    max-height: 600px;
+                    border: 1px solid var(--border);
+                    border-radius: var(--r-md);
+                    background: #020202;
+                    padding: 16px;
+                }
+                .preview-container {
+                    width: 800px;
+                    max-width: none !important;
+                    height: 400px;
+                }
             </style>
             
             <div class="canvas-workspace">
                 <div id="preview-container" class="preview-container greet-canvas-container" style="border: 1px solid var(--border); border-radius: var(--r-md); background: #080808;">
-                    <div id="preview-avatar" class="preview-avatar" style="border: 2px solid #fff;">
-                        <i class="fa-solid fa-user" style="font-size: 3rem; color: rgba(255,255,255,0.4);"></i>
+                    <div id="preview-avatar" class="preview-avatar" style="border: none; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.5); background-image: url('https://cdn.discordapp.com/embed/avatars/0.png'); background-size: cover; background-position: center;">
                     </div>
-                    <div id="preview-username" class="preview-username" style="font-family: 'CustomFont', sans-serif;">
+                    <div id="preview-username" class="preview-username" style="font-family: 'CustomFont', sans-serif; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);">
                         Username
                     </div>
                 </div>
             </div>
-
+ 
             <div class="form-group mt-3">
                 <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ كافة التغييرات</button>
             </div>
         </div>
-
+ 
     </form>
 </main>
-
+ 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const bgInput = document.getElementById('image_url');
         const container = document.getElementById('preview-container');
-
+ 
         const avatarEl = document.getElementById('preview-avatar');
         const axInput = document.getElementById('avatar_x');
         const ayInput = document.getElementById('avatar_y');
         const asizeInput = document.getElementById('avatar_size');
-
+ 
         const usernameEl = document.getElementById('preview-username');
         const uxInput = document.getElementById('username_x');
         const uyInput = document.getElementById('username_y');
         const ucolorInput = document.getElementById('username_color');
         const usizeInput = document.getElementById('username_size');
-
+ 
         let bgNativeWidth = 800;
         let bgNativeHeight = 400;
-
+ 
         function updateBackground() {
             const url = bgInput.value.trim();
             if (url) {
@@ -158,47 +171,46 @@ textChannels = textChannels && (Array.isArray(textChannels) || typeof textChanne
                 img.onload = function() {
                     bgNativeWidth = this.width;
                     bgNativeHeight = this.height;
-
-                    const containerWidth = container.clientWidth;
-                    const aspect = this.height / this.width;
-                    container.style.height = (containerWidth * aspect) + 'px';
-
+ 
+                    container.style.width = this.width + 'px';
+                    container.style.height = this.height + 'px';
+ 
                     updatePositions();
                 };
                 img.src = url;
             } else {
                 container.style.backgroundImage = 'none';
+                container.style.width = '800px';
                 container.style.height = '400px';
-                bgNativeWidth = container.clientWidth || 800;
+                bgNativeWidth = 800;
                 bgNativeHeight = 400;
                 updatePositions();
             }
         }
-
+ 
         function getScale() {
-            const cw = container.clientWidth;
-            return cw / bgNativeWidth;
+            return 1;
         }
-
+ 
         function updatePositions() {
             const scale = getScale();
-
+ 
             const ax = parseInt(axInput.value) || 0;
             const ay = parseInt(ayInput.value) || 0;
             const asize = parseInt(asizeInput.value) || 150;
-
+ 
             avatarEl.style.left = (ax * scale) + 'px';
             avatarEl.style.top = (ay * scale) + 'px';
             avatarEl.style.width = (asize * scale) + 'px';
             avatarEl.style.height = (asize * scale) + 'px';
-
+ 
             const icon = avatarEl.querySelector('i');
             if (icon) icon.style.fontSize = Math.max(10, (asize * scale * 0.4)) + 'px';
-
+ 
             const ux = parseInt(uxInput.value) || 0;
             const uy = parseInt(uyInput.value) || 0;
             const usize = parseInt(usizeInput.value) || 40;
-
+ 
             usernameEl.style.left = (ux * scale) + 'px';
             usernameEl.style.top = (uy * scale - (usize * scale)) + 'px';
             usernameEl.style.color = ucolorInput.value || '#ffffff';

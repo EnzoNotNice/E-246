@@ -1,7 +1,3 @@
-
-
-
-
 function getCalendarMonthsDifference(startDate, endDate) {
   let months = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth());
   if (endDate.getDate() < startDate.getDate()) {
@@ -20,25 +16,20 @@ function getMilestoneDate(startDate, monthsOffset) {
   return target;
 }
 
-
+const { logger } = require('./logger');
 
 const CHROME_VERSION = '149.0.0.0';
-const USER_AGENT =
-  `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_VERSION} Safari/537.36`;
-
+const USER_AGENT = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_VERSION} Safari/537.36`;
 
 let _cachedBuildNumber = 554905;
 let buildNumberPromise = null;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-
-
-
 async function fetchDiscordBuildNumber() {
   try {
     const pageRes = await fetch('https://discord.com/login', {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' }
     });
     if (!pageRes.ok) throw new Error(`Login page returned ${pageRes.status}`);
     const html = await pageRes.text();
@@ -59,14 +50,17 @@ async function fetchDiscordBuildNumber() {
 
         if (match) {
           const num = parseInt(match[1], 10);
-          console.log(`[SelfbotHelper] Discord build number: ${num}`);
+          logger.info(`[SelfbotHelper] Discord build number: ${num}`);
           return num;
         }
-      } catch (_) {  }
+      } catch (error) {
+        // Failed to fetch script - continue to next
+        logger.debug('Could not fetch Discord JS script:', error.message);
+      }
     }
-    console.warn('[SelfbotHelper] Could not find build number — using fallback.');
+    logger.warn('[SelfbotHelper] Could not find build number — using fallback.');
   } catch (err) {
-    console.warn('[SelfbotHelper] Build number fetch failed:', err.message);
+    logger.warn('[SelfbotHelper] Build number fetch failed:', err.message);
   }
   return _cachedBuildNumber;
 }
@@ -80,10 +74,7 @@ function getBuildNumber() {
   return buildNumberPromise;
 }
 
-
 getBuildNumber();
-
-
 
 function buildSuperProperties() {
   return Buffer.from(
@@ -101,7 +92,7 @@ function buildSuperProperties() {
       referring_domain_current: '',
       release_channel: 'stable',
       client_build_number: _cachedBuildNumber,
-      client_event_source: null,
+      client_event_source: null
     })
   ).toString('base64');
 }
@@ -125,7 +116,7 @@ function getHeaders(token, fingerprint = null) {
     'Sec-Ch-Ua-Platform': '"Windows"',
     'Sec-Fetch-Dest': 'empty',
     'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Site': 'same-origin',
+    'Sec-Fetch-Site': 'same-origin'
   };
   if (fingerprint) headers['X-Fingerprint'] = fingerprint;
   return headers;
@@ -142,8 +133,8 @@ async function getFingerprint() {
         Referer: 'https://discord.com/',
         'Sec-Fetch-Dest': 'empty',
         'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin',
-      },
+        'Sec-Fetch-Site': 'same-origin'
+      }
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -152,9 +143,6 @@ async function getFingerprint() {
     return null;
   }
 }
-
-
-
 
 async function solveCaptcha(sitekey, rqdata, rqtoken) {
   const apiKey = process.env.CAPTCHA_API_KEY;
@@ -171,12 +159,12 @@ async function solveCaptcha(sitekey, rqdata, rqtoken) {
   if (!apiKey || isDefaultKey) {
     throw new Error(
       'CAPTCHA triggered! To run 100% free without keys, simply wait 15–30 minutes for your Discord rate-limit to reset and try again (avoid changing profiles too fast).\n' +
-      'To solve automatically, sign up at https://nopecha.com (free 100 solves/day) and add CAPTCHA_API_KEY to your .env file.'
+        'To solve automatically, sign up at https://nopecha.com (free 100 solves/day) and add CAPTCHA_API_KEY to your .env file.'
     );
   }
 
   const isNopecha = baseUrl.includes('nopecha.com');
-  console.log(`[SelfbotHelper] Submitting captcha to ${baseUrl} (Nopecha solver: ${isNopecha})...`);
+  logger.info(`[SelfbotHelper] Submitting captcha to ${baseUrl} (Nopecha solver: ${isNopecha})...`);
 
   if (isNopecha) {
     const submitRes = await fetch(`${baseUrl}/token`, {
@@ -188,9 +176,9 @@ async function solveCaptcha(sitekey, rqdata, rqtoken) {
         sitekey,
         url: 'https://discord.com',
         data: {
-          rqdata,
-        },
-      }),
+          rqdata
+        }
+      })
     });
 
     if (!submitRes.ok) throw new Error(`NopeCHA submit HTTP error: ${submitRes.status}`);
@@ -201,9 +189,8 @@ async function solveCaptcha(sitekey, rqdata, rqtoken) {
     }
 
     const taskId = submitData.data;
-    console.log(`[SelfbotHelper] NopeCHA task submitted (ID: ${taskId}). Waiting for solution...`);
+    logger.info(`[SelfbotHelper] NopeCHA task submitted (ID: ${taskId}). Waiting for solution...`);
 
-    
     for (let i = 0; i < 24; i++) {
       await sleep(5000);
 
@@ -212,19 +199,18 @@ async function solveCaptcha(sitekey, rqdata, rqtoken) {
       const pollData = await pollRes.json();
 
       if (pollData.data && !pollData.error) {
-        console.log('[SelfbotHelper] Captcha solved ✅');
+        logger.info('[SelfbotHelper] Captcha solved ✅');
         return { captchaKey: pollData.data, captchaRqtoken: rqtoken };
       }
 
-      if (pollData.error && pollData.error !== 14) { 
+      if (pollData.error && pollData.error !== 14) {
         throw new Error(`NopeCHA solve failed: (${pollData.error}) ${pollData.message}`);
       }
 
-      console.log(`[SelfbotHelper] Captcha pending... (attempt ${i + 1}/24)`);
+      logger.info(`[SelfbotHelper] Captcha pending... (attempt ${i + 1}/24)`);
     }
     throw new Error('NopeCHA solving timed out after 2 minutes.');
   } else {
-    
     const submitRes = await fetch(`${baseUrl}/in.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -233,10 +219,10 @@ async function solveCaptcha(sitekey, rqdata, rqtoken) {
         method: 'hcaptcha',
         sitekey,
         pageurl: 'https://discord.com',
-        data: rqdata,          
+        data: rqdata,
         userAgent: USER_AGENT,
-        json: 1,
-      }),
+        json: 1
+      })
     });
 
     if (!submitRes.ok) throw new Error(`Captcha submit HTTP error: ${submitRes.status}`);
@@ -247,20 +233,17 @@ async function solveCaptcha(sitekey, rqdata, rqtoken) {
     }
 
     const taskId = submitData.request;
-    console.log(`[SelfbotHelper] Captcha task submitted (ID: ${taskId}). Waiting for solution...`);
+    logger.info(`[SelfbotHelper] Captcha task submitted (ID: ${taskId}). Waiting for solution...`);
 
-    
     for (let i = 0; i < 24; i++) {
       await sleep(5000);
 
-      const pollRes = await fetch(
-        `${baseUrl}/res.php?key=${apiKey}&action=get&id=${taskId}&json=1`
-      );
+      const pollRes = await fetch(`${baseUrl}/res.php?key=${apiKey}&action=get&id=${taskId}&json=1`);
       if (!pollRes.ok) continue;
       const pollData = await pollRes.json();
 
       if (pollData.status === 1) {
-        console.log('[SelfbotHelper] Captcha solved ✅');
+        logger.info('[SelfbotHelper] Captcha solved ✅');
         return { captchaKey: pollData.request, captchaRqtoken: rqtoken };
       }
 
@@ -268,22 +251,19 @@ async function solveCaptcha(sitekey, rqdata, rqtoken) {
         throw new Error(`Captcha solve failed: ${pollData.request}`);
       }
 
-      console.log(`[SelfbotHelper] Captcha pending... (attempt ${i + 1}/24)`);
+      logger.info(`[SelfbotHelper] Captcha pending... (attempt ${i + 1}/24)`);
     }
 
     throw new Error('Captcha solving timed out after 2 minutes.');
   }
 }
 
-
-
-
 async function validateToken(token) {
   try {
     await getBuildNumber();
     const response = await fetch('https://discord.com/api/v9/users/@me', {
       method: 'GET',
-      headers: getHeaders(token),
+      headers: getHeaders(token)
     });
 
     if (response.status === 200) {
@@ -299,14 +279,12 @@ async function validateToken(token) {
   }
 }
 
-
 async function imageUrlToBase64DataUri(url) {
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Failed to fetch image: status ${response.status}`);
 
-    let contentType = (response.headers.get('content-type') || 'image/png')
-      .split(';')[0].trim().toLowerCase();
+    let contentType = (response.headers.get('content-type') || 'image/png').split(';')[0].trim().toLowerCase();
 
     const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
     if (!allowed.includes(contentType)) contentType = 'image/png';
@@ -314,18 +292,16 @@ async function imageUrlToBase64DataUri(url) {
     const base64 = Buffer.from(await response.arrayBuffer()).toString('base64');
     return `data:${contentType};base64,${base64}`;
   } catch (error) {
-    console.error('[SelfbotHelper] Image download failed:', error.message);
+    logger.error('[SelfbotHelper] Image download failed:', error.message);
     throw new Error(`Failed to process image from URL: ${error.message}`);
   }
 }
-
-
 
 async function getUserNitroInfo(token, targetUserId = null) {
   try {
     await getBuildNumber();
     const res = await fetch('https://discord.com/api/v9/users/@me', {
-      headers: getHeaders(token),
+      headers: getHeaders(token)
     });
 
     if (!res.ok) {
@@ -335,10 +311,9 @@ async function getUserNitroInfo(token, targetUserId = null) {
 
     const user = await res.json();
     const targetId = targetUserId || user.id;
-    
-    
+
     const profileRes = await fetch(`https://discord.com/api/v9/users/${targetId}/profile`, {
-      headers: getHeaders(token),
+      headers: getHeaders(token)
     });
 
     if (!profileRes.ok) {
@@ -353,7 +328,7 @@ async function getUserNitroInfo(token, targetUserId = null) {
     } else if (profileData.user?.premium_type !== undefined && profileData.user?.premium_type !== null) {
       premiumType = profileData.user.premium_type;
     }
-    
+
     if (premiumSince && premiumType === 0) {
       premiumType = 2;
     }
@@ -367,17 +342,15 @@ async function getUserNitroInfo(token, targetUserId = null) {
     const totalDays = Math.floor((now - sinceDate) / (1000 * 60 * 60 * 24));
     const totalMonths = getCalendarMonthsDifference(sinceDate, now);
 
-    
-    
     const TIER_THRESHOLDS = [
-      { name: 'opal',     months: 72, badge: 'opal' },
-      { name: 'ruby',     months: 60, badge: 'ruby' },
-      { name: 'emerald',  months: 36, badge: 'emerald' },
-      { name: 'diamond',  months: 24, badge: 'diamond' },
+      { name: 'opal', months: 72, badge: 'opal' },
+      { name: 'ruby', months: 60, badge: 'ruby' },
+      { name: 'emerald', months: 36, badge: 'emerald' },
+      { name: 'diamond', months: 24, badge: 'diamond' },
       { name: 'platinum', months: 12, badge: 'platinum' },
-      { name: 'gold',     months: 6,  badge: 'gold' },
-      { name: 'silver',   months: 3,  badge: 'silver' },
-      { name: 'bronze',   months: 1,  badge: 'bronze' },
+      { name: 'gold', months: 6, badge: 'gold' },
+      { name: 'silver', months: 3, badge: 'silver' },
+      { name: 'bronze', months: 1, badge: 'bronze' }
     ];
 
     let currentTierName = 'none';
@@ -388,11 +361,11 @@ async function getUserNitroInfo(token, targetUserId = null) {
     let progressPercent = Math.min((totalMonths / 1) * 100, 100);
     let nextMonths = 1;
 
-    const matchedTier = TIER_THRESHOLDS.find(t => totalMonths >= t.months);
+    const matchedTier = TIER_THRESHOLDS.find((t) => totalMonths >= t.months);
     if (matchedTier) {
       currentTierName = matchedTier.name;
       currentBadge = matchedTier.badge;
-      const tierIndex = TIER_THRESHOLDS.findIndex(t => t.name === matchedTier.name);
+      const tierIndex = TIER_THRESHOLDS.findIndex((t) => t.name === matchedTier.name);
       const nextTier = tierIndex > 0 ? TIER_THRESHOLDS[tierIndex - 1] : null;
       if (nextTier) {
         nextTierName = nextTier.name;
@@ -411,15 +384,14 @@ async function getUserNitroInfo(token, targetUserId = null) {
 
     let timeRemainingMs = null;
     let daysRemaining = null;
-    if (nextMonths != null) {
+    if (nextMonths !== null) {
       const targetDate = getMilestoneDate(sinceDate, nextMonths);
       const msDiff = targetDate.getTime() - now.getTime();
       daysRemaining = Math.max(0, Math.ceil(msDiff / (1000 * 60 * 60 * 24)));
       timeRemainingMs = msDiff;
     }
 
-    
-    const earnedTiers = TIER_THRESHOLDS.filter(t => totalMonths >= t.months).reverse();
+    const earnedTiers = TIER_THRESHOLDS.filter((t) => totalMonths >= t.months).reverse();
     const currentBadgeEarnedDate = getMilestoneDate(sinceDate, progressStart);
 
     return {
@@ -443,14 +415,13 @@ async function getUserNitroInfo(token, targetUserId = null) {
         username: profileData?.user?.username || user.username,
         discriminator: profileData?.user?.discriminator || user.discriminator,
         avatarHash: profileData?.user?.avatar || user.avatar,
-        userId: targetId,
+        userId: targetId
       }
     };
   } catch (err) {
     return { success: false, error: `Connection error: ${err.message}` };
   }
 }
-
 
 async function getUserBoostInfo(token, targetUserId = null) {
   try {
@@ -459,7 +430,7 @@ async function getUserBoostInfo(token, targetUserId = null) {
     let targetId = targetUserId;
     if (!targetId) {
       const userRes = await fetch('https://discord.com/api/v9/users/@me', {
-        headers: getHeaders(token),
+        headers: getHeaders(token)
       });
       if (userRes.ok) {
         const user = await userRes.json();
@@ -470,7 +441,7 @@ async function getUserBoostInfo(token, targetUserId = null) {
     }
 
     const profileRes = await fetch(`https://discord.com/api/v9/users/${targetId}/profile?with_mutual_guilds=false`, {
-      headers: getHeaders(token),
+      headers: getHeaders(token)
     });
 
     if (!profileRes.ok) {
@@ -481,13 +452,16 @@ async function getUserBoostInfo(token, targetUserId = null) {
     const premiumGuildSince = profileData.premium_guild_since ?? null;
 
     if (!premiumGuildSince) {
-      return { success: true, data: { hasBoost: false, totalBoosts: 0, boostMonths: 0, badgeTier: 0, oldestBoostDate: null } };
+      return {
+        success: true,
+        data: { hasBoost: false, totalBoosts: 0, boostMonths: 0, badgeTier: 0, oldestBoostDate: null }
+      };
     }
 
     const oldestBoostDate = new Date(premiumGuildSince);
     const now = new Date();
     const boostMonths = getCalendarMonthsDifference(oldestBoostDate, now);
-    const totalBoosts = 1; 
+    const totalBoosts = 1;
 
     const MONTH_TIERS = [24, 18, 15, 12, 9, 6, 3, 2, 1];
     let badgeTier = 1;
@@ -508,15 +482,12 @@ async function getUserBoostInfo(token, targetUserId = null) {
     }
     if (boostMonths < 1) {
       badgeTier = 1;
-      nextTierMonths = 2; 
-      
-      
-      
+      nextTierMonths = 2;
     }
 
     let timeRemainingMs = null;
     let daysRemaining = null;
-    if (nextTierMonths != null) {
+    if (nextTierMonths !== null) {
       const targetDate = getMilestoneDate(oldestBoostDate, nextTierMonths);
       const msDiff = targetDate.getTime() - now.getTime();
       daysRemaining = Math.max(0, Math.ceil(msDiff / (1000 * 60 * 60 * 24)));
@@ -542,7 +513,7 @@ async function getUserBoostInfo(token, targetUserId = null) {
         username: profileData.user?.username || 'Unknown',
         discriminator: profileData.user?.discriminator || '0',
         avatarHash: profileData.user?.avatar || null,
-        userId: targetId,
+        userId: targetId
       }
     };
   } catch (err) {
@@ -552,7 +523,6 @@ async function getUserBoostInfo(token, targetUserId = null) {
 
 async function updateProfile(token, { avatarUrl, bannerUrl }) {
   try {
-    
     const validateRes = await validateToken(token);
     if (!validateRes.success) {
       return { success: false, error: `Invalid Token: ${validateRes.error}` };
@@ -563,25 +533,22 @@ async function updateProfile(token, { avatarUrl, bannerUrl }) {
     let appliedBanner = false;
     const warnings = [];
 
-    
     const fingerprint = await getFingerprint();
-    console.log(fingerprint
-      ? '[SelfbotHelper] Fingerprint acquired.'
-      : '[SelfbotHelper] No fingerprint — proceeding without it.'
+    logger.info(
+      fingerprint ? '[SelfbotHelper] Fingerprint acquired.' : '[SelfbotHelper] No fingerprint — proceeding without it.'
     );
 
-    
-    async function patch(payload, attempt = 1) {
+    const patch = async (payload, attempt = 1) => {
       const res = await fetch('https://discord.com/api/v9/users/@me', {
         method: 'PATCH',
         headers: getHeaders(token, fingerprint),
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) return { ok: true };
 
       const text = await res.text();
-      console.error(`[SelfbotHelper] PATCH failed (${res.status}):`, text);
+      logger.error(`[SelfbotHelper] PATCH failed (${res.status}):`, text);
 
       let message = `Status ${res.status}`;
       let isRateLimit = false;
@@ -590,19 +557,17 @@ async function updateProfile(token, { avatarUrl, bannerUrl }) {
       try {
         const json = JSON.parse(text);
 
-        
         if (json.captcha_key) {
           captchaData = {
             sitekey: json.captcha_sitekey,
             rqdata: json.captcha_rqdata,
-            rqtoken: json.captcha_rqtoken,
+            rqtoken: json.captcha_rqtoken
           };
           message = 'hCaptcha challenge';
         }
 
         if (json.message) message = json.message;
 
-        
         const bannerErrors = json.errors?.banner?._errors ?? [];
         if (bannerErrors.some((e) => e.code === 'BANNER_RATE_LIMIT')) {
           isRateLimit = true;
@@ -621,7 +586,6 @@ async function updateProfile(token, { avatarUrl, bannerUrl }) {
         message += `: ${text}`;
       }
 
-      
       if (captchaData && attempt === 1) {
         try {
           const { captchaKey, captchaRqtoken } = await solveCaptcha(
@@ -629,21 +593,16 @@ async function updateProfile(token, { avatarUrl, bannerUrl }) {
             captchaData.rqdata,
             captchaData.rqtoken
           );
-          
-          return patch(
-            { ...payload, captcha_key: captchaKey, captcha_rqtoken: captchaRqtoken },
-            2
-          );
+
+          return patch({ ...payload, captcha_key: captchaKey, captcha_rqtoken: captchaRqtoken }, 2);
         } catch (solveErr) {
           return { ok: false, message: solveErr.message, isRateLimit: false, isCaptcha: true };
         }
       }
 
       return { ok: false, message, isRateLimit, isCaptcha: !!captchaData };
-    }
-    
+    };
 
-    
     if (avatarUrl) {
       let avatarData;
       try {
@@ -660,12 +619,11 @@ async function updateProfile(token, { avatarUrl, bannerUrl }) {
           success: false,
           error: `Avatar update failed: ${result.message}`,
           appliedAvatar: false,
-          appliedBanner: false,
+          appliedBanner: false
         };
       }
     }
 
-    
     if (bannerUrl) {
       if (!hasNitroBoost) {
         warnings.push('Nitro Boost is required for custom banners — banner skipped.');
@@ -707,17 +665,16 @@ async function updateProfile(token, { avatarUrl, bannerUrl }) {
       success: true,
       appliedAvatar,
       appliedBanner,
-      warning: warnings.length ? warnings.join('\n') : null,
+      warning: warnings.length ? warnings.join('\n') : null
     };
   } catch (error) {
     return {
       success: false,
       error: `Network/connection error: ${error.message}`,
       appliedAvatar: false,
-      appliedBanner: false,
+      appliedBanner: false
     };
   }
 }
-
 
 module.exports = { validateToken, imageUrlToBase64DataUri, getUserNitroInfo, getUserBoostInfo, updateProfile };

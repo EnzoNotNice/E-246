@@ -12,7 +12,7 @@ module.exports = {
       let authorTag = message.author?.tag || null;
       let authorAvatar = message.author ? message.author.displayAvatarURL() : null;
       let content = message.content || null;
-      let attachments = message.attachments ? message.attachments.map(att => att.url) : [];
+      let attachments = message.attachments ? message.attachments.map((att) => att.url) : [];
 
       const cached = await db.getCachedMessage(message.id).catch(() => null);
       if (cached) {
@@ -30,13 +30,7 @@ module.exports = {
       }
 
       if (content && authorId) {
-        db.setSnipe(
-          message.channelId,
-          content,
-          authorId,
-          authorTag || 'مجهول',
-          authorAvatar || ''
-        );
+        db.setSnipe(message.channelId, content, authorId, authorTag || 'مجهول', authorAvatar || '');
       }
 
       const memberMention = authorId ? `<@${authorId}>` : 'غير معروف';
@@ -44,18 +38,23 @@ module.exports = {
       const authorDisplay = authorId ? `${tagDisplay} (${authorId})` : 'غير معروف';
 
       const embed = new EmbedBuilder()
-        .setColor(0xED4245)
+        .setColor(0xed4245)
         .setTitle('{emoji:trash} رسالة محذوفة')
-        .setDescription(`**المرسل** ${memberMention} (${authorDisplay})\n**الروم** ${message.channel}\n**المحتوى**\n${content || '*[بدون محتوى]*'}`)
+        .setDescription(
+          `**المرسل** ${memberMention} (${authorDisplay})\n**الروم** ${message.channel}\n**المحتوى**\n${content || '*[بدون محتوى]*'}`
+        )
         .setTimestamp();
 
       if (attachments && attachments.length > 0) {
-        embed.addFields({ name: 'المرفقات', value: attachments.map((url, index) => `[مرفق ${index + 1}](${url})`).join('\n') });
+        embed.addFields({
+          name: 'المرفقات',
+          value: attachments.map((url, index) => `[مرفق ${index + 1}](${url})`).join('\n')
+        });
       }
 
       await sendLog(message.client, message.guildId, embed, 'message_delete').catch(() => null);
     } catch (err) {
-      console.error('[messageDelete Error]:', err);
+      logger.error('[messageDelete Error]:', err);
     }
   }
 };

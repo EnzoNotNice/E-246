@@ -1,0 +1,64 @@
+<%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : {};
+textChannels = textChannels && (Array.isArray(textChannels) || typeof textChannels.forEach === 'function') ? textChannels : [];
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'starboard' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-star"></i> نظام الستاربورد (Starboard)</h1>
+        <p>قم بتهيئة روم الستاربورد لحفظ وتسليط الضوء على الرسائل المميزة التي يتفاعل معها الأعضاء</p>
+    </div>
+
+    <div class="glass-panel reveal">
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= success %></div>
+        <% } %>
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> <%= error %></div>
+        <% } %>
+
+        <form action="/dashboard/<%= guild.id %>/starboard" method="POST" class="settings-form">
+            
+            <div class="form-group">
+                <label for="enabled">حالة نظام الستاربورد</label>
+                <select id="enabled" name="enabled" class="glass-input">
+                    <option value="1" <%= settings.enabled === 1 || settings.enabled === true ? 'selected' : '' %>>مفعّل</option>
+                    <option value="0" <%= settings.enabled === 0 || settings.enabled === false ? 'selected' : '' %>>معطّل</option>
+                </select>
+                <small>تفعيل أو تعطيل ميزة الستاربورد في السيرفر</small>
+            </div>
+
+            <div class="form-group">
+                <label for="starboard_channel">روم الستاربورد المخصص</label>
+                <select id="starboard_channel" name="starboard_channel" class="glass-input" required>
+                    <option value="">-- اختر الروم --</option>
+                    <% textChannels.forEach(c => { %>
+                        <option value="<%= c.id %>" <%= settings.starboard_channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
+                    <% }) %>
+                </select>
+                <small>الروم الذي سترسل إليه الرسائل المميزة الحاصلة على النجوم</small>
+            </div>
+
+            <div class="grid-form-2 mt-2">
+                <div class="form-group">
+                    <label for="emoji">إيموجي التفاعل (Star Emoji)</label>
+                    <input type="text" id="emoji" name="emoji" class="glass-input" value="<%= settings.emoji || '⭐' %>" placeholder="⭐" required>
+                    <small>الإيموجي المستخدم للتفاعل لجمع النجوم (افتراضي: ⭐)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="threshold">الحد الأدنى للتفاعلات (Threshold)</label>
+                    <input type="number" id="threshold" name="threshold" class="glass-input" value="<%= settings.threshold !== undefined ? settings.threshold : 3 %>" min="1" required>
+                    <small>عدد التفاعلات المطلوبة لإرسال الرسالة إلى روم الستاربورد</small>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3"><i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات</button>
+        </form>
+    </div>
+</main>
+
+<%- include('partials/footer') %>

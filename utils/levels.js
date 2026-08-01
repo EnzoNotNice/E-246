@@ -10,16 +10,15 @@ function getVoiceNextLvlTime(level) {
 
 async function checkLevelUp(client, userId, guildId, channelId = null) {
   const levelSettings = db.getLevelSettings(guildId);
-  if (!levelSettings.enabled) return;
+  if (!levelSettings || !levelSettings.enabled) return;
 
   const userData = db.getLevel(userId, guildId);
   if (!userData) return;
 
   let textLevel = userData.level || 0;
   let voiceLevel = userData.voice_level || 0;
-  let textXp = userData.xp || 0;
-  let voiceXp = userData.voice_xp || 0;
-
+  const textXp = userData.xp || 0;
+  const voiceXp = userData.voice_xp || 0;
 
   let leveledUpText = false;
   let leveledUpVoice = false;
@@ -47,22 +46,31 @@ async function checkLevelUp(client, userId, guildId, channelId = null) {
       announceCh = await guild.channels.fetch(channelId).catch(() => null);
     } else {
       announceCh = guild.systemChannel;
-      const me = guild.members.me || await guild.members.fetch(client.user.id).catch(() => null);
+      const me = guild.members.me || (await guild.members.fetch(client.user.id).catch(() => null));
       if (me && (!announceCh || !announceCh.permissionsFor(me).has('SendMessages'))) {
-        announceCh = guild.channels.cache.find(ch => ch.isTextBased() && ch.permissionsFor(me).has('SendMessages'));
+        announceCh = guild.channels.cache.find((ch) => ch.isTextBased() && ch.permissionsFor(me).has('SendMessages'));
       }
     }
 
+    const { replaceEmojis } = require('./emojiReplacer');
     if (announceCh) {
       if (leveledUpText) {
-        announceCh.send({
-          content: `{emoji:confetti} مبروك <@${userId}> لقد وصلت لـ **المستوى الكتابي ${textLevel}** {emoji:message}`
-        }).catch(() => null);
+        announceCh
+          .send({
+            content: replaceEmojis(
+              `{emoji:confetti} مبروك <@${userId}> لقد وصلت لـ **المستوى الكتابي ${textLevel}** {emoji:message}`
+            )
+          })
+          .catch(() => null);
       }
       if (leveledUpVoice) {
-        announceCh.send({
-          content: `{emoji:confetti} مبروك <@${userId}> لقد وصلت لـ **المستوى الصوتي ${voiceLevel}** {emoji:mic}`
-        }).catch(() => null);
+        announceCh
+          .send({
+            content: replaceEmojis(
+              `{emoji:confetti} مبروك <@${userId}> لقد وصلت لـ **المستوى الصوتي ${voiceLevel}** {emoji:mic}`
+            )
+          })
+          .catch(() => null);
       }
     }
 
@@ -74,7 +82,7 @@ async function checkLevelUp(client, userId, guildId, channelId = null) {
       rewards = [];
     }
     const maxLevel = Math.max(textLevel, voiceLevel);
-    const reward = rewards.find(r => r.level === maxLevel);
+    const reward = rewards.find((r) => r.level === maxLevel);
     if (reward) {
       const member = await guild.members.fetch(userId).catch(() => null);
       if (member) {

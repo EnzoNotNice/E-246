@@ -2,20 +2,31 @@ const fs = require('fs');
 const path = require('path');
 const Canvas = require('canvas');
 const db = require('../database/db');
+const { logger } = require('./logger');
 
 function rgbToHsl(r, g, b) {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h, s, l = (max + min) / 2;
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
+  let h, s;
+  const l = (max + min) / 2;
   if (max === min) {
     h = s = 0;
   } else {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
     }
     h /= 6;
   }
@@ -23,7 +34,9 @@ function rgbToHsl(r, g, b) {
 }
 
 function hslToRgb(h, s, l) {
-  h /= 360; s /= 100; l /= 100;
+  h /= 360;
+  s /= 100;
+  l /= 100;
   let r, g, b;
   if (s === 0) {
     r = g = b = l;
@@ -31,16 +44,16 @@ function hslToRgb(h, s, l) {
     const hue2rgb = (p, q, t) => {
       if (t < 0) t += 1;
       if (t > 1) t -= 1;
-      if (t < 1/6) return p + (q - p) * 6 * t;
-      if (t < 1/2) return q;
-      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
       return p;
     };
     const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
     const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1/3);
+    r = hue2rgb(p, q, h + 1 / 3);
     g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1/3);
+    b = hue2rgb(p, q, h - 1 / 3);
   }
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
@@ -48,7 +61,7 @@ function hslToRgb(h, s, l) {
 async function recolorEmojis() {
   const settings = db.getBotSettings();
   const color = settings.emoji_color || 'blue';
-  
+
   const originalDir = path.join(__dirname, '..', 'assets', 'emojis');
   const targetDir = path.join(originalDir, color);
 
@@ -75,8 +88,6 @@ async function recolorEmojis() {
     const sourcePath = path.join(originalDir, file);
     const targetPath = path.join(targetDir, file);
 
-
-
     const isBoostOrNitro = file.toLowerCase().includes('boost') || file.toLowerCase().includes('nitro');
     if (ext === '.gif' || color === 'purple' || isBoostOrNitro) {
       fs.copyFileSync(sourcePath, targetPath);
@@ -99,6 +110,7 @@ async function recolorEmojis() {
         const g = data[i + 1];
         const b = data[i + 2];
 
+        // eslint-disable-next-line no-unused-vars
         const [h, s, l] = rgbToHsl(r, g, b);
 
         if (s > 10) {
@@ -112,7 +124,12 @@ async function recolorEmojis() {
       ctx.putImageData(imgData, 0, 0);
       fs.writeFileSync(targetPath, canvas.toBuffer());
     } catch (err) {
-      console.error(`Failed to recolor emoji ${file}:`, err.message);
+      try {
+        fs.copyFileSync(sourcePath, targetPath);
+      } catch (error) {
+        // Failed to copy file as fallback - log but continue
+        logger.warn('Failed to fallback copy for emoji file:', file, ', error:', error.message);
+      }
     }
   }
 }

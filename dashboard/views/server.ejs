@@ -55,15 +55,26 @@ messageStats = typeof messageStats !== 'undefined' && Array.isArray(messageStats
 
         <form action="/dashboard/<%= guild.id %>/general" method="POST" class="settings-form">
 
-            <div class="form-group">
-                <label for="log_channel">روم سجلات الإشراف (Mod Log)</label>
-                <select id="log_channel" name="log_channel" class="glass-input">
-                    <option value="none" <%= !(settings && settings.log_channel) || settings.log_channel === 'none' ? 'selected' : '' %>>بدون / تعطيل</option>
-                    <% textChannels.forEach(c => { %>
-                        <option value="<%= c.id %>" <%= (settings && settings.log_channel === c.id) ? 'selected' : '' %>># <%= c.name %></option>
-                    <% }) %>
-                </select>
-                <small>القناة التي ترسل إليها سجلات الإشراف والعقوبات</small>
+            <div class="grid-form-2">
+                <div class="form-group">
+                    <label for="log_channel">روم سجلات الإشراف (Mod Log)</label>
+                    <select id="log_channel" name="log_channel" class="glass-input">
+                        <option value="none" <%= !(settings && settings.log_channel) || settings.log_channel === 'none' ? 'selected' : '' %>>بدون / تعطيل</option>
+                        <% textChannels.forEach(c => { %>
+                            <option value="<%= c.id %>" <%= (settings && settings.log_channel === c.id) ? 'selected' : '' %>># <%= c.name %></option>
+                        <% }) %>
+                    </select>
+                    <small>القناة التي ترسل إليها سجلات الإشراف والعقوبات</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="theme_color">لون ثيم البوت الموحد (Theme Color)</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="color" id="theme_color" name="theme_color" class="glass-input" value="<%= (settings && settings.theme_color) || '#5865F2' %>" style="width: 50px; height: 42px; padding: 4px; cursor: pointer; border: 1px solid var(--border); border-radius: var(--r-sm); background: transparent;" oninput="document.getElementById('theme_color_text').value = this.value;">
+                        <input type="text" id="theme_color_text" class="glass-input" value="<%= (settings && settings.theme_color) || '#5865F2' %>" placeholder="#5865F2" style="flex: 1;" oninput="document.getElementById('theme_color').value = this.value;">
+                    </div>
+                    <small>اللون الموحد المستخدم في جميع بطاقات إمبيدات البوت</small>
+                </div>
             </div>
 
             <div class="grid-form-2 mt-2">

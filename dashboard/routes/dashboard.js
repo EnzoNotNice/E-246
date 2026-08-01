@@ -1,558 +1,591 @@
 const express = require('express');
+const logger = require('../../utils/logger');
 const router = express.Router();
-const { PermissionsBitField, EmbedBuilder, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+const {
+  EmbedBuilder,
+  ActivityType,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder
+} = require('discord.js');
 const db = require('../../database/db');
-const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { resolveYouTubeChannelId, isValidYouTubeChannelId } = require('../../utils/youtubeResolve');
 
 function isHexColor(value) {
-    return typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value);
+  return typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value);
 }
 
 function safeColor(value, fallback = '#5865F2') {
-    return isHexColor(value) ? value : fallback;
+  return isHexColor(value) ? value : fallback;
 }
 
 function safeUrl(value) {
-    if (!value) return '';
-    try {
-        const url = new URL(value);
-        return ['http:', 'https:'].includes(url.protocol) ? value : '';
-    } catch {
-        return '';
-    }
+  if (!value) return '';
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) ? value : '';
+  } catch {
+    return '';
+  }
 }
 
 function channelExists(guild, id) {
-    return !id || guild.channels.cache.has(id);
+  return !id || guild.channels.cache.has(id);
 }
 
 function roleExists(guild, id) {
-    return !id || guild.roles.cache.has(id);
+  return !id || guild.roles.cache.has(id);
 }
 
 function checkAuth(req, res, next) {
-    if (req.isAuthenticated()) return next();
-    res.redirect('/auth/login');
+  if (req.isAuthenticated()) return next();
+  res.redirect('/auth/login');
 }
 
 module.exports = (client) => {
-    async function checkGuildAccess(req, res, next) {
-        try {
-            const guildId = req.params.id;
-            const guild = client.guilds.cache.get(guildId);
-            if (!guild) return res.redirect('/dashboard?error=not_in_guild');
+  function checkGuildAccess(req, res, next) {
+    try {
+      const guildId = req.params.id;
+      const guild = client.guilds.cache.get(guildId);
+      if (!guild) return res.redirect('/dashboard?error=not_in_guild');
 
-            const userGuild = req.user.guilds.find(g => g.id === guildId);
-            if (!userGuild) return res.redirect('/dashboard?error=no_access');
+      const userGuild = req.user.guilds.find((g) => g.id === guildId);
+      if (!userGuild) return res.redirect('/dashboard?error=no_access');
 
-            const perms = BigInt(userGuild.permissions);
-            const hasPerms = (perms & BigInt(0x8)) === BigInt(0x8) || (perms & BigInt(0x20)) === BigInt(0x20);
+      const perms = BigInt(userGuild.permissions);
+      const hasPerms = (perms & BigInt(0x8)) === BigInt(0x8) || (perms & BigInt(0x20)) === BigInt(0x20);
 
-            if (!hasPerms) return res.redirect('/dashboard?error=missing_perms');
+      if (!hasPerms) return res.redirect('/dashboard?error=missing_perms');
 
-            req.guild = guild;
+      req.guild = guild;
 
-            // Attach common collections to res.locals for EJS templates
-            res.locals.textChannels = guild.channels.cache.filter(c => c.type === 0 || c.type === 5);
-            res.locals.voiceChannels = guild.channels.cache.filter(c => c.type === 2);
-            res.locals.categories = guild.channels.cache.filter(c => c.type === 4);
-            res.locals.roles = guild.roles.cache.filter(r => r.id !== guild.id).sort((a, b) => b.position - a.position);
+      // Attach common collections to res.locals for EJS templates
+      res.locals.textChannels = guild.channels.cache.filter((c) => c.type === 0 || c.type === 5);
+      res.locals.voiceChannels = guild.channels.cache.filter((c) => c.type === 2);
+      res.locals.categories = guild.channels.cache.filter((c) => c.type === 4);
+      res.locals.roles = guild.roles.cache.filter((r) => r.id !== guild.id).sort((a, b) => b.position - a.position);
 
-            next();
-        } catch (err) {
-            next(err);
-        }
+      next();
+    } catch (err) {
+      next(err);
     }
+  }
 
-    router.get('/', checkAuth, (req, res, next) => {
-        try {
-            const userGuilds = req.user.guilds.filter(g => {
-                const perms = BigInt(g.permissions);
-                return (perms & BigInt(0x8)) === BigInt(0x8) || (perms & BigInt(0x20)) === BigInt(0x20);
-            });
+  router.get('/', checkAuth, (req, res, next) => {
+    try {
+      const userGuilds = req.user.guilds.filter((g) => {
+        const perms = BigInt(g.permissions);
+        return (perms & BigInt(0x8)) === BigInt(0x8) || (perms & BigInt(0x20)) === BigInt(0x20);
+      });
 
-            const totalGuilds = client.guilds.cache.size;
-            const totalUsers = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
+      const totalGuilds = client.guilds.cache.size;
+      const totalUsers = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
 
-            const uptime = process.uptime();
-            const days = Math.floor(uptime / 86400);
-            const hours = Math.floor(uptime / 3600) % 24;
-            const minutes = Math.floor(uptime / 60) % 60;
-            const uptimeString = `${days}d ${hours}h ${minutes}m`;
+      const uptime = process.uptime();
+      const days = Math.floor(uptime / 86400);
+      const hours = Math.floor(uptime / 3600) % 24;
+      const minutes = Math.floor(uptime / 60) % 60;
+      const uptimeString = `${days}d ${hours}h ${minutes}m`;
 
-            const memUsed = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+      const memUsed = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
 
-            const stats = {
-                totalGuilds,
-                totalUsers,
-                uptime: uptimeString,
-                ram: `${memUsed} MB`,
-                ping: `${client.ws.ping} ms`
-            };
+      const stats = {
+        totalGuilds,
+        totalUsers,
+        uptime: uptimeString,
+        ram: `${memUsed} MB`,
+        ping: `${client.ws.ping} ms`
+      };
 
-            res.render('dashboard', {
-                guilds: userGuilds,
-                botGuilds: client.guilds.cache,
-                stats
-            });
-        } catch (err) {
-            next(err);
+      res.render('dashboard', {
+        guilds: userGuilds,
+        botGuilds: client.guilds.cache,
+        stats
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/bank', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const guild = req.guild;
+      const bankSettings = db.getBankSettings(guild.id);
+
+      res.render('bank', {
+        guild,
+        settings: bankSettings,
+        success: req.query.success
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/bank', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const guild = req.guild;
+
+      const tradeCooldownVal = parseInt(req.body.tradeCooldown);
+      const tradeCooldown = isNaN(tradeCooldownVal) ? 10800000 : tradeCooldownVal * 60000;
+
+      const investCooldownVal = parseInt(req.body.investCooldown);
+      const investCooldown = isNaN(investCooldownVal) ? 10800000 : investCooldownVal * 60000;
+
+      const dailyCooldownVal = parseInt(req.body.dailyCooldown);
+      const dailyCooldown = isNaN(dailyCooldownVal) ? 172800000 : dailyCooldownVal * 3600000;
+
+      const salaryCooldownVal = parseInt(req.body.salaryCooldown);
+      const salaryCooldown = isNaN(salaryCooldownVal) ? 86400000 : salaryCooldownVal * 3600000;
+
+      const gambleCooldownVal = parseInt(req.body.gambleCooldown);
+      const gambleCooldown = isNaN(gambleCooldownVal) ? 14400000 : gambleCooldownVal * 60000;
+
+      const diceCooldownVal = parseInt(req.body.diceCooldown);
+      const diceCooldown = isNaN(diceCooldownVal) ? 14400000 : diceCooldownVal * 60000;
+
+      const coinflipCooldownVal = parseInt(req.body.coinflipCooldown);
+      const coinflipCooldown = isNaN(coinflipCooldownVal) ? 7200000 : coinflipCooldownVal * 60000;
+
+      db.setBankSettings(guild.id, {
+        tradeCooldown,
+        investCooldown,
+        dailyCooldown,
+        salaryCooldown,
+        gambleCooldown,
+        diceCooldown,
+        coinflipCooldown
+      });
+
+      res.redirect(`/dashboard/${guild.id}/bank?success=1`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/admin/botsettings', checkAuth, async (req, res, next) => {
+    try {
+      let isOwner = false;
+      if (process.env.OWNER_ID && req.user.id === process.env.OWNER_ID) isOwner = true;
+      if (!isOwner && client.application) {
+        await client.application.fetch().catch(() => null);
+        if (client.application.owner) {
+          if (client.application.owner.members) {
+            if (client.application.owner.members.has(req.user.id)) isOwner = true;
+          } else if (client.application.owner.id === req.user.id) {
+            isOwner = true;
+          }
         }
-    });
+      }
 
-    router.get('/:id/bank', checkAuth, checkGuildAccess, async (req, res, next) => {
-        try {
-            const guild = req.guild;
-            const bankSettings = db.getBankSettings(guild.id);
-            
-            res.render('bank', {
-                guild,
-                settings: bankSettings
-            });
-        } catch (err) {
-            next(err);
+      if (!isOwner) {
+        return res.redirect('/dashboard?error=not_owner');
+      }
+      res.render('botsettings', {
+        bot: client.user,
+        settings: db.getBotSettings()
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/admin/botsettings', checkAuth, async (req, res, next) => {
+    try {
+      let isOwner = false;
+      if (process.env.OWNER_ID && req.user.id === process.env.OWNER_ID) isOwner = true;
+      if (!isOwner && client.application) {
+        await client.application.fetch().catch(() => null);
+        if (client.application.owner) {
+          if (client.application.owner.members) {
+            if (client.application.owner.members.has(req.user.id)) isOwner = true;
+          } else if (client.application.owner.id === req.user.id) {
+            isOwner = true;
+          }
         }
-    });
+      }
 
-    router.post('/:id/bank', checkAuth, checkGuildAccess, async (req, res, next) => {
+      if (!isOwner) {
+        return res.redirect('/dashboard?error=not_owner');
+      }
+      const { status, activity_type, activity_name, emoji_color, broadcast_tokens } = req.body;
+      const tokensArray =
+        typeof broadcast_tokens === 'string'
+          ? broadcast_tokens
+              .split('\n')
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [];
+      db.updateBotSettings(status, activity_type, activity_name, emoji_color, tokensArray);
+
+      const emojiSetup = require('../../utils/emojiSetup');
+      emojiSetup(client).catch((err) => logger.error(err));
+
+      const actType = ActivityType[activity_type] || ActivityType.Playing;
+
+      client.user.setPresence({
+        activities: [{ name: activity_name, type: actType }],
+        status: status
+      });
+
+      res.redirect('/dashboard/admin/botsettings?success=تم+تحديث+إعدادات+البوت');
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const guildId = req.guild.id;
+      res.render('server', {
+        guild: req.guild,
+        settings: db.getGuildSettings(guildId),
+        memberStats: db.getDailyMembersStats(guildId, 7),
+        messageStats: db.getHourlyMessagesStats(guildId),
+        voiceStats: db.getDailyVoiceStats(guildId, 7)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/general', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { prefix, log_channel, reply_type, bank_channel, theme_color } = req.body;
+      if (prefix) db.setGuildSetting(req.guild.id, 'prefix', prefix);
+      if (log_channel) db.setGuildSetting(req.guild.id, 'log_channel', log_channel === 'none' ? null : log_channel);
+      if (reply_type) db.setGuildSetting(req.guild.id, 'reply_type', reply_type);
+      if (bank_channel) db.setGuildSetting(req.guild.id, 'bank_channel', bank_channel === 'none' ? null : bank_channel);
+      if (theme_color) db.setGuildSetting(req.guild.id, 'theme_color', theme_color);
+      res.redirect(`/dashboard/${req.guild.id}?success=تم+تحديث+الإعدادات+بنجاح`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/levels', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      res.render('levels', {
+        guild: req.guild,
+        settings: db.getLevelSettings(req.guild.id),
+        textChannels: Array.from(req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5).values())
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/levels', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const { enabled, channel, xp_min, xp_max, voice_enabled, voice_xp_min, voice_xp_max } = req.body;
+      await db.updateLevelSettings(req.guild.id, {
+        enabled: parseInt(enabled),
+        channel: channel || null,
+        xp_min: parseInt(xp_min),
+        xp_max: parseInt(xp_max),
+        voice_enabled: parseInt(voice_enabled),
+        voice_xp_min: parseInt(voice_xp_min),
+        voice_xp_max: parseInt(voice_xp_max)
+      });
+      res.redirect(`/dashboard/${req.guild.id}/levels?success=تم+تحديث+إعدادات+المستويات`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/welcome', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      res.render('welcome', {
+        guild: req.guild,
+        settings: db.getGreetSettings(req.guild.id),
+        textChannels: Array.from(req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5).values())
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/welcome', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const {
+        enabled,
+        channel,
+        message,
+        image_url,
+        scale_mode,
+        avatar_x,
+        avatar_y,
+        avatar_size,
+        username_x,
+        username_y,
+        username_size,
+        username_color
+      } = req.body;
+
+      const settings = db.getGreetSettings(req.guild.id);
+      settings.enabled = parseInt(enabled) || 0;
+      settings.channel = channel || null;
+      settings.message = message || '';
+      settings.image_url = image_url || null;
+      settings.scale_mode = scale_mode || 'fit';
+      settings.username_color = username_color || '#ffffff';
+
+      settings.avatar_x = parseInt(avatar_x) || 100;
+      settings.avatar_y = parseInt(avatar_y) || 100;
+      settings.avatar_size = parseInt(avatar_size) || 150;
+      settings.username_x = parseInt(username_x) || 100;
+      settings.username_y = parseInt(username_y) || 300;
+      settings.username_size = parseInt(username_size) || 40;
+
+      await db.updateGreetSettings(req.guild.id, settings);
+      res.redirect(`/dashboard/${req.guild.id}/welcome?success=تم+تحديث+إعدادات+الترحيب`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/welcome/upload', checkAuth, checkGuildAccess, (req, res) => {
+    try {
+      const { image } = req.body;
+      if (!image || !image.startsWith('data:image/')) {
+        return res.json({ success: false, error: 'Invalid image data' });
+      }
+
+      const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      const ext = image.split(';')[0].split('/')[1] || 'png';
+
+      const uploadDir = path.join(__dirname, '../../database/uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const fileName = `welcome_${req.guild.id}.${ext}`;
+      const filePath = path.join(uploadDir, fileName);
+      fs.writeFileSync(filePath, buffer);
+
+      const imageUrl = `/uploads/${fileName}?t=${Date.now()}`;
+
+      res.json({ success: true, url: imageUrl });
+    } catch (e) {
+      logger.error('Upload Error:', e);
+      res.json({ success: false, error: 'Failed to upload image' });
+    }
+  });
+
+  router.get('/:id/tempvoice', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      res.render('tempvoice', {
+        guild: req.guild,
+        settings: db.getTempVoiceSettings(req.guild.id),
+        channels: req.guild.channels.cache.filter((c) => c.type === 2),
+        categories: req.guild.channels.cache.filter((c) => c.type === 4)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/tempvoice', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { master_channel, category_id } = req.body;
+      db.updateTempVoiceSettings(req.guild.id, master_channel || null, category_id || null);
+      res.redirect(`/dashboard/${req.guild.id}/tempvoice?success=تم+تحديث+إعدادات+الرومات+المؤقتة`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/protection', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      res.render('protection', {
+        guild: req.guild,
+        settings: db.getProtection(req.guild.id),
+        roles: req.guild.roles.cache.filter((r) => r.id !== req.guild.id).sort((a, b) => b.position - a.position)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/protection', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const b = req.body;
+      db.updateProtection(req.guild.id, {
+        enabled: b.enabled === '1' || b.enabled === 1 ? 1 : 0,
+        antilink: b.antilink === '1' || b.antilink === 'on' || b.antilink === 1 ? 1 : 0,
+        antispam: b.antispam === '1' || b.antispam === 'on' || b.antispam === 1 ? 1 : 0,
+        antiraid: b.antiraid === '1' || b.antiraid === 'on' || b.antiraid === 1 ? 1 : 0,
+        bypass_role: b.bypass_role || null,
+        ban_limit: parseInt(b.ban_limit) || 3,
+        kick_limit: parseInt(b.kick_limit) || 3,
+        channel_limit: parseInt(b.channel_limit) || 3,
+        role_limit: parseInt(b.role_limit) || 3,
+        webhook_limit: parseInt(b.webhook_limit) || 3,
+        action: b.action || 'ban'
+      });
+      res.redirect(`/dashboard/${req.guild.id}/protection?success=تم+تحديث+إعدادات+الحماية`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/automod', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      res.render('automod', {
+        guild: req.guild,
+        settings: db.getAutomod(req.guild.id),
+        roles: req.guild.roles.cache.filter((r) => r.id !== req.guild.id).sort((a, b) => b.position - a.position)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/automod', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const b = req.body;
+
+      let words = [];
+      if (b.words) {
+        words = b.words
+          .split(',')
+          .map((w) => w.trim())
+          .filter(Boolean);
+      }
+
+      let bypass_roles = [];
+      if (b.bypass_roles) {
+        bypass_roles = Array.isArray(b.bypass_roles) ? b.bypass_roles : [b.bypass_roles];
+      }
+
+      db.updateAutomod(req.guild.id, {
+        enabled: b.enabled === '1' || b.enabled === 1 ? 1 : 0,
+        action: b.action || 'delete',
+        words: JSON.stringify(words),
+        bypass_roles: JSON.stringify(bypass_roles)
+      });
+
+      res.redirect(`/dashboard/${req.guild.id}/automod?success=تم+تحديث+إعدادات+الفلتر+الذكي`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/autoreplies', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      res.render('autoreplies', {
+        guild: req.guild,
+        replies: db.getAutoReplies(req.guild.id)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/autoreplies', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { trigger, response, deleteTrigger, mode } = req.body;
+      if (trigger && response) {
+        db.addAutoReply(req.guild.id, trigger, response, deleteTrigger === 'on' ? 1 : 0, mode || 'reply');
+      }
+      res.redirect(`/dashboard/${req.guild.id}/autoreplies?success=تمت+إضافة+الرد+التلقائي`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/autoreplies/delete', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { trigger } = req.body;
+      if (trigger) {
+        db.removeAutoReply(req.guild.id, trigger);
+      }
+      res.redirect(`/dashboard/${req.guild.id}/autoreplies?success=تم+حذف+الرد+التلقائي`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/aliases', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const commandNames = [];
+      for (const [name, cmd] of client.commands) {
         try {
-            const guild = req.guild;
-            
-            const tradeCooldownVal = parseInt(req.body.tradeCooldown);
-            const tradeCooldown = isNaN(tradeCooldownVal) ? 10800000 : tradeCooldownVal * 60000;
-            
-            const investCooldownVal = parseInt(req.body.investCooldown);
-            const investCooldown = isNaN(investCooldownVal) ? 10800000 : investCooldownVal * 60000;
-            
-            const dailyCooldownVal = parseInt(req.body.dailyCooldown);
-            const dailyCooldown = isNaN(dailyCooldownVal) ? 172800000 : dailyCooldownVal * 3600000;
-            
-            const salaryCooldownVal = parseInt(req.body.salaryCooldown);
-            const salaryCooldown = isNaN(salaryCooldownVal) ? 86400000 : salaryCooldownVal * 3600000;
-            
-            const gambleCooldownVal = parseInt(req.body.gambleCooldown);
-            const gambleCooldown = isNaN(gambleCooldownVal) ? 14400000 : gambleCooldownVal * 60000;
-            
-            const diceCooldownVal = parseInt(req.body.diceCooldown);
-            const diceCooldown = isNaN(diceCooldownVal) ? 14400000 : diceCooldownVal * 60000;
-            
-            const coinflipCooldownVal = parseInt(req.body.coinflipCooldown);
-            const coinflipCooldown = isNaN(coinflipCooldownVal) ? 7200000 : coinflipCooldownVal * 60000;
-
-            db.setBankSettings(guild.id, {
-                tradeCooldown,
-                investCooldown,
-                dailyCooldown,
-                salaryCooldown,
-                gambleCooldown,
-                diceCooldown,
-                coinflipCooldown
-            });
-
-            res.redirect(`/dashboard/${guild.id}/bank?success=1`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.get('/admin/botsettings', checkAuth, async (req, res, next) => {
-        try {
-            let isOwner = false;
-            if (process.env.OWNER_ID && req.user.id === process.env.OWNER_ID) isOwner = true;
-            if (!isOwner && client.application) {
-                await client.application.fetch().catch(()=>null);
-                if (client.application.owner) {
-                    if (client.application.owner.members) {
-                        if (client.application.owner.members.has(req.user.id)) isOwner = true;
-                    } else if (client.application.owner.id === req.user.id) {
-                        isOwner = true;
-                    }
-                }
+          const serialized = cmd.data.toJSON ? cmd.data.toJSON() : cmd.data;
+          const subcommands = serialized.options ? serialized.options.filter((opt) => opt.type === 1) : [];
+          if (subcommands.length > 0) {
+            for (const sub of subcommands) {
+              commandNames.push(`${name} ${sub.name}`);
             }
-
-            if (!isOwner) {
-                return res.redirect('/dashboard?error=not_owner');
-            }
-            res.render('botsettings', {
-                bot: client.user,
-                settings: db.getBotSettings()
-            });
+          } else {
+            commandNames.push(name);
+          }
         } catch (err) {
-            next(err);
+          logger.error('Error serializing command for dashboard:', err);
+          commandNames.push(name);
         }
-    });
+      }
+      commandNames.sort();
 
-    router.post('/admin/botsettings', checkAuth, async (req, res, next) => {
-        try {
-            let isOwner = false;
-            if (process.env.OWNER_ID && req.user.id === process.env.OWNER_ID) isOwner = true;
-            if (!isOwner && client.application) {
-                await client.application.fetch().catch(()=>null);
-                if (client.application.owner) {
-                    if (client.application.owner.members) {
-                        if (client.application.owner.members.has(req.user.id)) isOwner = true;
-                    } else if (client.application.owner.id === req.user.id) {
-                        isOwner = true;
-                    }
-                }
-            }
+      res.render('aliases', {
+        guild: req.guild,
+        aliases: db.getAliases(req.guild.id),
+        commands: commandNames
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
 
-            if (!isOwner) {
-                return res.redirect('/dashboard?error=not_owner');
-            }
-            const { status, activity_type, activity_name, emoji_color, broadcast_tokens } = req.body;
-            const tokensArray = typeof broadcast_tokens === 'string'
-                ? broadcast_tokens.split('\n').map(t => t.trim()).filter(Boolean)
-                : [];
-            db.updateBotSettings(status, activity_type, activity_name, emoji_color, tokensArray);
+  router.post('/:id/aliases', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { shortcut, command } = req.body;
+      if (shortcut && command) {
+        const prefix = db.getGuildSettings(req.guild.id).prefix || '#';
+        const cleanShortcut = shortcut.startsWith(prefix) ? shortcut.slice(prefix.length) : shortcut;
+        const cleanCommand = command.startsWith(prefix) ? command.slice(prefix.length) : command;
+        db.addAlias(req.guild.id, cleanShortcut.trim(), cleanCommand.trim());
+      }
+      res.redirect(`/dashboard/${req.guild.id}/aliases?success=تمت+إضافة+الاختصار`);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-            const emojiSetup = require('../../utils/emojiSetup');
-            emojiSetup(client).catch(console.error);
-            
-            const actType = ActivityType[activity_type] || ActivityType.Playing;
+  router.post('/:id/aliases/delete', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { shortcut } = req.body;
+      if (shortcut) {
+        db.removeAlias(req.guild.id, shortcut);
+      }
+      res.redirect(`/dashboard/${req.guild.id}/aliases?success=تم+حذف+الاختصار`);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-            client.user.setPresence({
-                activities: [{ name: activity_name, type: actType }],
-                status: status,
-            });
+  router.get('/:id/logs', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      res.render('logs', {
+        guild: req.guild,
+        settings: db.getLogSettings(req.guild.id)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
 
-            res.redirect('/dashboard/admin/botsettings?success=تم+تحديث+إعدادات+البوت');
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.get('/:id', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const guildId = req.guild.id;
-            res.render('server', {
-                guild: req.guild,
-                settings: db.getGuildSettings(guildId),
-                memberStats: db.getDailyMembersStats(guildId, 7),
-                messageStats: db.getHourlyMessagesStats(guildId),
-                voiceStats: db.getDailyVoiceStats(guildId, 7)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/general', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { prefix, log_channel, reply_type, bank_channel } = req.body;
-            if (prefix) db.setGuildSetting(req.guild.id, 'prefix', prefix);
-            if (log_channel) db.setGuildSetting(req.guild.id, 'log_channel', log_channel === 'none' ? null : log_channel);
-            if (reply_type) db.setGuildSetting(req.guild.id, 'reply_type', reply_type);
-            if (bank_channel) db.setGuildSetting(req.guild.id, 'bank_channel', bank_channel === 'none' ? null : bank_channel);
-            res.redirect(`/dashboard/${req.guild.id}?success=تم+تحديث+الإعدادات+بنجاح`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.get('/:id/levels', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            res.render('levels', {
-                guild: req.guild,
-                settings: db.getLevelSettings(req.guild.id)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/levels', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { enabled, channel, xp_min, xp_max } = req.body;
-            db.db.prepare(`
-                INSERT INTO level_settings (guildId, enabled, channel, xp_min, xp_max)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(guildId) DO UPDATE SET
-                enabled = ?, channel = ?, xp_min = ?, xp_max = ?
-            `).run(
-                req.guild.id, parseInt(enabled), channel || null, parseInt(xp_min), parseInt(xp_max),
-                parseInt(enabled), channel || null, parseInt(xp_min), parseInt(xp_max)
-            );
-            res.redirect(`/dashboard/${req.guild.id}/levels?success=تم+تحديث+إعدادات+المستويات`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.get('/:id/welcome', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            res.render('welcome', {
-                guild: req.guild,
-                settings: db.getGreetSettings(req.guild.id),
-                textChannels: Array.from(req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5).values())
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/welcome', checkAuth, checkGuildAccess, async (req, res, next) => {
-        try {
-            const { enabled, channel, message, image_url, scale_mode, avatar_x, avatar_y, avatar_size, username_x, username_y, username_size, username_color } = req.body;
-            
-            const settings = db.getGreetSettings(req.guild.id);
-            settings.enabled = parseInt(enabled) || 0;
-            settings.channel = channel || null;
-            settings.message = message || '';
-            settings.image_url = image_url || null;
-            settings.scale_mode = scale_mode || 'fit';
-            settings.username_color = username_color || '#ffffff';
-            
-            settings.avatar_x = parseInt(avatar_x) || 100;
-            settings.avatar_y = parseInt(avatar_y) || 100;
-            settings.avatar_size = parseInt(avatar_size) || 150;
-            settings.username_x = parseInt(username_x) || 100;
-            settings.username_y = parseInt(username_y) || 300;
-            settings.username_size = parseInt(username_size) || 40;
-
-            await db.updateGreetSettings(req.guild.id, settings);
-            res.redirect(`/dashboard/${req.guild.id}/welcome?success=تم+تحديث+إعدادات+الترحيب`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/welcome/upload', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { image } = req.body;
-            if (!image || !image.startsWith('data:image/')) {
-                return res.json({ success: false, error: 'Invalid image data' });
-            }
-
-            const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
-            const buffer = Buffer.from(base64Data, 'base64');
-            const ext = image.split(';')[0].split('/')[1] || 'png';
-            
-            const uploadDir = path.join(__dirname, '../../database/uploads');
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
-            }
-
-            const fileName = `welcome_${req.guild.id}.${ext}`;
-            const filePath = path.join(uploadDir, fileName);
-            fs.writeFileSync(filePath, buffer);
-
-            const imageUrl = `/uploads/${fileName}?t=${Date.now()}`;
-            
-            res.json({ success: true, url: imageUrl });
-        } catch (e) {
-            console.error('Upload Error:', e);
-            res.json({ success: false, error: 'Failed to upload image' });
-        }
-    });
-
-    router.get('/:id/tempvoice', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            res.render('tempvoice', {
-                guild: req.guild,
-                settings: db.getTempVoiceSettings(req.guild.id),
-                channels: req.guild.channels.cache.filter(c => c.type === 2), 
-                categories: req.guild.channels.cache.filter(c => c.type === 4) 
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/tempvoice', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { master_channel, category_id } = req.body;
-            db.updateTempVoiceSettings(req.guild.id, master_channel || null, category_id || null);
-            res.redirect(`/dashboard/${req.guild.id}/tempvoice?success=تم+تحديث+إعدادات+الرومات+المؤقتة`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.get('/:id/protection', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            res.render('protection', {
-                guild: req.guild,
-                settings: db.getProtection(req.guild.id),
-                roles: req.guild.roles.cache.filter(r => r.id !== req.guild.id).sort((a, b) => b.position - a.position)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/protection', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const b = req.body;
-            db.updateProtection(req.guild.id, {
-                enabled: b.enabled === '1' || b.enabled === 1 ? 1 : 0,
-                antilink: b.antilink === '1' || b.antilink === 'on' || b.antilink === 1 ? 1 : 0,
-                antispam: b.antispam === '1' || b.antispam === 'on' || b.antispam === 1 ? 1 : 0,
-                antiraid: b.antiraid === '1' || b.antiraid === 'on' || b.antiraid === 1 ? 1 : 0,
-                bypass_role: b.bypass_role || null,
-                ban_limit: parseInt(b.ban_limit) || 3,
-                kick_limit: parseInt(b.kick_limit) || 3,
-                channel_limit: parseInt(b.channel_limit) || 3,
-                role_limit: parseInt(b.role_limit) || 3,
-                webhook_limit: parseInt(b.webhook_limit) || 3,
-                action: b.action || 'ban'
-            });
-            res.redirect(`/dashboard/${req.guild.id}/protection?success=تم+تحديث+إعدادات+الحماية`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.get('/:id/automod', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            res.render('automod', {
-                guild: req.guild,
-                settings: db.getAutomod(req.guild.id),
-                roles: req.guild.roles.cache.filter(r => r.id !== req.guild.id).sort((a, b) => b.position - a.position)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/automod', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const b = req.body;
-            
-            let words = [];
-            if (b.words) {
-                words = b.words.split(',').map(w => w.trim()).filter(Boolean);
-            }
-
-            let bypass_roles = [];
-            if (b.bypass_roles) {
-                bypass_roles = Array.isArray(b.bypass_roles) ? b.bypass_roles : [b.bypass_roles];
-            }
-
-            db.updateAutomod(req.guild.id, {
-                enabled: b.enabled === '1' || b.enabled === 1 ? 1 : 0,
-                action: b.action || 'delete',
-                words: JSON.stringify(words),
-                bypass_roles: JSON.stringify(bypass_roles)
-            });
-            
-            res.redirect(`/dashboard/${req.guild.id}/automod?success=تم+تحديث+إعدادات+الفلتر+الذكي`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.get('/:id/autoreplies', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            res.render('autoreplies', {
-                guild: req.guild,
-                replies: db.getAutoReplies(req.guild.id)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/autoreplies', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { trigger, response, deleteTrigger } = req.body;
-            if (trigger && response) {
-                db.addAutoReply(req.guild.id, trigger, response, deleteTrigger === 'on' ? 1 : 0);
-            }
-            res.redirect(`/dashboard/${req.guild.id}/autoreplies?success=تمت+إضافة+الرد+التلقائي`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/autoreplies/delete', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { trigger } = req.body;
-            if (trigger) {
-                db.removeAutoReply(req.guild.id, trigger);
-            }
-            res.redirect(`/dashboard/${req.guild.id}/autoreplies?success=تم+حذف+الرد+التلقائي`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.get('/:id/aliases', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const commandNames = [];
-            for (const [name, cmd] of client.commands) {
-                try {
-                    const serialized = cmd.data.toJSON ? cmd.data.toJSON() : cmd.data;
-                    const subcommands = serialized.options ? serialized.options.filter(opt => opt.type === 1) : [];
-                    if (subcommands.length > 0) {
-                        for (const sub of subcommands) {
-                            commandNames.push(`${name} ${sub.name}`);
-                        }
-                    } else {
-                        commandNames.push(name);
-                    }
-                } catch (err) {
-                    console.error("Error serializing command for dashboard:", err);
-                    commandNames.push(name);
-                }
-            }
-            commandNames.sort();
-
-            res.render('aliases', {
-                guild: req.guild,
-                aliases: db.getAliases(req.guild.id),
-                commands: commandNames
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/aliases', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { shortcut, command } = req.body;
-            if (shortcut && command) {
-                const prefix = db.getGuildSettings(req.guild.id).prefix || '#';
-                const cleanShortcut = shortcut.startsWith(prefix) ? shortcut.slice(prefix.length) : shortcut;
-                const cleanCommand = command.startsWith(prefix) ? command.slice(prefix.length) : command;
-                db.addAlias(req.guild.id, cleanShortcut.trim(), cleanCommand.trim());
-            }
-            res.redirect(`/dashboard/${req.guild.id}/aliases?success=تمت+إضافة+الاختصار`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/aliases/delete', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { shortcut } = req.body;
-            if (shortcut) {
-                db.removeAlias(req.guild.id, shortcut);
-            }
-            res.redirect(`/dashboard/${req.guild.id}/aliases?success=تم+حذف+الاختصار`);
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.get('/:id/logs', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            res.render('logs', {
-                guild: req.guild,
-                settings: db.getLogSettings(req.guild.id)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/logs', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const b = req.body;
-            db.db.prepare(`
+  router.post('/:id/logs', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const b = req.body;
+      db.db
+        .prepare(
+          `
                 INSERT INTO log_settings (
                     guildId, ban_channel, unban_channel, kick_channel, timeout_channel, warn_channel,
                     message_delete_channel, message_edit_channel, member_join_channel, member_leave_channel,
@@ -563,591 +596,875 @@ module.exports = (client) => {
                     ban_channel = ?, unban_channel = ?, kick_channel = ?, timeout_channel = ?, warn_channel = ?,
                     message_delete_channel = ?, message_edit_channel = ?, member_join_channel = ?, member_leave_channel = ?,
                     channel_create_channel = ?, channel_delete_channel = ?, role_create_channel = ?, role_delete_channel = ?, nick_change_channel = ?
-            `).run(
-                req.guild.id,
-                b.ban_channel || null, b.unban_channel || null, b.kick_channel || null, b.timeout_channel || null, b.warn_channel || null,
-                b.message_delete_channel || null, b.message_edit_channel || null, b.member_join_channel || null, b.member_leave_channel || null,
-                b.channel_create_channel || null, b.channel_delete_channel || null, b.role_create_channel || null, b.role_delete_channel || null, b.nick_change_channel || null,
+            `
+        )
+        .run(
+          req.guild.id,
+          b.ban_channel || null,
+          b.unban_channel || null,
+          b.kick_channel || null,
+          b.timeout_channel || null,
+          b.warn_channel || null,
+          b.message_delete_channel || null,
+          b.message_edit_channel || null,
+          b.member_join_channel || null,
+          b.member_leave_channel || null,
+          b.channel_create_channel || null,
+          b.channel_delete_channel || null,
+          b.role_create_channel || null,
+          b.role_delete_channel || null,
+          b.nick_change_channel || null,
 
-                b.ban_channel || null, b.unban_channel || null, b.kick_channel || null, b.timeout_channel || null, b.warn_channel || null,
-                b.message_delete_channel || null, b.message_edit_channel || null, b.member_join_channel || null, b.member_leave_channel || null,
-                b.channel_create_channel || null, b.channel_delete_channel || null, b.role_create_channel || null, b.role_delete_channel || null, b.nick_change_channel || null
-            );
-            res.redirect(`/dashboard/${req.guild.id}/logs?success=تم+تحديث+إعدادات+السجلات`);
-        } catch (err) {
-            next(err);
-        }
-    });
+          b.ban_channel || null,
+          b.unban_channel || null,
+          b.kick_channel || null,
+          b.timeout_channel || null,
+          b.warn_channel || null,
+          b.message_delete_channel || null,
+          b.message_edit_channel || null,
+          b.member_join_channel || null,
+          b.member_leave_channel || null,
+          b.channel_create_channel || null,
+          b.channel_delete_channel || null,
+          b.role_create_channel || null,
+          b.role_delete_channel || null,
+          b.nick_change_channel || null
+        );
+      res.redirect(`/dashboard/${req.guild.id}/logs?success=تم+تحديث+إعدادات+السجلات`);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-    router.get('/:id/tickets', checkAuth, checkGuildAccess, async (req, res, next) => {
+  router.get('/:id/tickets', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const settings = await db.getTicketSettings(req.guild.id);
+      const ticketCategories = db.getTicketCategories(req.guild.id) || [];
+
+      res.render('tickets', {
+        guild: req.guild,
+        settings,
+        ticketCategories,
+        roles: req.guild.roles.cache.sort((a, b) => b.position - a.position),
+        channels: req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5),
+        categories: req.guild.channels.cache.filter((c) => c.type === 4),
+        success: req.query.success,
+        error: req.query.error
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/tickets/category/add', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { name, emoji, category_channel, staff_role } = req.body;
+      if (!name) return res.redirect(`/dashboard/${req.guild.id}/tickets?error=Category+name+is+required`);
+
+      db.addTicketCategory(req.guild.id, {
+        name: name.trim(),
+        emoji: emoji || '🎫',
+        categoryId: category_channel || null,
+        staffRoleId: staff_role || null
+      });
+      res.redirect(`/dashboard/${req.guild.id}/tickets?success=تم+إضافة+القسم+بنجاح`);
+    } catch (err) {
+      logger.error('Dashboard Add Ticket Category Error:', err);
+      next(err);
+    }
+  });
+
+  router.post('/:id/tickets/category/delete', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { name } = req.body;
+      if (!name) return res.redirect(`/dashboard/${req.guild.id}/tickets?error=Category+name+is+required`);
+
+      db.removeTicketCategory(req.guild.id, name);
+      res.redirect(`/dashboard/${req.guild.id}/tickets?success=تم+إزالة+القسم+بنجاح`);
+    } catch (err) {
+      logger.error('Dashboard Delete Ticket Category Error:', err);
+      next(err);
+    }
+  });
+
+  router.post('/:id/tickets', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const b = req.body;
+      let panelData = {};
+
+      try {
+        panelData = JSON.parse(b.panel_data_json || '{}');
+        panelData.actions = {
+          call_user: b.call_user || 'none',
+          call_support: b.call_support || 'none',
+          call_owners: b.call_owners || 'none',
+          warn_user: b.warn_user || 'none',
+          blacklist_user: b.blacklist_user || 'none',
+          rename_ticket: b.rename_ticket || 'none',
+          lock_ticket: b.lock_ticket || 'none',
+          unlock_ticket: b.unlock_ticket || 'none'
+        };
+      } catch {
+        return res.redirect(`/dashboard/${req.guild.id}/tickets?error=Invalid+panel+data`);
+      }
+
+      await db.updateTicketSettings(req.guild.id, {
+        category_id: b.category_id || null,
+        log_channel: b.log_channel || null,
+        feedbacks_channel: b.feedbacks_channel || null,
+
+        staff_role: b.staff_role || null,
+        owners_role: b.owners_role || null,
+
+        panel_channel: b.panel_channel || null,
+
+        ticket_message: b.ticket_message || 'شكراً لفتح تذكرة، سيتواصل معك فريق الدعم قريباً.',
+
+        panel_data: panelData
+      });
+
+      if (b.send_panel === 'yes' && b.panel_channel) {
         try {
-            const settings = await db.getTicketSettings(req.guild.id);
-
-            res.render('tickets', {
-                guild: req.guild,
-                settings,
-                roles: req.guild.roles.cache.sort((a, b) => b.position - a.position),
-                channels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5),
-                categories: req.guild.channels.cache.filter(c => c.type === 4),
-                success:  req.query.success,
-                error: req.query.error
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/tickets', checkAuth, checkGuildAccess, async (req, res, next) => {
-        try {
-            const b = req.body;
-            let panelData = {};
-
-            try {
-                panelData = JSON.parse(b.panel_data_json || "{}");
-                panelData.actions = {
-                    call_user: b.call_user || "none",
-                    call_support: b.call_support || "none",
-                    call_owners: b.call_owners || "none",
-                    warn_user: b.warn_user || "none",
-                    blacklist_user: b.blacklist_user || "none",
-                    rename_ticket: b.rename_ticket || "none",
-                    lock_ticket: b.lock_ticket || "none",
-                    unlock_ticket: b.unlock_ticket || "none"
-                };
-            } catch {
-                return res.redirect(
-                    `/dashboard/${req.guild.id}/tickets?error=Invalid+panel+data`
-                );
-            }
-
-            await db.updateTicketSettings(req.guild.id, {
-                category_id: b.category_id || null,
-                log_channel: b.log_channel || null,
-                feedbacks_channel: b.feedbacks_channel || null,
-
-                staff_role: b.staff_role || null,
-                owners_role: b.owners_role || null,
-
-                panel_channel: b.panel_channel || null,
-
-                ticket_message:
-                    b.ticket_message ||
-                    'شكراً لفتح تذكرة، سيتواصل معك فريق الدعم قريباً.',
-
-                panel_data: panelData
-            });
-
-            if (b.send_panel === 'yes' && b.panel_channel) {
-                try {
-                    const pChannel = req.guild.channels.cache.get(b.panel_channel);
-                    if (pChannel) {
-                        const hexColor = panelData.color ? panelData.color.replace('#', '') : '5865F2';
-                        const colorInt = parseInt(hexColor, 16) || 0x5865F2;
-
-                        const embed = new EmbedBuilder()
-                            .setColor(colorInt)
-                            .setTitle(panelData.title || "تذاكر الدعم")
-                            .setDescription(
-                                panelData.description ||
-                                "اضغط أدناه لفتح تذكرة"
-                            );
-
-                        if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
-                        if (panelData.image) embed.setImage(panelData.image);
-
-                        const row = new ActionRowBuilder();
-                        
-                        if (panelData.comp_type === 'select') {
-                            row.addComponents(
-                                new StringSelectMenuBuilder()
-                                    .setCustomId("ticket_create_select")
-                                    .setPlaceholder(panelData.label || "افتح تذكرة")
-                                    .addOptions({
-                                        label: panelData.label || "افتح تذكرة",
-                                        value: "create_ticket",
-                                        emoji: panelData.emoji || "🎫"
-                                    })
-                            );
-                        } else {
-                            row.addComponents(
-                                new ButtonBuilder()
-                                    .setCustomId("ticket_create_btn")
-                                    .setLabel(panelData.label || "فتح تذكرة")
-                                    .setEmoji(panelData.emoji || "🎫")
-                                    .setStyle(ButtonStyle.Primary)
-                            );
-                        }
-
-                        await pChannel.send({
-                            embeds: [embed],
-                            components: [row]
-                        });
-                    }
-                } catch(err) {
-                    console.error("Ticket Panel Error:", err);
-                }
-            }
-
-            res.redirect(
-                `/dashboard/${req.guild.id}/tickets?success=تم+حفظ+الإعدادات`
-            );
-
-        } catch (err) {
-            console.error("Dashboard Tickets Error:", err);
-            next(err);
-        }
-    });
-
-    router.get('/:id/embed', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            res.render('embedbuilder', {
-                guild: req.guild,
-                channels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/embed', checkAuth, checkGuildAccess, async (req, res, next) => {
-        const b = req.body;
-        if (!b.channel) return res.redirect(`/dashboard/${req.guild.id}/embed?error=No+channel+selected`);
-
-        try {
-            const targetChannel = req.guild.channels.cache.get(b.channel);
-            if (!targetChannel) throw new Error("Channel not found");
+          const pChannel = req.guild.channels.cache.get(b.panel_channel);
+          if (pChannel) {
+            const hexColor = panelData.color ? panelData.color.replace('#', '') : '5865F2';
+            const colorInt = parseInt(hexColor, 16) || 0x5865f2;
 
             const embed = new EmbedBuilder()
-                .setColor(parseInt(safeColor(b.color).replace('#', ''), 16));
+              .setColor(colorInt)
+              .setTitle(panelData.title || 'تذاكر الدعم')
+              .setDescription(panelData.description || 'اضغط أدناه لفتح تذكرة');
 
-            const authorIcon = safeUrl(b.author_icon);
-            const footerIcon = safeUrl(b.footer_icon);
-            const image = safeUrl(b.image);
-            const thumbnail = safeUrl(b.thumbnail);
+            if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
+            if (panelData.image) embed.setImage(panelData.image);
 
-            if (b.author_name) embed.setAuthor({ name: b.author_name.substring(0, 256), iconURL: authorIcon || null });
-            if (b.title) embed.setTitle(b.title.substring(0, 256));
-            if (b.description) embed.setDescription(b.description.substring(0, 4096));
-            if (image) embed.setImage(image);
-            if (thumbnail) embed.setThumbnail(thumbnail);
+            const categories = db.getTicketCategories(req.guild.id) || [];
+            const row = new ActionRowBuilder();
 
-            if (b.footer_text) embed.setFooter({ text: b.footer_text.substring(0, 2048), iconURL: footerIcon || null });
-            if (b.timestamp === 'true') embed.setTimestamp();
+            if (panelData.comp_type === 'select' || categories.length > 0) {
+              const selectOptions = categories.map((cat) => ({
+                label: cat.name || cat.label || 'قسم تذكرة',
+                value: `ticket_cat_${cat.name}`,
+                description: cat.description || undefined,
+                emoji: cat.emoji || '🎫'
+              }));
 
-            if (!b.title && !b.description && !b.image && !b.author_name && !b.footer_text) {
-                return res.redirect(`/dashboard/${req.guild.id}/embed?error=Embed+must+have+some+content+(title,+description,+author,+etc)`);
-            }
+              if (selectOptions.length === 0) {
+                selectOptions.push({
+                  label: panelData.label || 'افتح تذكرة',
+                  value: 'create_ticket',
+                  emoji: panelData.emoji || '🎫'
+                });
+              }
 
-            await targetChannel.send({ embeds: [embed] });
-            res.redirect(`/dashboard/${req.guild.id}/embed?success=تم+إرسال+الإمبيد+بنجاح`);
-        } catch (e) {
-            console.error("Dashboard Embed Builder Error:", e);
-            next(e);
-        }
-    });
-
-    router.get('/:id/customcmds', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const commands = db.getCustomCommands(req.guild.id);
-            res.render('customcmds', {
-                guild: req.guild,
-                roles: req.guild.roles.cache.sort((a, b) => b.position - a.position),
-                commands: commands
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/customcmds/add', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { trigger, action_type, action_value } = req.body;
-            if (!trigger) return res.redirect(`/dashboard/${req.guild.id}/customcmds?error=Trigger+is+required`);
-
-            const cleanTrigger = trigger.trim().toLowerCase();
-            if (cleanTrigger.includes(' ')) return res.redirect(`/dashboard/${req.guild.id}/customcmds?error=Trigger+cannot+contain+spaces`);
-
-            let actions = [];
-            
-            if (Array.isArray(action_type)) {
-                for (let i = 0; i < action_type.length; i++) {
-                    if (action_type[i] && action_value[i]) {
-                        actions.push({ type: action_type[i], value: action_value[i] });
-                    }
-                }
-            } else if (action_type && action_value) {
-                actions.push({ type: action_type, value: action_value });
-            }
-
-            if (actions.length === 0) return res.redirect(`/dashboard/${req.guild.id}/customcmds?error=At+least+one+valid+action+is+required`);
-
-            const id = Date.now().toString();
-            db.addCustomCommand(req.guild.id, id, cleanTrigger, actions);
-            res.redirect(`/dashboard/${req.guild.id}/customcmds?success=تم+إضافة+الأمر+بنجاح`);
-        } catch (e) {
-            console.error("Dashboard Custom Commands Error:", e);
-            next(e);
-        }
-    });
-
-    router.post('/:id/customcmds/delete', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { cmd_id } = req.body;
-            if (cmd_id) {
-                db.deleteCustomCommand(req.guild.id, cmd_id);
-                res.redirect(`/dashboard/${req.guild.id}/customcmds?success=تم+حذف+الأمر`);
+              row.addComponents(
+                new StringSelectMenuBuilder()
+                  .setCustomId('ticket_create_select')
+                  .setPlaceholder(panelData.label || 'اختر قسم التذكرة...')
+                  .addOptions(selectOptions)
+              );
             } else {
-                res.redirect(`/dashboard/${req.guild.id}/customcmds?error=Invalid+ID`);
-            }
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.get('/:id/reactionroles', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const settings = db.getReactionRoles(req.guild.id);
-            if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
-            if (typeof settings.roles_data === 'string') settings.roles_data = JSON.parse(settings.roles_data || '[]');
-
-            const nativeReactionRoles = db.db.prepare('SELECT * FROM reactroles WHERE guildId = ?').all(req.guild.id);
-
-            res.render('reactionroles', {
-                guild: req.guild,
-                settings,
-                client,
-                nativeReactionRoles,
-                roles: req.guild.roles.cache.sort((a, b) => b.position - a.position).map(r => ({id: r.id, name: r.name})),
-                textChannels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
-
-    router.post('/:id/reactionroles', checkAuth, checkGuildAccess, async (req, res, next) => {
-        try {
-            const b = req.body;
-
-            const panelData = {
-                title: b.title || 'اختر رتبك',
-                description: b.description || 'اضغط على الأزرار أدناه للحصول على الرتب',
-                color: safeColor(b.color),
-                thumbnail: safeUrl(b.thumbnail),
-                image: safeUrl(b.image),
-                comp_type: b.comp_type || 'button',
-                panel_channel: b.panel_channel || ''
-            };
-
-            const rolesData = b.roles_data || '[]';
-
-            db.updateReactionRoles(req.guild.id, {
-                panel_data: JSON.stringify(panelData),
-                roles_data: rolesData
-            });
-
-            if (b.send_panel === 'yes' && b.panel_channel) {
-                try {
-                    const targetChannel = req.guild.channels.cache.get(b.panel_channel);
-                    if (targetChannel) {
-                        const embed = new EmbedBuilder()
-                            .setColor(parseInt(panelData.color.replace('#', ''), 16))
-                            .setTitle(panelData.title.substring(0, 256))
-                            .setDescription(panelData.description.substring(0, 4096));
-
-                        if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
-                        if (panelData.image) embed.setImage(panelData.image);
-
-                        const parsedRoles = JSON.parse(rolesData);
-                        const components = [];
-
-                        if (panelData.comp_type === 'button') {
-                            for (let i = 0; i < parsedRoles.length; i += 5) {
-                                const chunk = parsedRoles.slice(i, i + 5);
-                                const row = new ActionRowBuilder();
-                                chunk.forEach((r, idx) => {
-                                    const btn = new ButtonBuilder()
-                                        .setCustomId(`rr_${r.roleId}_${i + idx}`)
-                                        .setStyle(ButtonStyle.Secondary);
-
-                                    if (r.label) btn.setLabel(r.label.substring(0, 80));
-                                    if (r.emoji) btn.setEmoji(r.emoji);
-                                    if (!r.label && !r.emoji) btn.setLabel('رتبة');
-                                    row.addComponents(btn);
-                                });
-                                components.push(row);
-                            }
-                        } else {
-                            const row = new ActionRowBuilder();
-                            const sel = new StringSelectMenuBuilder()
-                                .setCustomId('rr_select')
-                                .setPlaceholder('اختر رتبك...')
-                                .setMinValues(0)
-                                .setMaxValues(Math.min(parsedRoles.length, 25));
-
-                            const options = parsedRoles.map(r => {
-                                const opt = new StringSelectMenuOptionBuilder()
-                                    .setLabel(r.label || 'رتبة')
-                                    .setValue(`rr_opt_${r.roleId}`);
-                                if (r.emoji) opt.setEmoji(r.emoji);
-                                return opt;
-                            });
-                            sel.addOptions(options);
-                            row.addComponents(sel);
-                            components.push(row);
-                        }
-
-                        await targetChannel.send({ embeds: [embed], components });
-                    }
-                } catch (e) {
-                    console.error("Error sending reaction roles panel", e);
-                    return res.redirect(`/dashboard/${req.guild.id}/reactionroles?error=Failed+to+send+panel`);
-                }
+              row.addComponents(
+                new ButtonBuilder()
+                  .setCustomId('ticket_create_btn')
+                  .setLabel(panelData.label || 'فتح تذكرة')
+                  .setEmoji(panelData.emoji || '🎫')
+                  .setStyle(ButtonStyle.Primary)
+              );
             }
 
-            res.redirect(`/dashboard/${req.guild.id}/reactionroles?success=تم+حفظ+الرتب`);
+            await pChannel.send({
+              embeds: [embed],
+              components: [row]
+            });
+          }
+        } catch (err) {
+          logger.error('Ticket Panel Error:', err);
+        }
+      }
+
+      res.redirect(`/dashboard/${req.guild.id}/tickets?success=تم+حفظ+الإعدادات`);
+    } catch (err) {
+      logger.error('Dashboard Tickets Error:', err);
+      next(err);
+    }
+  });
+
+  router.get('/:id/embed', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      res.render('embedbuilder', {
+        guild: req.guild,
+        channels: req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/embed', checkAuth, checkGuildAccess, async (req, res, next) => {
+    const b = req.body;
+    if (!b.channel) return res.redirect(`/dashboard/${req.guild.id}/embed?error=No+channel+selected`);
+
+    try {
+      const targetChannel = req.guild.channels.cache.get(b.channel);
+      if (!targetChannel) throw new Error('Channel not found');
+
+      const embed = new EmbedBuilder().setColor(parseInt(safeColor(b.color).replace('#', ''), 16));
+
+      const authorIcon = safeUrl(b.author_icon);
+      const footerIcon = safeUrl(b.footer_icon);
+      const image = safeUrl(b.image);
+      const thumbnail = safeUrl(b.thumbnail);
+
+      if (b.author_name) embed.setAuthor({ name: b.author_name.substring(0, 256), iconURL: authorIcon || null });
+      if (b.title) embed.setTitle(b.title.substring(0, 256));
+      if (b.description) embed.setDescription(b.description.substring(0, 4096));
+      if (image) embed.setImage(image);
+      if (thumbnail) embed.setThumbnail(thumbnail);
+
+      if (b.footer_text) embed.setFooter({ text: b.footer_text.substring(0, 2048), iconURL: footerIcon || null });
+      if (b.timestamp === 'true') embed.setTimestamp();
+
+      if (!b.title && !b.description && !b.image && !b.author_name && !b.footer_text) {
+        return res.redirect(
+          `/dashboard/${req.guild.id}/embed?error=Embed+must+have+some+content+(title,+description,+author,+etc)`
+        );
+      }
+
+      await targetChannel.send({ embeds: [embed] });
+      res.redirect(`/dashboard/${req.guild.id}/embed?success=تم+إرسال+الإمبيد+بنجاح`);
+    } catch (e) {
+      logger.error('Dashboard Embed Builder Error:', e);
+      next(e);
+    }
+  });
+
+  router.get('/:id/customcmds', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const commands = db.getCustomCommands(req.guild.id);
+      res.render('customcmds', {
+        guild: req.guild,
+        roles: req.guild.roles.cache.sort((a, b) => b.position - a.position),
+        commands: commands
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/customcmds/add', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { trigger, action_type, action_value } = req.body;
+      if (!trigger) return res.redirect(`/dashboard/${req.guild.id}/customcmds?error=Trigger+is+required`);
+
+      const cleanTrigger = trigger.trim().toLowerCase();
+      if (cleanTrigger.includes(' '))
+        return res.redirect(`/dashboard/${req.guild.id}/customcmds?error=Trigger+cannot+contain+spaces`);
+
+      const actions = [];
+
+      if (Array.isArray(action_type)) {
+        for (let i = 0; i < action_type.length; i++) {
+          if (action_type[i] && action_value[i]) {
+            actions.push({ type: action_type[i], value: action_value[i] });
+          }
+        }
+      } else if (action_type && action_value) {
+        actions.push({ type: action_type, value: action_value });
+      }
+
+      if (actions.length === 0)
+        return res.redirect(`/dashboard/${req.guild.id}/customcmds?error=At+least+one+valid+action+is+required`);
+
+      const id = Date.now().toString();
+      db.addCustomCommand(req.guild.id, id, cleanTrigger, actions);
+      res.redirect(`/dashboard/${req.guild.id}/customcmds?success=تم+إضافة+الأمر+بنجاح`);
+    } catch (e) {
+      logger.error('Dashboard Custom Commands Error:', e);
+      next(e);
+    }
+  });
+
+  router.post('/:id/customcmds/delete', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { cmd_id } = req.body;
+      if (cmd_id) {
+        db.deleteCustomCommand(req.guild.id, cmd_id);
+        res.redirect(`/dashboard/${req.guild.id}/customcmds?success=تم+حذف+الأمر`);
+      } else {
+        res.redirect(`/dashboard/${req.guild.id}/customcmds?error=Invalid+ID`);
+      }
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/reactionroles', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const settings = db.getReactionRoles(req.guild.id);
+      if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
+      if (typeof settings.roles_data === 'string') settings.roles_data = JSON.parse(settings.roles_data || '[]');
+
+      const nativeReactionRoles = db.db.prepare('SELECT * FROM reactroles WHERE guildId = ?').all(req.guild.id);
+
+      res.render('reactionroles', {
+        guild: req.guild,
+        settings,
+        client,
+        nativeReactionRoles,
+        roles: req.guild.roles.cache.sort((a, b) => b.position - a.position).map((r) => ({ id: r.id, name: r.name })),
+        textChannels: req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/reactionroles', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const b = req.body;
+
+      const panelData = {
+        title: b.title || 'اختر رتبك',
+        description: b.description || 'اضغط على الأزرار أدناه للحصول على الرتب',
+        color: safeColor(b.color),
+        thumbnail: safeUrl(b.thumbnail),
+        image: safeUrl(b.image),
+        comp_type: b.comp_type || 'button',
+        panel_channel: b.panel_channel || ''
+      };
+
+      const rolesData = b.roles_data || '[]';
+
+      db.updateReactionRoles(req.guild.id, {
+        panel_data: JSON.stringify(panelData),
+        roles_data: rolesData
+      });
+
+      if (b.send_panel === 'yes' && b.panel_channel) {
+        try {
+          const targetChannel = req.guild.channels.cache.get(b.panel_channel);
+          if (targetChannel) {
+            const embed = new EmbedBuilder()
+              .setColor(parseInt(panelData.color.replace('#', ''), 16))
+              .setTitle(panelData.title.substring(0, 256))
+              .setDescription(panelData.description.substring(0, 4096));
+
+            if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
+            if (panelData.image) embed.setImage(panelData.image);
+
+            const parsedRoles = JSON.parse(rolesData);
+            const components = [];
+
+            if (panelData.comp_type === 'button') {
+              for (let i = 0; i < parsedRoles.length; i += 5) {
+                const chunk = parsedRoles.slice(i, i + 5);
+                const row = new ActionRowBuilder();
+                chunk.forEach((r, idx) => {
+                  const btn = new ButtonBuilder()
+                    .setCustomId(`rr_${r.roleId}_${i + idx}`)
+                    .setStyle(ButtonStyle.Secondary);
+
+                  if (r.label) btn.setLabel(r.label.substring(0, 80));
+                  if (r.emoji) btn.setEmoji(r.emoji);
+                  if (!r.label && !r.emoji) btn.setLabel('رتبة');
+                  row.addComponents(btn);
+                });
+                components.push(row);
+              }
+            } else {
+              const row = new ActionRowBuilder();
+              const sel = new StringSelectMenuBuilder()
+                .setCustomId('rr_select')
+                .setPlaceholder('اختر رتبك...')
+                .setMinValues(0)
+                .setMaxValues(Math.min(parsedRoles.length, 25));
+
+              const options = parsedRoles.map((r) => {
+                const opt = new StringSelectMenuOptionBuilder()
+                  .setLabel(r.label || 'رتبة')
+                  .setValue(`rr_opt_${r.roleId}`);
+                if (r.emoji) opt.setEmoji(r.emoji);
+                return opt;
+              });
+              sel.addOptions(options);
+              row.addComponents(sel);
+              components.push(row);
+            }
+
+            await targetChannel.send({ embeds: [embed], components });
+          }
         } catch (e) {
-            console.error("Dashboard Reaction Roles Error:", e);
-            next(e);
+          logger.error('Error sending reaction roles panel', e);
+          return res.redirect(`/dashboard/${req.guild.id}/reactionroles?error=Failed+to+send+panel`);
         }
-    });
+      }
 
-    router.get('/:id/forms', checkAuth, checkGuildAccess, (req, res, next) => {
+      res.redirect(`/dashboard/${req.guild.id}/reactionroles?success=تم+حفظ+الرتب`);
+    } catch (e) {
+      logger.error('Dashboard Reaction Roles Error:', e);
+      next(e);
+    }
+  });
+
+  router.get('/:id/forms', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const settings = db.getFormsSettings(req.guild.id);
+      if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
+
+      res.render('forms', {
+        guild: req.guild,
+        settings,
+        client,
+        textChannels: req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/forms', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const b = req.body;
+
+      if (!channelExists(req.guild, b.log_channel) || !channelExists(req.guild, b.panel_channel)) {
+        return res.redirect(`/dashboard/${req.guild.id}/forms?error=Invalid+channel`);
+      }
+
+      const panelData = {
+        title: b.title || 'نموذج التقديم',
+        description: b.description || 'اضغط على الزر أدناه للتقديم.',
+        color: safeColor(b.color),
+        thumbnail: safeUrl(b.thumbnail),
+        image: safeUrl(b.image)
+      };
+
+      const questionsData = b.questions || '[]';
+
+      db.updateFormsSettings(req.guild.id, {
+        log_channel: b.log_channel,
+        panel_data: JSON.stringify(panelData),
+        questions: questionsData
+      });
+
+      if (b.send_panel === 'yes' && b.panel_channel) {
         try {
-            const settings = db.getFormsSettings(req.guild.id);
-            if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
+          const targetChannel = req.guild.channels.cache.get(b.panel_channel);
+          if (targetChannel) {
+            const embed = new EmbedBuilder()
+              .setColor(parseInt(panelData.color.replace('#', ''), 16))
+              .setTitle(panelData.title.substring(0, 256))
+              .setDescription(panelData.description.substring(0, 4096));
 
-            res.render('forms', {
-                guild: req.guild,
-                settings,
-                client,
-                textChannels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
+            if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
+            if (panelData.image) embed.setImage(panelData.image);
 
-    router.post('/:id/forms', checkAuth, checkGuildAccess, async (req, res, next) => {
-        try {
-            const b = req.body;
+            const row = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setCustomId('form_apply_btn')
+                .setLabel('قدّم الآن')
+                .setEmoji('📝')
+                .setStyle(ButtonStyle.Primary)
+            );
 
-            if (!channelExists(req.guild, b.log_channel) || !channelExists(req.guild, b.panel_channel)) {
-                return res.redirect(`/dashboard/${req.guild.id}/forms?error=Invalid+channel`);
-            }
-
-            const panelData = {
-                title: b.title || 'نموذج التقديم',
-                description: b.description || 'اضغط على الزر أدناه للتقديم.',
-                color: safeColor(b.color),
-                thumbnail: safeUrl(b.thumbnail),
-                image: safeUrl(b.image)
-            };
-
-            const questionsData = b.questions || '[]';
-
-            db.updateFormsSettings(req.guild.id, {
-                log_channel: b.log_channel,
-                panel_data: JSON.stringify(panelData),
-                questions: questionsData
-            });
-
-            if (b.send_panel === 'yes' && b.panel_channel) {
-                try {
-                    const targetChannel = req.guild.channels.cache.get(b.panel_channel);
-                    if (targetChannel) {
-                        const embed = new EmbedBuilder()
-                            .setColor(parseInt(panelData.color.replace('#', ''), 16))
-                            .setTitle(panelData.title.substring(0, 256))
-                            .setDescription(panelData.description.substring(0, 4096));
-
-                        if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
-                        if (panelData.image) embed.setImage(panelData.image);
-
-                        const row = new ActionRowBuilder().addComponents(
-                            new ButtonBuilder()
-                                .setCustomId('form_apply_btn')
-                                .setLabel('قدّم الآن')
-                                .setEmoji('📝')
-                                .setStyle(ButtonStyle.Primary)
-                        );
-
-                        await targetChannel.send({ embeds: [embed], components: [row] });
-                    }
-                } catch (e) {
-                    console.error("Error sending forms panel", e);
-                    return res.redirect(`/dashboard/${req.guild.id}/forms?error=Failed+to+send+panel`);
-                }
-            }
-
-            res.redirect(`/dashboard/${req.guild.id}/forms?success=تم+حفظ+التقديم`);
+            await targetChannel.send({ embeds: [embed], components: [row] });
+          }
         } catch (e) {
-            console.error("Dashboard Forms Error:", e);
-            next(e);
+          logger.error('Error sending forms panel', e);
+          return res.redirect(`/dashboard/${req.guild.id}/forms?error=Failed+to+send+panel`);
         }
-    });
+      }
 
-    router.get('/:id/captcha', checkAuth, checkGuildAccess, (req, res, next) => {
+      res.redirect(`/dashboard/${req.guild.id}/forms?success=تم+حفظ+التقديم`);
+    } catch (e) {
+      logger.error('Dashboard Forms Error:', e);
+      next(e);
+    }
+  });
+
+  router.get('/:id/captcha', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const settings = db.getCaptchaSettings(req.guild.id);
+      if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
+
+      res.render('captcha', {
+        guild: req.guild,
+        settings,
+        client,
+        roles: req.guild.roles.cache.sort((a, b) => b.position - a.position).map((r) => ({ id: r.id, name: r.name })),
+        textChannels: req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/captcha', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const b = req.body;
+
+      if (
+        !channelExists(req.guild, b.panel_channel) ||
+        !roleExists(req.guild, b.unverified_role) ||
+        !roleExists(req.guild, b.verified_role)
+      ) {
+        return res.redirect(`/dashboard/${req.guild.id}/captcha?error=Invalid+channel+or+role`);
+      }
+
+      const panelData = {
+        title: b.title || 'التحقق من السيرفر',
+        description: b.description || 'للوصول إلى بقية السيرفر، اضغط على الزر أدناه وحل التحقق.',
+        color: safeColor(b.color, '#57F287'),
+        btn_text: b.btn_text || 'تحقق',
+        btn_emoji: b.btn_emoji || '✅',
+        btn_style: b.btn_style || 'Success'
+      };
+
+      db.updateCaptchaSettings(req.guild.id, {
+        enabled: parseInt(b.enabled) || 0,
+        unverified_role: b.unverified_role || null,
+        verified_role: b.verified_role || null,
+        panel_channel: b.panel_channel || null,
+        panel_data: JSON.stringify(panelData)
+      });
+
+      if (b.send_panel === 'yes' && b.panel_channel) {
         try {
-            const settings = db.getCaptchaSettings(req.guild.id);
-            if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
+          const targetChannel = req.guild.channels.cache.get(b.panel_channel);
+          if (targetChannel) {
+            const embed = new EmbedBuilder()
+              .setColor(parseInt(panelData.color.replace('#', ''), 16))
+              .setTitle(panelData.title.substring(0, 256))
+              .setDescription(panelData.description.substring(0, 4096));
 
-            res.render('captcha', {
-                guild: req.guild,
-                settings,
-                client,
-                roles: req.guild.roles.cache.sort((a, b) => b.position - a.position).map(r => ({id: r.id, name: r.name})),
-                textChannels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
+            let style = ButtonStyle.Success;
+            if (panelData.btn_style === 'Primary') style = ButtonStyle.Primary;
+            if (panelData.btn_style === 'Secondary') style = ButtonStyle.Secondary;
+            if (panelData.btn_style === 'Danger') style = ButtonStyle.Danger;
 
-    router.post('/:id/captcha', checkAuth, checkGuildAccess, async (req, res, next) => {
-        try {
-            const b = req.body;
+            const btn = new ButtonBuilder()
+              .setCustomId('captcha_verify_btn')
+              .setLabel(panelData.btn_text)
+              .setStyle(style);
+            if (panelData.btn_emoji) btn.setEmoji(panelData.btn_emoji);
 
-            if (!channelExists(req.guild, b.panel_channel) || !roleExists(req.guild, b.unverified_role) || !roleExists(req.guild, b.verified_role)) {
-                return res.redirect(`/dashboard/${req.guild.id}/captcha?error=Invalid+channel+or+role`);
-            }
+            const row = new ActionRowBuilder().addComponents(btn);
 
-            const panelData = {
-                title: b.title || 'التحقق من السيرفر',
-                description: b.description || 'للوصول إلى بقية السيرفر، اضغط على الزر أدناه وحل التحقق.',
-                color: safeColor(b.color, '#57F287'),
-                btn_text: b.btn_text || 'تحقق',
-                btn_emoji: b.btn_emoji || '✅',
-                btn_style: b.btn_style || 'Success'
-            };
-
-            db.updateCaptchaSettings(req.guild.id, {
-                enabled: parseInt(b.enabled) || 0,
-                unverified_role: b.unverified_role || null,
-                verified_role: b.verified_role || null,
-                panel_channel: b.panel_channel || null,
-                panel_data: JSON.stringify(panelData)
-            });
-
-            if (b.send_panel === 'yes' && b.panel_channel) {
-                try {
-                    const targetChannel = req.guild.channels.cache.get(b.panel_channel);
-                    if (targetChannel) {
-                        const embed = new EmbedBuilder()
-                            .setColor(parseInt(panelData.color.replace('#', ''), 16))
-                            .setTitle(panelData.title.substring(0, 256))
-                            .setDescription(panelData.description.substring(0, 4096));
-
-                        let style = ButtonStyle.Success;
-                        if (panelData.btn_style === 'Primary') style = ButtonStyle.Primary;
-                        if (panelData.btn_style === 'Secondary') style = ButtonStyle.Secondary;
-                        if (panelData.btn_style === 'Danger') style = ButtonStyle.Danger;
-
-                        const btn = new ButtonBuilder()
-                            .setCustomId('captcha_verify_btn')
-                            .setLabel(panelData.btn_text)
-                            .setStyle(style);
-                        if (panelData.btn_emoji) btn.setEmoji(panelData.btn_emoji);
-
-                        const row = new ActionRowBuilder().addComponents(btn);
-
-                        await targetChannel.send({ embeds: [embed], components: [row] });
-                    }
-                } catch (e) {
-                    console.error("Error sending captcha panel", e);
-                    return res.redirect(`/dashboard/${req.guild.id}/captcha?error=Failed+to+send+panel`);
-                }
-            }
-
-            res.redirect(`/dashboard/${req.guild.id}/captcha?success=تم+حفظ+إعدادات+التحقق`);
+            await targetChannel.send({ embeds: [embed], components: [row] });
+          }
         } catch (e) {
-            console.error("Dashboard Captcha Error:", e);
-            next(e);
+          logger.error('Error sending captcha panel', e);
+          return res.redirect(`/dashboard/${req.guild.id}/captcha?error=Failed+to+send+panel`);
         }
-    });
+      }
 
-    router.get('/:id/stats', checkAuth, checkGuildAccess, (req, res, next) => {
+      res.redirect(`/dashboard/${req.guild.id}/captcha?success=تم+حفظ+إعدادات+التحقق`);
+    } catch (e) {
+      logger.error('Dashboard Captcha Error:', e);
+      next(e);
+    }
+  });
+
+  router.get('/:id/status', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const os = require('os');
+      const db = require('../../database/db');
+
+      const usedMemory = process.memoryUsage().heapUsed / 1024 / 1024;
+      const totalMemory = os.totalmem() / 1024 / 1024 / 1024;
+      const freeMemory = os.freemem() / 1024 / 1024 / 1024;
+      const systemUsedMemory = totalMemory - freeMemory;
+      const platform = os.platform();
+
+      const lavalinkConnected = client.manager?.nodes?.some((n) => n.connected) ? 'متصل 🟢' : 'غير متصل 🔴';
+
+      res.render('status', {
+        guild: req.guild,
+        uptime: process.uptime(),
+        usedMemory: usedMemory.toFixed(2),
+        systemUsedMemory: systemUsedMemory.toFixed(2),
+        totalMemory: totalMemory.toFixed(2),
+        platform,
+        dbConnected: db.client ? true : false,
+        lavalinkConnected,
+        ping: client.ws.ping,
+        activeTab: 'status'
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/stats', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const topMessages = db.db
+        .prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY messages DESC LIMIT 10')
+        .all(req.guild.id);
+      const topVoice = db.db
+        .prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY voice_xp DESC LIMIT 10')
+        .all(req.guild.id);
+      const topReactions = db.db
+        .prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY reactionsCount DESC LIMIT 10')
+        .all(req.guild.id);
+
+      const userIds = [
+        ...new Set([
+          ...topMessages.map((r) => r.userId),
+          ...topVoice.map((r) => r.userId),
+          ...topReactions.map((r) => r.userId)
+        ])
+      ];
+
+      const membersMap = new Map();
+      try {
+        if (userIds.length > 0) {
+          const fetchedMembers = await req.guild.members.fetch({ user: userIds }).catch(() => null);
+          if (fetchedMembers) {
+            fetchedMembers.forEach((m) => membersMap.set(m.id, m));
+          }
+        }
+      } catch (err) {
+        logger.warn('[Dashboard Stats] Failed to batch fetch members:', err.message);
+      }
+
+      const resolveList = (list) => {
+        return list.map((row) => {
+          const member = membersMap.get(row.userId) || req.guild.members.cache.get(row.userId);
+          return {
+            ...row,
+            username: member ? member.user.username : `العضو (${row.userId.slice(-4)})`,
+            avatarURL: member
+              ? member.user.displayAvatarURL({ extension: 'png', size: 128 })
+              : 'https://cdn.discordapp.com/embed/avatars/0.png'
+          };
+        });
+      };
+
+      res.render('stats', {
+        guild: req.guild,
+        topMessages: resolveList(topMessages),
+        topVoice: resolveList(topVoice),
+        topReactions: resolveList(topReactions)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/reactionroles/delete', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { messageId, emoji } = req.body;
+      db.db
+        .prepare('DELETE FROM reactroles WHERE guildId = ? AND messageId = ? AND emoji = ?')
+        .run(req.guild.id, messageId, emoji);
+      res.redirect(`/dashboard/${req.guild.id}/reactionroles?success=تم+حذف+الرتبة+التفاعلية+بنجاح`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/alerts', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const alerts = db.getSocialAlerts(req.guild.id);
+      res.render('alerts', {
+        guild: req.guild,
+        alerts,
+        textChannels: req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/alerts/add', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const { platform, channelId, socialId, message } = req.body;
+
+      if (!channelExists(req.guild, channelId)) {
+        return res.redirect(`/dashboard/${req.guild.id}/alerts?error=Invalid+channel`);
+      }
+      if (!socialId) {
+        return res.redirect(`/dashboard/${req.guild.id}/alerts?error=Missing+ID`);
+      }
+
+      let actualSocialId = socialId.trim();
+
+      if (platform === 'youtube') {
         try {
-            const topMessages = db.db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY messages DESC LIMIT 10').all(req.guild.id);
-            const topVoice = db.db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY voice_xp DESC LIMIT 10').all(req.guild.id);
-            const topReactions = db.db.prepare('SELECT * FROM levels WHERE guildId = ? ORDER BY reactionsCount DESC LIMIT 10').all(req.guild.id);
-
-            res.render('stats', {
-                guild: req.guild,
-                topMessages,
-                topVoice,
-                topReactions
-            });
-        } catch (err) {
-            next(err);
+          const resolved = await resolveYouTubeChannelId(actualSocialId);
+          if (isValidYouTubeChannelId(resolved)) {
+            actualSocialId = resolved;
+          }
+        } catch (e) {
+          logger.error('[Alerts] YouTube resolve failed:', e.message);
         }
-    });
+      }
 
-    router.post('/:id/reactionroles/delete', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { messageId, emoji } = req.body;
-            db.db.prepare('DELETE FROM reactroles WHERE guildId = ? AND messageId = ? AND emoji = ?').run(req.guild.id, messageId, emoji);
-            res.redirect(`/dashboard/${req.guild.id}/reactionroles?success=تم+حذف+الرتبة+التفاعلية+بنجاح`);
-        } catch (err) {
-            next(err);
-        }
-    });
+      db.addSocialAlert(req.guild.id, platform, channelId, actualSocialId, message || 'مقطع جديد! {url}');
+      res.redirect(`/dashboard/${req.guild.id}/alerts?success=تمت+إضافة+التنبيه+بنجاح`);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-    router.get('/:id/alerts', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const alerts = db.getSocialAlerts(req.guild.id);
-            res.render('alerts', {
-                guild: req.guild,
-                alerts,
-                textChannels: req.guild.channels.cache.filter(c => c.type === 0 || c.type === 5)
-            });
-        } catch (err) {
-            next(err);
-        }
-    });
+  router.post('/:id/alerts/delete', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { id } = req.body;
+      if (id) {
+        db.removeSocialAlert(id, req.guild.id);
+      }
+      res.redirect(`/dashboard/${req.guild.id}/alerts?success=تم+حذف+التنبيه`);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-    router.post('/:id/alerts/add', checkAuth, checkGuildAccess, async (req, res, next) => {
-        try {
-            const { platform, channelId, socialId, message } = req.body;
-            
-            if (!channelExists(req.guild, channelId)) {
-                return res.redirect(`/dashboard/${req.guild.id}/alerts?error=Invalid+channel`);
-            }
-            if (!socialId) {
-                return res.redirect(`/dashboard/${req.guild.id}/alerts?error=Missing+ID`);
-            }
+  router.get('/:id/suggestions', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const settings = db.getSuggestionSettings(req.guild.id) || {
+        enabled: 0,
+        suggest_channel: null,
+        review_channel: null,
+        auto_thread: 0
+      };
+      res.render('suggestions', {
+        guild: req.guild,
+        settings,
+        textChannels: Array.from(req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5).values()),
+        success: req.query.success,
+        error: req.query.error
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
 
-            let actualSocialId = socialId.trim();
+  router.post('/:id/suggestions', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { enabled, suggest_channel, review_channel, auto_thread } = req.body;
+      db.setSuggestionSettings(req.guild.id, {
+        enabled: parseInt(enabled),
+        suggest_channel: suggest_channel || null,
+        review_channel: review_channel || null,
+        auto_thread: auto_thread === '1' ? 1 : 0
+      });
+      res.redirect(`/dashboard/${req.guild.id}/suggestions?success=تم+تحديث+إعدادات+الاقتراحات`);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-            if (platform === 'youtube') {
-                try {
-                    const resolved = await resolveYouTubeChannelId(actualSocialId);
-                    if (isValidYouTubeChannelId(resolved)) {
-                        actualSocialId = resolved;
-                    }
-                } catch (e) {
-                    console.error('[Alerts] YouTube resolve failed:', e.message);
-                }
-            }
+  router.get('/:id/starboard', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const settings = db.getStarboardSettings(req.guild.id) || {
+        enabled: 0,
+        starboard_channel: null,
+        emoji: '⭐',
+        threshold: 3
+      };
+      res.render('starboard', {
+        guild: req.guild,
+        settings,
+        textChannels: Array.from(req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5).values()),
+        success: req.query.success,
+        error: req.query.error
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
 
-            db.addSocialAlert(req.guild.id, platform, channelId, actualSocialId, message || 'مقطع جديد! {url}');
-            res.redirect(`/dashboard/${req.guild.id}/alerts?success=تمت+إضافة+التنبيه+بنجاح`);
-        } catch (err) {
-            next(err);
-        }
-    });
+  router.post('/:id/starboard', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { enabled, starboard_channel, emoji, threshold } = req.body;
+      db.setStarboardSettings(req.guild.id, {
+        enabled: parseInt(enabled),
+        starboard_channel: starboard_channel || null,
+        emoji: emoji || '⭐',
+        threshold: parseInt(threshold) || 3
+      });
+      res.redirect(`/dashboard/${req.guild.id}/starboard?success=تم+تحديث+إعدادات+الستاربورد`);
+    } catch (err) {
+      next(err);
+    }
+  });
 
-    router.post('/:id/alerts/delete', checkAuth, checkGuildAccess, (req, res, next) => {
-        try {
-            const { id } = req.body;
-            if (id) {
-                db.removeSocialAlert(id, req.guild.id);
-            }
-            res.redirect(`/dashboard/${req.guild.id}/alerts?success=تم+حذف+التنبيه`);
-        } catch (err) {
-            next(err);
-        }
-    });
+  router.get('/:id/sticky', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const stickyMessages = db.getAllStickyMessages(req.guild.id) || [];
+      res.render('sticky', {
+        guild: req.guild,
+        stickyMessages,
+        textChannels: Array.from(req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5).values()),
+        success: req.query.success,
+        error: req.query.error
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
 
-    return router;
+  router.post('/:id/sticky/add', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { channel_id, content } = req.body;
+      if (!channel_id || !content)
+        return res.redirect(`/dashboard/${req.guild.id}/sticky?error=Missing+channel+or+content`);
+
+      db.setStickyMessage(req.guild.id, channel_id, content);
+      res.redirect(`/dashboard/${req.guild.id}/sticky?success=تم+تثبيت+الرسالة+بنجاح`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/sticky/delete', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const { channel_id } = req.body;
+      if (!channel_id) return res.redirect(`/dashboard/${req.guild.id}/sticky?error=Missing+channel`);
+
+      db.removeStickyMessage(channel_id);
+      res.redirect(`/dashboard/${req.guild.id}/sticky?success=تم+إلغاء+تثبيت+الرسالة`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/history', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const search = req.query.search || '';
+      const allHistory = db.getAllModActions(req.guild.id) || [];
+
+      let filteredHistory = allHistory;
+      if (search) {
+        filteredHistory = allHistory.filter(
+          (item) =>
+            item.targetId === search || (item.targetTag && item.targetTag.toLowerCase().includes(search.toLowerCase()))
+        );
+      }
+
+      // Sort by newest first
+      filteredHistory.sort((a, b) => b.timestamp - a.timestamp);
+
+      res.render('history', {
+        guild: req.guild,
+        historyList: filteredHistory,
+        searchQuery: search,
+        success: req.query.success,
+        error: req.query.error
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/history/clear', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      db.clearAllModActions(req.guild.id);
+      res.redirect(`/dashboard/${req.guild.id}/history?success=تم+مسح+سجل+العقوبات+بالكامل`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  return router;
 };

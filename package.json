@@ -1,11 +1,19 @@
 {
   "name": "e-246",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "E-246 System - a full-featured Discord bot with a responsive web dashboard, moderation, leveling, tickets, temp voice channels and protection systems.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "node tests/verify-fixes.js"
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "npx prettier --write \"./**/*.{js,json}\""
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.2.5"
   },
   "keywords": [
     "discord",

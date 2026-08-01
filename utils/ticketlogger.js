@@ -1,31 +1,15 @@
-const { EmbedBuilder } = require("discord.js");
-const db = require("../database/db");
+const { EmbedBuilder } = require('discord.js');
 
-module.exports = async function logTicket(
-    guild,
-    settings,
-    title,
-    description,
-    color = "#5865F2"
-) {
+module.exports = async function logTicket(guild, settings, title, description, color = '#5865F2') {
+  if (!settings.log_channel) return;
 
-    if (!settings.log_channel) return;
+  const channel = guild.channels.cache.get(settings.log_channel);
 
-    const channel =
-        guild.channels.cache.get(
-            settings.log_channel
-        );
+  if (!channel) return;
 
-    if (!channel) return;
-
-    await channel.send({
-        embeds: [
-            new EmbedBuilder()
-                .setColor(color)
-                .setTitle(title)
-                .setDescription(description)
-                .setTimestamp()
-        ]
-    }).catch(() => null);
-
+  await channel
+    .send({
+      embeds: [new EmbedBuilder().setColor(color).setTitle(title).setDescription(description).setTimestamp()]
+    })
+    .catch(() => null);
 };

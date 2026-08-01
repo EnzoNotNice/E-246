@@ -1,7 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
-
-
-const healthCheckEndpoint = (client) => async (req, res) => {
+const healthCheckEndpoint = (client) => (req, res) => {
   try {
     const { version } = require('../package.json');
     const os = require('os');
@@ -11,11 +8,11 @@ const healthCheckEndpoint = (client) => async (req, res) => {
     const uptime = process.uptime();
 
     const memoryUsage = process.memoryUsage();
-    const memUsed = Math.round(memoryUsage.heapUsed / 1024 / 1024 * 100) / 100;
-    const memTotal = Math.round(memoryUsage.heapTotal / 1024 / 1024 * 100) / 100;
+    const memUsed = Math.round((memoryUsage.heapUsed / 1024 / 1024) * 100) / 100;
+    const memTotal = Math.round((memoryUsage.heapTotal / 1024 / 1024) * 100) / 100;
 
     const cpuUsage = process.cpuUsage();
-    const cpuPercent = ((cpuUsage.user + cpuUsage.system) / process.uptime() * 100).toFixed(2);
+    const cpuPercent = (((cpuUsage.user + cpuUsage.system) / 1e6 / process.uptime()) * 100).toFixed(2);
 
     const healthData = {
       status: 'healthy',
@@ -38,20 +35,19 @@ const healthCheckEndpoint = (client) => async (req, res) => {
         memory: {
           used: `${memUsed} MB`,
           total: `${memTotal} MB`,
-          usage: `${(memUsed / memTotal * 100).toFixed(2)}%`
+          usage: `${((memUsed / memTotal) * 100).toFixed(2)}%`
         },
         cpu: {
           usage: `${cpuPercent}%`
         }
       },
       application: {
-        name: 'e',
+        name: 'E-246',
         version: version
       }
     };
 
     res.json(healthData);
-
   } catch (error) {
     const errorData = {
       status: 'unhealthy',

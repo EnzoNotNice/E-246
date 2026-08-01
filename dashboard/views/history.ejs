@@ -1,0 +1,99 @@
+<%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+historyList = typeof historyList !== 'undefined' && Array.isArray(historyList) ? historyList : [];
+searchQuery = typeof searchQuery !== 'undefined' ? searchQuery : '';
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'history' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-gavel"></i> سجل العقوبات المتقدم (Punishment History)</h1>
+        <p>عرض ومتابعة كافة الإجراءات الإدارية والعقوبات الصادرة من طاقم الإشراف بالسيرفر</p>
+    </div>
+
+    <!-- Search & Clear Tools -->
+    <div class="glass-panel mb-3 reveal">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <form action="/dashboard/<%= guild.id %>/history" method="GET" style="display: flex; gap: 10px; flex: 1; min-width: 300px;">
+                <input type="text" name="search" class="glass-input" placeholder="ابحث بمعرف العضو (User ID)..." value="<%= searchQuery %>" style="max-width: 350px;">
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> بحث</button>
+                <% if (searchQuery) { %>
+                    <a href="/dashboard/<%= guild.id %>/history" class="btn btn-secondary" style="padding: 10px 15px; border-radius: var(--r-sm); font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center;"><i class="fa-solid fa-times"></i> إلغاء الفلتر</a>
+                <% } %>
+            </form>
+
+            <form action="/dashboard/<%= guild.id %>/history/clear" method="POST" onsubmit="return confirm('تنبيه هام جداً: هل أنت متأكد من رغبتك في مسح كامل سجل العقوبات الخاص بهذا السيرفر نهائياً؟ لا يمكن التراجع عن هذا الإجراء.');">
+                <button type="submit" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i> مسح سجل العقوبات بالكامل</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Punishment History List -->
+    <div class="glass-panel reveal">
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= success %></div>
+        <% } %>
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> <%= error %></div>
+        <% } %>
+
+        <div class="section-title mb-3"><i class="fa-solid fa-list-check"></i> العقوبات المسجلة</div>
+
+        <% if (historyList.length > 0) { %>
+            <div class="table-responsive">
+                <table class="glass-table w-100" style="border-collapse: collapse; text-align: right;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted);">
+                            <th style="padding: 12px 10px;">المعاقب (Target)</th>
+                            <th style="padding: 12px 10px;">الإجراء (Action)</th>
+                            <th style="padding: 12px 10px;">السبب (Reason)</th>
+                            <th style="padding: 12px 10px;">المسؤول (Moderator)</th>
+                            <th style="padding: 12px 10px;">التاريخ (Date)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% historyList.forEach(item => { %>
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 12px 10px;">
+                                    <div style="font-weight: bold;"><%= item.targetTag || 'غير معروف' %></div>
+                                    <small style="color: var(--text-muted); font-size: 0.75rem;"><%= item.targetId %></small>
+                                </td>
+                                <td style="padding: 12px 10px;">
+                                    <% 
+                                    let badgeColor = 'rgba(255,255,255,0.05)';
+                                    let actionName = item.action;
+                                    if (item.action === 'ban') { badgeColor = 'rgba(237, 66, 69, 0.15)'; actionName = 'حظر / Ban'; }
+                                    else if (item.action === 'kick') { badgeColor = 'rgba(230, 126, 34, 0.15)'; actionName = 'طرد / Kick'; }
+                                    else if (item.action === 'timeout') { badgeColor = 'rgba(155, 89, 182, 0.15)'; actionName = 'إسكات / Timeout'; }
+                                    else if (item.action === 'warn') { badgeColor = 'rgba(241, 196, 15, 0.15)'; actionName = 'تحذير / Warning'; }
+                                    else if (item.action === 'jail') { badgeColor = 'rgba(52, 152, 219, 0.15)'; actionName = 'سجن / Jail'; }
+                                    else if (item.action === 'unjail') { badgeColor = 'rgba(46, 204, 113, 0.15)'; actionName = 'فك سجن / Unjail'; }
+                                    else if (item.action === 'unban') { badgeColor = 'rgba(46, 204, 113, 0.15)'; actionName = 'فك حظر / Unban'; }
+                                    %>
+                                    <span class="badge" style="background: <%= badgeColor %>; border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
+                                        <%= actionName %>
+                                    </span>
+                                </td>
+                                <td style="padding: 12px 10px; font-size: 0.85rem;"><%= item.reason || 'بدون سبب' %></td>
+                                <td style="padding: 12px 10px;">
+                                    <div style="font-weight: 500;"><%= item.executorTag || 'غير معروف' %></div>
+                                    <small style="color: var(--text-muted); font-size: 0.75rem;"><%= item.executorId %></small>
+                                </td>
+                                <td style="padding: 12px 10px; font-size: 0.8rem; color: var(--text-muted);">
+                                    <%= new Date(item.timestamp).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div class="alert alert-info" style="background: rgba(255,255,255,0.02); border: 1px dashed var(--border); text-align: center; padding: 30px; color: var(--text-muted); margin-top: 15px;">
+                <i class="fa-solid fa-info-circle"></i> لا توجد أي عقوبات مسجلة حالياً تطابق معايير البحث.
+            </div>
+        <% } %>
+    </div>
+</main>
+
+<%- include('partials/footer') %>

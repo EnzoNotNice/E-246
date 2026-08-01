@@ -6,8 +6,10 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('clear')
     .setDescription('حذف رسائل الروم')
-    .addIntegerOption(o => o.setName('amount').setDescription('عدد رسائل الحذف').setRequired(true).setMinValue(1).setMaxValue(100))
-    .addUserOption(o => o.setName('user').setDescription('حذف رسائل عضو'))
+    .addIntegerOption((o) =>
+      o.setName('amount').setDescription('عدد رسائل الحذف').setRequired(true).setMinValue(1).setMaxValue(100)
+    )
+    .addUserOption((o) => o.setName('user').setDescription('حذف رسائل عضو'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {
@@ -16,8 +18,8 @@ module.exports = {
     const filterUser = interaction.options.getUser('user');
 
     let messages = await interaction.channel.messages.fetch({ limit: 100 });
-    messages = messages.filter(m => !m.pinned);
-    if (filterUser) messages = messages.filter(m => m.author.id === filterUser.id);
+    messages = messages.filter((m) => !m.pinned);
+    if (filterUser) messages = messages.filter((m) => m.author.id === filterUser.id);
     messages = [...messages.values()].slice(0, amount);
 
     let deleted;

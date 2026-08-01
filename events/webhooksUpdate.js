@@ -16,10 +16,14 @@ module.exports = {
         const diff = Date.now() - entry.createdTimestamp;
         if (diff < 15000) {
           const executor = entry.executor;
-          if (executor.id !== guild.ownerId && !db.isWhitelisted(guild.id, executor.id) && executor.id !== guild.client?.user?.id) {
+          if (
+            executor.id !== guild.ownerId &&
+            !db.isWhitelisted(guild.id, executor.id) &&
+            executor.id !== guild.client?.user?.id
+          ) {
             const webhooks = await channel.fetchWebhooks().catch(() => null);
             if (webhooks) {
-              const newWebhook = webhooks.find(w => w.id === entry.target.id);
+              const newWebhook = webhooks.find((w) => w.id === entry.target.id);
               if (newWebhook) {
                 await newWebhook.delete().catch(() => null);
               }
@@ -35,7 +39,7 @@ module.exports = {
 
               const embed = new EmbedBuilder()
                 .setTitle('{emoji:shield} إنشاء ويبهوك غير مصرح به')
-                .setColor(0xFF0000)
+                .setColor(0xff0000)
                 .addFields(
                   { name: '{emoji:folder} الروم', value: `<#${channel.id}>`, inline: true },
                   { name: '{emoji:user} الفاعل', value: `<@${executor.id}>`, inline: true },
@@ -48,7 +52,7 @@ module.exports = {
         }
       }
     } catch (err) {
-      console.error('Error in webhooksUpdate event:', err);
+      logger.error('Error in webhooksUpdate event:', err);
     }
   }
 };

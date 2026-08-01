@@ -1,21 +1,19 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
-const locale = require('../../utils/locale');
 const fs = require('fs');
 const path = require('path');
+const logger = require('../../utils/logger');
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('help')
-    .setDescription('عرض أوامر البوت'),
+  data: new SlashCommandBuilder().setName('help').setDescription('عرض أوامر البوت'),
 
   async execute(interaction) {
     let emojisJson = {};
     try {
       emojisJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../../utils/emojis.json'), 'utf8'));
     } catch (e) {
-      console.error('[help] Failed to parse emojis.json, falling back to empty:', e);
+      logger.error('[help] Failed to parse emojis.json, falling back to empty:', e);
     }
-    
+
     function parseEmoji(emojiKey, fallbackId) {
       const emojiStr = emojisJson[emojiKey];
       if (!emojiStr) return { name: '📁', id: fallbackId };
@@ -58,9 +56,11 @@ module.exports = {
       music: 'الموسيقى'
     };
 
-    const commandDirs = fs.readdirSync(path.join(__dirname, '..')).filter(d => d !== 'prefix' && fs.statSync(path.join(__dirname, '..', d)).isDirectory());
+    const commandDirs = fs
+      .readdirSync(path.join(__dirname, '..'))
+      .filter((d) => d !== 'prefix' && fs.statSync(path.join(__dirname, '..', d)).isDirectory());
 
-    const options = commandDirs.map(dir => {
+    const options = commandDirs.map((dir) => {
       const emoji = emojis[dir] || { id: '1525592214846181487' };
       return {
         label: `أوامر ${arNames[dir] || dir}`,
@@ -86,15 +86,33 @@ module.exports = {
     }
 
     const dashboardEmoji = resolveEmoji('layoutdashboard', '📋');
+    const crownEmoji = resolveEmoji('crown', '👑');
+    const shieldEmoji = resolveEmoji('shield', '🛡️');
+    const ticketEmoji = resolveEmoji('ticket', '🎫');
+    const chartEmoji = resolveEmoji('chartpie', '📊');
+    const musicEmoji = resolveEmoji('music_play', '🎵');
+    const confettiEmoji = resolveEmoji('confetti', '🎉');
+    const mailEmoji = resolveEmoji('mail', '✉️');
+    const settingsEmoji = resolveEmoji('settings', '⚙️');
+    const folderEmoji = resolveEmoji('folder', '📁');
+    const gameEmoji = resolveEmoji('playerplay', '🎮');
+    const utilsEmoji = resolveEmoji('adjustments', '🛠️');
 
     const embed = new EmbedBuilder()
-      .setColor(0x2B2D31)
-      .setTitle(`${dashboardEmoji} قائمة المساعدة`)
-      .setDescription('قائمة مساعدة البوت')
-      .setThumbnail(interaction.client.user.displayAvatarURL())
-      .setFooter({ text: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
+      .setColor(0x2b2d31)
+      .setTitle(`${dashboardEmoji} __قائمة مساعدة البوت__`)
+      .setDescription(
+        `مرحباً بك في قائمة مساعدة **${interaction.client.user.username}**\n\n` +
+          `اختر القسم الذي ترغب باستعراض أوامره من القائمة المنسدلة أسفله\n\n` +
+          `__الأقسام المتاحة في البوت__\n` +
+          `${crownEmoji} **الإدارة** • ${shieldEmoji} **الحماية** • ${ticketEmoji} **التذاكر** • ${chartEmoji} **المستويات**\n` +
+          `${musicEmoji} **الموسيقى** • ${confettiEmoji} **الجيف أواي** • ${mailEmoji} **الدعوات** • ${settingsEmoji} **الآليات**\n` +
+          `${folderEmoji} **الترحيب** • ${gameEmoji} **الألعاب والتسلية** • ${utilsEmoji} **الأدوات العامة**`
+      )
+      .setThumbnail(interaction.client.user.displayAvatarURL({ size: 256 }))
+      .setFooter({ text: `طلب بواسطة ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], components: [row] });
+    await interaction.reply({ embeds: [embed], components: [row] }).catch(() => null);
   }
 };

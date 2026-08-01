@@ -1,0 +1,71 @@
+<%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : {};
+textChannels = textChannels && (Array.isArray(textChannels) || typeof textChannels.forEach === 'function') ? textChannels : [];
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'suggestions' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-lightbulb"></i> نظام الاقتراحات (Suggestions)</h1>
+        <p>اضبط خيارات استقبال اقتراحات الأعضاء ومراجعتها من قبل الإدارة</p>
+    </div>
+
+    <div class="glass-panel reveal">
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= success %></div>
+        <% } %>
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> <%= error %></div>
+        <% } %>
+
+        <form action="/dashboard/<%= guild.id %>/suggestions" method="POST" class="settings-form">
+            
+            <div class="form-group">
+                <label for="enabled">حالة نظام الاقتراحات</label>
+                <select id="enabled" name="enabled" class="glass-input">
+                    <option value="1" <%= settings.enabled === 1 || settings.enabled === true ? 'selected' : '' %>>مفعّل</option>
+                    <option value="0" <%= settings.enabled === 0 || settings.enabled === false ? 'selected' : '' %>>معطّل</option>
+                </select>
+                <small>تفعيل أو تعطيل استقبال الاقتراحات في السيرفر</small>
+            </div>
+
+            <div class="grid-form-2">
+                <div class="form-group">
+                    <label for="suggest_channel">روم الاقتراحات العامة</label>
+                    <select id="suggest_channel" name="suggest_channel" class="glass-input" required>
+                        <option value="">-- اختر الروم --</option>
+                        <% textChannels.forEach(c => { %>
+                            <option value="<%= c.id %>" <%= settings.suggest_channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
+                        <% }) %>
+                    </select>
+                    <small>الروم المفتوح للأعضاء لرؤية الاقتراحات والتصويت عليها بالأزرار</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="review_channel">روم مراجعة الإدارة (Mod Review)</label>
+                    <select id="review_channel" name="review_channel" class="glass-input" required>
+                        <option value="">-- اختر الروم --</option>
+                        <% textChannels.forEach(c => { %>
+                            <option value="<%= c.id %>" <%= settings.review_channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
+                        <% }) %>
+                    </select>
+                    <small>الروم المغلق الخاص بالإدارة لمراجعة وقبول أو رفض الاقتراحات</small>
+                </div>
+            </div>
+
+            <div class="form-group mt-2">
+                <label for="auto_thread" class="d-flex align-items-center gap-sm" style="cursor: pointer;">
+                    <input type="checkbox" id="auto_thread" name="auto_thread" value="1" <%= settings.auto_thread === 1 || settings.auto_thread === true ? 'checked' : '' %> style="width: 18px; height: 18px;">
+                    <span>إنشاء موضوع تلقائي (Auto Thread) لكل اقتراح جديد للناقش</span>
+                </label>
+                <small>سيقوم البوت بفتح Thread فرعي تحت كل بطاقة اقتراح لتمكين الأعضاء من كتابة آرائهم</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3"><i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات</button>
+        </form>
+    </div>
+</main>
+
+<%- include('partials/footer') %>

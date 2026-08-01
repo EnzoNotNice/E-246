@@ -1,0 +1,96 @@
+<%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+textChannels = textChannels && (Array.isArray(textChannels) || typeof textChannels.forEach === 'function') ? textChannels : [];
+stickyMessages = typeof stickyMessages !== 'undefined' && Array.isArray(stickyMessages) ? stickyMessages : [];
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'sticky' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-thumbtack"></i> الرسائل المثبتة (Sticky Messages)</h1>
+        <p>قم بتثبيت رسائل توجيهية وإرشادية تظل دائماً أسفل الشات في رومات السيرفر</p>
+    </div>
+
+    <div class="sticky-layout reveal" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        
+        <!-- Add Sticky Message Form (Left Column) -->
+        <div class="glass-panel">
+            <div class="section-title"><i class="fa-solid fa-plus"></i> إضافة رسالة مثبتة جديدة</div>
+            
+            <% if (typeof success !== 'undefined' && success) { %>
+                <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= success %></div>
+            <% } %>
+            <% if (typeof error !== 'undefined' && error) { %>
+                <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> <%= error %></div>
+            <% } %>
+
+            <form action="/dashboard/<%= guild.id %>/sticky/add" method="POST" class="settings-form mt-2">
+                <div class="form-group">
+                    <label for="channel_id">اختر روم الدردشة</label>
+                    <select id="channel_id" name="channel_id" class="glass-input" required>
+                        <option value="">-- اختر الروم --</option>
+                        <% textChannels.forEach(c => { %>
+                            <option value="<%= c.id %>"># <%= c.name %></option>
+                        <% }) %>
+                    </select>
+                    <small>الروم الذي سيتم تفعيل الرسالة المثبتة بداخله</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="content">محتوى الرسالة المثبتة</label>
+                    <textarea id="content" name="content" class="glass-input" rows="6" placeholder="اكتب هنا محتوى الرسالة الإرشادية التي ترغب في تثبيتها..." required style="resize: vertical; font-family: inherit; font-size: 0.9rem; line-height: 1.5;"></textarea>
+                    <small>يمكنك استخدام تنسيقات الديسكورد والمنشن والروابط بأمان</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-3"><i class="fa-solid fa-thumbtack"></i> تثبيت الرسالة</button>
+            </form>
+        </div>
+
+        <!-- Sticky Messages List (Right Column) -->
+        <div class="glass-panel">
+            <div class="section-title"><i class="fa-solid fa-table-list"></i> الرسائل المثبتة حالياً</div>
+            <p class="text-muted">قائمة بكافة الرومات المفعل بها نظام التثبيت التلقائي بالسيرفر</p>
+
+            <% if (stickyMessages.length > 0) { %>
+                <div class="table-responsive">
+                    <table class="glass-table w-100" style="border-collapse: collapse; text-align: right;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted);">
+                                <th style="padding: 10px;">الروم</th>
+                                <th style="padding: 10px;">المحتوى</th>
+                                <th style="padding: 10px; text-align: center;">إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% stickyMessages.forEach(msg => { %>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 10px; font-weight: bold;">
+                                        <% const ch = guild.channels.cache.get(msg.channelId); %>
+                                        # <%= ch ? ch.name : msg.channelId %>
+                                    </td>
+                                    <td style="padding: 10px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; color: var(--text-muted);">
+                                        <%= msg.content %>
+                                    </td>
+                                    <td style="padding: 10px; text-align: center;">
+                                        <form action="/dashboard/<%= guild.id %>/sticky/delete" method="POST" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من إلغاء تثبيت هذه الرسالة؟');">
+                                            <input type="hidden" name="channel_id" value="<%= msg.channelId %>">
+                                            <button type="submit" class="btn btn-danger btn-sm" style="padding: 4px 8px;"><i class="fa-solid fa-trash-can"></i> إلغاء التثبيت</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <div class="alert alert-info" style="background: rgba(255,255,255,0.02); border: 1px dashed var(--border); text-align: center; padding: 25px; color: var(--text-muted); margin-top: 20px;">
+                    <i class="fa-solid fa-info-circle"></i> لا توجد أي رسائل مثبتة حالياً في هذا السيرفر.
+                </div>
+            <% } %>
+        </div>
+
+    </div>
+</main>
+
+<%- include('partials/footer') %>

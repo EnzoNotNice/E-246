@@ -48,7 +48,8 @@ topReactions = typeof topReactions !== 'undefined' && Array.isArray(topReactions
                         <div class="list-item">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="leader-rank"><%= index + 1 %></span>
-                                <span class="leader-user"><i class="fa-solid fa-user"></i> ID: <%= user.userId %></span>
+                                <img src="<%= user.avatarURL %>" class="rounded-circle" style="width: 28px; height: 28px; object-fit: cover; border: 1.5px solid rgba(255, 255, 255, 0.1);">
+                                <span class="leader-user"><%= user.username %></span>
                             </div>
                             <strong class="text-main"><%= user.messages %> رسالة</strong>
                         </div>
@@ -73,7 +74,8 @@ topReactions = typeof topReactions !== 'undefined' && Array.isArray(topReactions
                         <div class="list-item">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="leader-rank"><%= index + 1 %></span>
-                                <span class="leader-user"><i class="fa-solid fa-user"></i> ID: <%= user.userId %></span>
+                                <img src="<%= user.avatarURL %>" class="rounded-circle" style="width: 28px; height: 28px; object-fit: cover; border: 1.5px solid rgba(255, 255, 255, 0.1);">
+                                <span class="leader-user"><%= user.username %></span>
                             </div>
                             <strong class="text-success"><%= hours %>س <%= mins %>د</strong>
                         </div>
@@ -95,7 +97,8 @@ topReactions = typeof topReactions !== 'undefined' && Array.isArray(topReactions
                         <div class="list-item">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="leader-rank"><%= index + 1 %></span>
-                                <span class="leader-user"><i class="fa-solid fa-user"></i> ID: <%= user.userId %></span>
+                                <img src="<%= user.avatarURL %>" class="rounded-circle" style="width: 28px; height: 28px; object-fit: cover; border: 1.5px solid rgba(255, 255, 255, 0.1);">
+                                <span class="leader-user"><%= user.username %></span>
                             </div>
                             <strong class="text-warning"><%= user.reactionsCount || 0 %> تفاعل</strong>
                         </div>

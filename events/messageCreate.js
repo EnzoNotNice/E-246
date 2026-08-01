@@ -1,8 +1,6 @@
+const { PermissionsBitField } = require('discord.js');
 const db = require('../database/db');
-
-function xpForLevel(level) {
-  return 5 * (level ** 2) + 50 * level + 100;
-}
+const logger = require('../utils/logger');
 
 const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]+/i;
 const spamTracker = new Map();
@@ -23,7 +21,48 @@ function normalizeArabic(text) {
 module.exports = {
   name: 'messageCreate',
   async execute(message) {
-    if (message.author.bot || !message.guild) return;
+    if (!message.guild) return;
+
+    const channelId = message.channel.id;
+    const client = message.client;
+
+    // ═══════════════════════════════════════════
+    // Sticky Message debounced handler (runs for everyone except our own bot)
+    // ═══════════════════════════════════════════
+    if (message.author.id !== client.user.id) {
+      const sticky = db.getStickyMessage(channelId);
+      if (sticky && sticky.enabled) {
+        const stickyTimeouts = client.stickyTimeouts || new Map();
+        if (stickyTimeouts.has(channelId)) {
+          clearTimeout(stickyTimeouts.get(channelId));
+        }
+
+        const timeoutId = setTimeout(async () => {
+          stickyTimeouts.delete(channelId);
+          const currentSticky = db.getStickyMessage(channelId);
+          if (!currentSticky || !currentSticky.enabled) return;
+
+          if (currentSticky.lastMessageId) {
+            const oldMsg = await message.channel.messages.fetch(currentSticky.lastMessageId).catch(() => null);
+            if (oldMsg) await oldMsg.delete().catch(() => null);
+          }
+
+          const newMsg = await message.channel
+            .send({
+              content: `__**رسالة مثبتة**__\n\n${currentSticky.content}`
+            })
+            .catch(() => null);
+          if (newMsg) {
+            db.updateStickyMessageId(channelId, newMsg.id);
+          }
+        }, 3000);
+
+        stickyTimeouts.set(channelId, timeoutId);
+        client.stickyTimeouts = stickyTimeouts;
+      }
+    }
+
+    if (message.author.bot) return;
 
     db.saveMessage(
       message.id,
@@ -33,27 +72,60 @@ module.exports = {
       message.author.tag,
       message.author.displayAvatarURL(),
       message.content,
-      message.attachments.map(att => att.url)
+      message.attachments.map((att) => att.url)
     );
 
-    const client = message.client;
     const guildId = message.guild.id;
     const userId = message.author.id;
-    const channelId = message.channel.id;
+
+    // ═══════════════════════════════════════════
+    // AFK Check: Author is AFK
+    // ═══════════════════════════════════════════
+    const authorAfk = db.getAFK(guildId, userId);
+    if (authorAfk) {
+      db.removeAFK(guildId, userId);
+      const oldName = message.member?.displayName;
+      if (oldName && oldName.startsWith('[AFK] ')) {
+        await message.member.setNickname(oldName.replace('[AFK] ', '')).catch(() => null);
+      }
+      await message
+        .reply({
+          content: `{emoji:circlecheck} مرحباً بعودتك <@${userId}>، تم إيقاف وضع الـ **AFK** تلقائياً`
+        })
+        .then((msg) => {
+          setTimeout(() => msg.delete().catch(() => null), 5000);
+        })
+        .catch(() => null);
+    }
+
+    // AFK Check: Mentioned Users are AFK
+    if (message.mentions.members && message.mentions.members.size > 0) {
+      for (const [mentionedId, member] of message.mentions.members) {
+        if (mentionedId === userId) continue;
+        const targetAfk = db.getAFK(guildId, mentionedId);
+        if (targetAfk) {
+          const timeAgo = `<t:${Math.floor(targetAfk.timestamp / 1000)}:R>`;
+          await message
+            .reply({
+              content: `{emoji:clock} **${member.displayName}** في وضع الخمول حالياً\n- **السبب:** '${targetAfk.reason}'\n- **منذ:** ${timeAgo}`
+            })
+            .catch(() => null);
+        }
+      }
+    }
     const prefix = db.getGuildSettings(guildId).prefix || '#';
 
     let isCommand = false;
 
-    // --- Custom Commands Logic ---
     const customCommands = db.getCustomCommands(guildId);
     const contentTrimmed = message.content.trim().toLowerCase();
-    const matchedCustomCmd = customCommands.find(c => c.trigger === contentTrimmed);
+    const matchedCustomCmd = customCommands.find((c) => c.trigger === contentTrimmed);
     if (matchedCustomCmd) {
       for (const action of matchedCustomCmd.actions) {
-        let val = String(action.value || '')
+        const val = String(action.value || '')
           .replace(/{user}/g, `<@${message.author.id}>`)
           .replace(/{server}/g, message.guild.name);
-          
+
         try {
           if (action.type === 'reply_text') {
             await message.channel.send(val);
@@ -71,7 +143,7 @@ module.exports = {
             if (message.deletable) await message.delete().catch(() => null);
           }
         } catch (e) {
-          console.error("Custom Command Execution Error:", e);
+          logger.error('Custom Command Execution Error:', e);
         }
       }
       return; // Stop processing further commands or replies
@@ -114,7 +186,7 @@ module.exports = {
       const { buildCommandHelpEmbed, shouldShowCommandHelp } = require('../utils/commandHelp');
       const { createFakeInteraction } = require('../utils/fakeInteraction');
 
-      async function runSlash(slashCmd, runArgs) {
+      const runSlash = async (slashCmd, runArgs) => {
         const requiredPerms = slashCmd.data?.defaultMemberPermissions;
         if (requiredPerms && message.member && !message.member.permissions.has(requiredPerms)) {
           return message.reply({ content: '{emoji:circlex} ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
@@ -126,29 +198,43 @@ module.exports = {
         try {
           await slashCmd.execute(fakeInteraction);
         } catch (e) {
-          console.error(e);
+          logger.error(e);
           if (!fakeInteraction.replied && !fakeInteraction.deferred) {
             await message.reply({ content: '{emoji:circlex} حدث خطأ أثناء تنفيذ الأمر.' }).catch(() => null);
           } else {
-            await fakeInteraction.editReply({ content: '{emoji:circlex} حدث خطأ أثناء تنفيذ الأمر.' }).catch(() => null);
+            await fakeInteraction
+              .editReply({ content: '{emoji:circlex} حدث خطأ أثناء تنفيذ الأمر.' })
+              .catch(() => null);
           }
         }
-      }
+      };
 
-      let cmd = client.prefixCommands.get(commandName) || client.prefixCommands.find(c => c.aliases && c.aliases.includes(commandName));
+      const cmd =
+        client.prefixCommands.get(commandName) ||
+        client.prefixCommands.find((c) => c.aliases && c.aliases.includes(commandName));
       if (cmd) {
         // Check command restrictions
         const restrictions = db.getCommandRestrictions(guildId, commandName);
         if (restrictions) {
           // Check role restrictions
-          if (restrictions.allowedRoles && Array.isArray(restrictions.allowedRoles) && restrictions.allowedRoles.length > 0) {
-            const hasRole = message.member.roles.cache.some(role => restrictions.allowedRoles.includes(role.id));
+          if (
+            restrictions.allowedRoles &&
+            Array.isArray(restrictions.allowedRoles) &&
+            restrictions.allowedRoles.length > 0
+          ) {
+            const hasRole = message.member.roles.cache.some((role) => restrictions.allowedRoles.includes(role.id));
             if (!hasRole) {
-              return message.reply({ content: '{emoji:circlex} ليس لديك الرتبة المطلوبة لاستخدام هذا الأمر.' }).catch(() => null);
+              return message
+                .reply({ content: '{emoji:circlex} ليس لديك الرتبة المطلوبة لاستخدام هذا الأمر.' })
+                .catch(() => null);
             }
           }
           // Check channel restrictions
-          if (restrictions.allowedChannels && Array.isArray(restrictions.allowedChannels) && restrictions.allowedChannels.length > 0) {
+          if (
+            restrictions.allowedChannels &&
+            Array.isArray(restrictions.allowedChannels) &&
+            restrictions.allowedChannels.length > 0
+          ) {
             if (!restrictions.allowedChannels.includes(channelId)) {
               return message.reply({ content: '{emoji:circlex} هذا الأمر غير متاح في هذا الروم.' }).catch(() => null);
             }
@@ -158,7 +244,7 @@ module.exports = {
         try {
           await cmd.execute(message, args);
         } catch (e) {
-          console.error(e);
+          logger.error(e);
         }
         return;
       }
@@ -167,11 +253,13 @@ module.exports = {
       let runArgs = args;
 
       if (!slashCmd) {
-        const alias =
-          resolvedAlias ||
-          customAliases.find((a) => normalizeShort(a.shortcut) === commandName);
+        const alias = resolvedAlias || customAliases.find((a) => normalizeShort(a.shortcut) === commandName);
         if (alias) {
-          const aliasParts = String(alias.command || '').replace(/^\//, '').trim().split(/ +/).filter(Boolean);
+          const aliasParts = String(alias.command || '')
+            .replace(/^\//, '')
+            .trim()
+            .split(/ +/)
+            .filter(Boolean);
           const mappedName = (aliasParts.shift() || '').toLowerCase();
           slashCmd = client.commands.get(mappedName);
           runArgs = [...aliasParts, ...args];
@@ -183,6 +271,33 @@ module.exports = {
         if (requiredPerms && message.member && !message.member.permissions.has(requiredPerms)) {
           return message.reply({ content: '{emoji:circlex} ليس لديك صلاحية استخدام هذا الأمر.' }).catch(() => null);
         }
+
+        const cmdRestrictions = db.getCommandRestrictions(guildId, slashCmd.data?.name || commandName);
+        const isAdmin = message.member?.permissions.has(PermissionsBitField.Flags.Administrator);
+        if (cmdRestrictions && !isAdmin) {
+          if (
+            cmdRestrictions.allowedRoles &&
+            Array.isArray(cmdRestrictions.allowedRoles) &&
+            cmdRestrictions.allowedRoles.length > 0
+          ) {
+            const hasRole = message.member.roles.cache.some((r) => cmdRestrictions.allowedRoles.includes(r.id));
+            if (!hasRole) {
+              return message
+                .reply({ content: '{emoji:circlex} ليس لديك الرتبة المطلوبة لاستخدام هذا الأمر.' })
+                .catch(() => null);
+            }
+          }
+          if (
+            cmdRestrictions.allowedChannels &&
+            Array.isArray(cmdRestrictions.allowedChannels) &&
+            cmdRestrictions.allowedChannels.length > 0
+          ) {
+            if (!cmdRestrictions.allowedChannels.includes(channelId)) {
+              return message.reply({ content: '{emoji:circlex} هذا الأمر غير متاح في هذا الروم.' }).catch(() => null);
+            }
+          }
+        }
+
         await runSlash(slashCmd, runArgs);
         return;
       }
@@ -196,10 +311,7 @@ module.exports = {
           const msg = boostSettings.message.replace(/{user}/g, `<@${message.author.id}>`);
           if (boostSettings.useEmbed) {
             const { EmbedBuilder } = require('discord.js');
-            const embed = new EmbedBuilder()
-              .setColor(0xFF73E1)
-              .setDescription(msg)
-              .setTimestamp();
+            const embed = new EmbedBuilder().setColor(0xff73e1).setDescription(msg).setTimestamp();
             boostChannel.send({ embeds: [embed] }).catch(() => null);
           } else {
             boostChannel.send(msg).catch(() => null);
@@ -211,10 +323,16 @@ module.exports = {
     db.incrementHourlyMessages(guildId);
 
     const replies = db.getAutoReplies(guildId);
-    const contentLower = message.content.toLowerCase();
     for (const r of replies) {
-      const trigger = String(r.trigger || '').toLowerCase();
-      if (trigger && contentLower.includes(trigger)) {
+      const trigger = String(r.trigger || '')
+        .trim()
+        .toLowerCase();
+      if (!trigger) continue;
+
+      const isExactMatch = contentTrimmed === trigger;
+      const isContainsMatch = r.matchType === 'contains' && contentTrimmed.includes(trigger);
+
+      if (isExactMatch || isContainsMatch) {
         if (r.mode === 'message') {
           message.channel.send({ content: r.response }).catch(() => null);
         } else {
@@ -233,10 +351,7 @@ module.exports = {
     const feelingsSettings = db.getFeelingsSettings(guildId);
     if (feelingsSettings.channelId === channelId) {
       const { EmbedBuilder } = require('discord.js');
-      const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
-        .setDescription(message.content)
-        .setTimestamp();
+      const embed = new EmbedBuilder().setColor(0x5865f2).setDescription(message.content).setTimestamp();
 
       if (!feelingsSettings.anonymous) {
         embed.setAuthor({
@@ -251,10 +366,9 @@ module.exports = {
     }
 
     const automations = db.getAutomation(guildId, channelId);
-    const automationBatch = [];
     for (const a of automations) {
       if (a.type === 'images') {
-        const hasImage = message.attachments.some(att => att.contentType?.startsWith('image/'));
+        const hasImage = message.attachments.some((att) => att.contentType?.startsWith('image/'));
         const hasImageLink = /\.(png|jpg|jpeg|gif|webp)$/i.test(message.content);
         if (!hasImage && !hasImageLink) {
           await message.delete().catch(() => null);
@@ -277,11 +391,11 @@ module.exports = {
       if (a.type === 'autoline') {
         const settings = db.getGuildSettings(guildId);
         if (settings.line_image) {
-            message.channel.send({ content: settings.line_image }).catch(() => null);
+          message.channel.send({ content: settings.line_image }).catch(() => null);
         }
       }
       if (a.type === 'autotax') {
-        let amountStr = message.content.toLowerCase().trim();
+        const amountStr = message.content.toLowerCase().trim();
         let multiplier = 1;
         if (amountStr.endsWith('k')) multiplier = 1000;
         else if (amountStr.endsWith('m')) multiplier = 1000000;
@@ -289,16 +403,16 @@ module.exports = {
 
         const amount = parseFloat(amountStr.replace(/[^\d.]/g, '')) * multiplier;
         if (!isNaN(amount) && amount > 0) {
-            const tax = Math.floor(amount * (20 / 19) + 1);
-            message.reply({ content: `{emoji:ProBot} **${tax}**` }).catch(() => null);
-            
-            // Send line separator after tax if configured
-            const settings = db.getGuildSettings(guildId);
-            if (settings.tax_line_image) {
-                setTimeout(() => {
-                    message.channel.send({ content: settings.tax_line_image }).catch(() => null);
-                }, 500);
-            }
+          const tax = Math.floor(amount * (20 / 19) + 1);
+          message.reply({ content: `{emoji:ProBot} **${tax}**` }).catch(() => null);
+
+          // Send line separator after tax if configured
+          const settings = db.getGuildSettings(guildId);
+          if (settings.tax_line_image) {
+            setTimeout(() => {
+              message.channel.send({ content: settings.tax_line_image }).catch(() => null);
+            }, 500);
+          }
         }
       }
       if (a.type === 'react' && a.value) {
@@ -317,10 +431,12 @@ module.exports = {
         // Check if channel is in antilink_channels or if antilink is server-wide (no channels specified)
         const antilinkChannels = protection.antilink_channels || [];
         const shouldBlock = antilinkChannels.length === 0 || antilinkChannels.includes(channelId);
-        
+
         if (shouldBlock && linkRegex.test(message.content)) {
           await message.delete().catch(() => null);
-          const warnMsg = await message.channel.send({ content: `${message.author}, {emoji:circlex} ممنوع إرسال الروابط هنا` });
+          const warnMsg = await message.channel.send({
+            content: `${message.author}, {emoji:circlex} ممنوع إرسال الروابط هنا`
+          });
           setTimeout(() => warnMsg.delete().catch(() => null), 5000);
           return;
         }
@@ -330,7 +446,7 @@ module.exports = {
         const key = `${guildId}_${userId}`;
         const now = Date.now();
         let times = spamTracker.get(key) || [];
-        times = times.filter(t => now - t < 5000);
+        times = times.filter((t) => now - t < 5000);
         times.push(now);
         spamTracker.set(key, times);
         if (times.length >= 6) {
@@ -338,7 +454,9 @@ module.exports = {
           if (member && member.moderatable) {
             await member.timeout(60_000, 'Anti-Spam').catch(() => null);
           }
-          const warnMsg = await message.channel.send({ content: `${message.author}, {emoji:alerttriangle} تم رصد سبام` });
+          const warnMsg = await message.channel.send({
+            content: `${message.author}, {emoji:alerttriangle} تم رصد سبام`
+          });
           setTimeout(() => warnMsg.delete().catch(() => null), 5000);
           spamTracker.set(key, []);
           return;
@@ -350,11 +468,11 @@ module.exports = {
     if (automod && automod.enabled && Array.isArray(automod.words) && automod.words.length > 0) {
       const member = message.member;
       const bypassRoles = Array.isArray(automod.bypass_roles) ? automod.bypass_roles : [];
-      const hasBypass = member && bypassRoles.some(roleId => member.roles.cache.has(roleId));
+      const hasBypass = member && bypassRoles.some((roleId) => member.roles.cache.has(roleId));
 
       if (!hasBypass) {
         const normalizedMsg = normalizeArabic(message.content);
-        const hasBadWord = automod.words.some(word => {
+        const hasBadWord = automod.words.some((word) => {
           const normalizedWord = normalizeArabic(word);
           return normalizedMsg.includes(normalizedWord);
         });
@@ -362,11 +480,15 @@ module.exports = {
         if (hasBadWord) {
           await message.delete().catch(() => null);
           if (automod.action === 'warn') {
-            const warnMsg = await message.channel.send({ content: `${message.author}, {emoji:circlex} يرجى احترام قوانين الخادم وتجنب استخدام الكلمات الممنوعة.` });
+            const warnMsg = await message.channel.send({
+              content: `${message.author}, {emoji:circlex} يرجى احترام قوانين الخادم وتجنب استخدام الكلمات الممنوعة.`
+            });
             setTimeout(() => warnMsg.delete().catch(() => null), 5000);
           } else if (automod.action === 'timeout' && member && member.moderatable) {
             await member.timeout(60 * 60 * 1000, 'استخدام كلمات ممنوعة').catch(() => null);
-            const warnMsg = await message.channel.send({ content: `${message.author}, {emoji:alerttriangle} تم إعطائك تايم أوت لمدة ساعة بسبب استخدام كلمات ممنوعة.` });
+            const warnMsg = await message.channel.send({
+              content: `${message.author}, {emoji:alerttriangle} تم إعطائك تايم أوت لمدة ساعة بسبب استخدام كلمات ممنوعة.`
+            });
             setTimeout(() => warnMsg.delete().catch(() => null), 5000);
           }
           return;
@@ -378,9 +500,10 @@ module.exports = {
     if (levelSettings.enabled) {
       const now = Math.floor(Date.now() / 1000);
       const userData = db.getLevel(userId, guildId);
-      const cooldown = levelSettings.xp_cooldown !== undefined && levelSettings.xp_cooldown !== null ? levelSettings.xp_cooldown : 60;
+      const cooldown =
+        levelSettings.xp_cooldown !== undefined && levelSettings.xp_cooldown !== null ? levelSettings.xp_cooldown : 60;
 
-      if (!userData || (now - (userData.last_message || 0)) >= cooldown) {
+      if (!userData || now - (userData.last_message || 0) >= cooldown) {
         const xpGain = Math.floor(
           Math.random() * (levelSettings.xp_max - levelSettings.xp_min + 1) + levelSettings.xp_min
         );

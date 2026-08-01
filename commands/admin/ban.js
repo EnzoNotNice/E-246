@@ -2,14 +2,17 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const locale = require('../../utils/locale');
 const { success, error, modlog } = require('../../utils/embeds');
 const { sendLog } = require('../../utils/logger');
+const db = require('../../database/db');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ban')
     .setDescription('حظر عضو')
-    .addUserOption(o => o.setName('user').setDescription('العضو للحظر').setRequired(true))
-    .addStringOption(o => o.setName('reason').setDescription('سبب الحظر'))
-    .addIntegerOption(o => o.setName('delete_messages').setDescription('أيام حذف الرسائل').setMinValue(0).setMaxValue(7))
+    .addUserOption((o) => o.setName('user').setDescription('العضو للحظر').setRequired(true))
+    .addStringOption((o) => o.setName('reason').setDescription('سبب الحظر'))
+    .addIntegerOption((o) =>
+      o.setName('delete_messages').setDescription('أيام حذف الرسائل').setMinValue(0).setMaxValue(7)
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
@@ -21,25 +24,45 @@ module.exports = {
     const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
     const deleteDays = interaction.options.getInteger('delete_messages') ?? 0;
 
-    if (!target) return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
+    if (!target)
+      return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
 
     const member = await interaction.guild.members.fetch(target.id).catch(() => null);
 
-    if (member && !member.bannable) return interaction.reply({ embeds: [error(locale.get('moderation.cannotBan'))], flags: ['Ephemeral'] });
-    if (interaction.user.id !== interaction.guild.ownerId && member && (member.roles?.highest?.position ?? 0) >= (interaction.member?.roles?.highest?.position ?? 0))
+    if (member && !member.bannable)
+      return interaction.reply({ embeds: [error(locale.get('moderation.cannotBan'))], flags: ['Ephemeral'] });
+    if (
+      interaction.user.id !== interaction.guild.ownerId &&
+      member &&
+      (member.roles?.highest?.position ?? 0) >= (interaction.member?.roles?.highest?.position ?? 0)
+    )
       return interaction.reply({ embeds: [error(locale.get('general.noPermission'))], flags: ['Ephemeral'] });
 
     try {
       await interaction.guild.members.ban(target, { reason, deleteMessageSeconds: deleteDays * 86400 });
 
+      db.addModAction(
+        interaction.guildId,
+        target.id,
+        target.tag,
+        interaction.user.id,
+        interaction.user.tag,
+        'ban',
+        reason
+      );
+
       const logEmbed = modlog('Member Banned', { tag: target.tag, id: target.id }, interaction.user, reason);
       await sendLog(interaction.client, interaction.guildId, logEmbed, 'ban');
 
-      return interaction.reply({
-        embeds: [success(locale.get('moderation.banSuccess', { user: target.tag, reason }))]
-      }).catch(() => {});
+      return interaction
+        .reply({
+          embeds: [success(locale.get('moderation.banSuccess', { user: target.tag, reason }))]
+        })
+        .catch(() => {});
     } catch (e) {
-      return interaction.reply({ embeds: [error(locale.get('general.errorOccurred'))], flags: ['Ephemeral'] }).catch(() => {});
+      return interaction
+        .reply({ embeds: [error(locale.get('general.errorOccurred'))], flags: ['Ephemeral'] })
+        .catch(() => {});
     }
   }
 };

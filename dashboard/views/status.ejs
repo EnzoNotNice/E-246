@@ -1,0 +1,90 @@
+<%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'status' }) %>
+
+<main class="app-content">
+    <div class="content-header">
+        <h1><i class="fa-solid fa-heart-pulse"></i> حالة البوت والخادم (System Status)</h1>
+        <p>مراقبة حية لاستهلاك الموارد وقنوات الاتصال وبنية النظام النشطة</p>
+    </div>
+
+    <div class="grid-form-2 reveal">
+        <!-- Card 1: Bot Health -->
+        <div class="glass-panel">
+            <h3><i class="fa-solid fa-robot"></i> حالة البوت</h3>
+            <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>سرعة استجابة البوت (Ping):</span>
+                    <strong><%= ping %> ms</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>مدة التشغيل المتواصل (Uptime):</span>
+                    <strong>
+                        <% 
+                        const days = Math.floor(uptime / 86400);
+                        const hours = Math.floor((uptime % 86400) / 3600);
+                        const minutes = Math.floor((uptime % 3600) / 60);
+                        const seconds = Math.floor(uptime % 60);
+                        %>
+                        <%= days %> يوم، <%= hours %> ساعة، <%= minutes %> دقيقة
+                    </strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>نظام التشغيل:</span>
+                    <strong style="text-transform: capitalize;"><%= platform %></strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Services Status -->
+        <div class="glass-panel">
+            <h3><i class="fa-solid fa-server"></i> حالة الخدمات الخارجية</h3>
+            <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>اتصال MongoDB:</span>
+                    <span class="badge" style="background: <%= dbConnected ? '#2ECC71' : '#E74C3C' %>; padding: 4px 8px; border-radius: 4px; color: white;">
+                        <%= dbConnected ? 'نشط 🟢' : 'غير متصل 🔴' %>
+                    </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>مخدم الموسيقى (Lavalink):</span>
+                    <span class="badge" style="background: <%= lavalinkConnected.includes('متصل') ? '#2ECC71' : '#E74C3C' %>; padding: 4px 8px; border-radius: 4px; color: white;">
+                        <%= lavalinkConnected %>
+                    </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>النسخ الاحتياطي التلقائي:</span>
+                    <span class="badge" style="background: #2ECC71; padding: 4px 8px; border-radius: 4px; color: white;">
+                        مجدول 🟢
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Memory Usage Panel -->
+    <div class="glass-panel mt-3 reveal">
+        <h3><i class="fa-solid fa-memory"></i> استهلاك الذاكرة العشوائية (RAM)</h3>
+        <div style="margin-top: 15px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span>استهلاك العملية (Node Process):</span>
+                <strong><%= usedMemory %> MB</strong>
+            </div>
+            <div class="progress-bar-container" style="background: rgba(255,255,255,0.1); border-radius: 10px; height: 12px; overflow: hidden; margin-bottom: 20px;">
+                <div class="progress-bar" style="background: linear-gradient(90deg, #8C52FF, #00FFCC); height: 100%; width: <%= Math.min(100, (usedMemory / 1024) * 100) %>%"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span>استهلاك النظام بالكامل:</span>
+                <strong><%= systemUsedMemory %> GB / <%= totalMemory %> GB</strong>
+            </div>
+            <div class="progress-bar-container" style="background: rgba(255,255,255,0.1); border-radius: 10px; height: 12px; overflow: hidden;">
+                <div class="progress-bar" style="background: linear-gradient(90deg, #00FFCC, #FF3366); height: 100%; width: <%= (systemUsedMemory / totalMemory) * 100 %>%"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<%- include('partials/footer') %>

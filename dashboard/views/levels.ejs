@@ -54,7 +54,31 @@ textChannels = textChannels && (Array.isArray(textChannels) || typeof textChanne
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary mt-2"><i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات</button>
+            <div class="section-title mt-4"><i class="fa-solid fa-microphone"></i> إعدادات مستويات الصوت (Voice Leveling)</div>
+
+            <div class="form-group">
+                <label for="voice_enabled">حالة مستويات الصوت</label>
+                <select id="voice_enabled" name="voice_enabled" class="glass-input">
+                    <option value="1" <%= settings.voice_enabled !== 0 ? 'selected' : '' %>>مفعّل</option>
+                    <option value="0" <%= settings.voice_enabled === 0 ? 'selected' : '' %>>معطّل</option>
+                </select>
+                <small>تفعيل أو تعطيل كسب نقاط الخبرة أثناء التواجد في الغرف الصوتية</small>
+            </div>
+
+            <div class="grid-form-2">
+                <div class="form-group">
+                    <label for="voice_xp_min">الحد الأدنى للـ XP الصوتي (لكل دقيقة)</label>
+                    <input type="number" id="voice_xp_min" name="voice_xp_min" class="glass-input" value="<%= settings.voice_xp_min !== undefined ? settings.voice_xp_min : 10 %>" required>
+                    <small>أقل نقاط خبرة تمنح للعضو كل دقيقة نشاط صوتي</small>
+                </div>
+                <div class="form-group">
+                    <label for="voice_xp_max">الحد الأقصى للـ XP الصوتي (لكل دقيقة)</label>
+                    <input type="number" id="voice_xp_max" name="voice_xp_max" class="glass-input" value="<%= settings.voice_xp_max !== undefined ? settings.voice_xp_max : 20 %>" required>
+                    <small>أقصى نقاط خبرة تمنح للعضو كل دقيقة نشاط صوتي</small>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3"><i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات</button>
         </form>
     </div>
 </main>

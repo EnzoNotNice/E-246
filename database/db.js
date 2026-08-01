@@ -1,29 +1,39 @@
 const { MongoClient } = require('mongodb');
+const logger = require('../utils/logger');
 
 const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/e246';
-const client = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 5000 });
-
-client.on('error', (err) => console.error('[MongoDB Connection Error]', err));
-client.on('close', () => console.warn('[MongoDB Connection Closed]'));
-client.on('reconnect', () => console.log('✅ [MongoDB Reconnected]'));
-client.on('topologyDescriptionChanged', (ev) => {
-  // Silence or log server selection topology changes if needed
+const client = new MongoClient(mongoUri, {
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 45000
 });
 
+client.on('error', (err) => logger.error('[MongoDB Connection Error]', err));
+client.on('close', () => logger.warn('[MongoDB Connection Closed]'));
+client.on('reconnect', () => logger.info('✅ [MongoDB Reconnected]'));
+client.on('topologyDescriptionChanged', () => {});
+
 let mongoDb = null;
+let isConnected = false;
+let connectionAttempted = false;
 
 function safeCollection(name) {
   if (!mongoDb) {
-    // return a stub with commonly used methods that do nothing safely
+    if (!connectionAttempted) {
+      logger.warn('[MongoDB] safeCollection called before connection attempt — returning mock');
+    } else if (!isConnected) {
+      logger.warn('[MongoDB] safeCollection called while disconnected — returning mock');
+    }
     return {
-      insertOne: async () => ({}),
-      updateOne: async () => ({}),
-      updateMany: async () => ({}),
-      deleteMany: async () => ({}),
-      deleteOne: async () => ({}),
-      findOne: async () => null,
-      find: () => ({ toArray: async () => [] }),
-      createIndex: async () => (null)
+      insertOne: () => ({}),
+      updateOne: () => ({}),
+      updateMany: () => ({}),
+      deleteMany: () => ({}),
+      deleteOne: () => ({}),
+      findOne: () => null,
+      find: () => ({ toArray: () => [] }),
+      createIndex: () => null,
+      countDocuments: () => 0
     };
   }
   return mongoDb.collection(name);
@@ -75,7 +85,15 @@ const cache = {
   stats_daily_voice: new Map(),
   social_alerts: [],
   automod_settings: new Map(),
-  custom_commands: []
+  custom_commands: [],
+  mod_actions: [],
+  suggestion_settings: new Map(),
+  suggestions: new Map(),
+  afk_users: new Map(),
+  starboard_settings: new Map(),
+  starboard_posts: new Map(),
+  sticky_messages: new Map(),
+  form_submissions: []
 };
 
 const unhandledSqlStatements = [];
@@ -93,50 +111,70 @@ function safeSet(doc) {
 
 async function loadMongoCache() {
   if (!mongoDb) {
-    console.warn('[MongoDB] loadMongoCache skipped — no active connection');
+    logger.warn('[MongoDB] loadMongoCache skipped — no active connection');
     return;
   }
   const collections = await mongoDb.collections();
-  const names = collections.map(c => c.collectionName);
+  const names = collections.map((c) => c.collectionName);
 
   const mapCollections = [
-    { name: 'guild_settings', key: d => d.guildId },
-    { name: 'levels', key: d => `${d.userId}_${d.guildId}` },
-    { name: 'level_settings', key: d => d.guildId },
-    { name: 'greet_settings', key: d => d.guildId },
-    { name: 'feelings_settings', key: d => d.guildId },
-    { name: 'boost_settings', key: d => d.guildId },
-    { name: 'bank_settings', key: d => d.guildId },
-    { name: 'active_games', key: d => d.channelId },
-    { name: 'giveaways', key: d => d.messageId },
-    { name: 'protection_settings', key: d => d.guildId },
-    { name: 'invites', key: d => `${d.userId}_${d.guildId}` },
-    { name: 'invite_uses', key: d => `${d.code}_${d.guildId}` },
-    { name: 'invite_logs', key: d => d.guildId },
-    { name: 'ticket_settings', key: d => d.guildId },
-    { name: 'reaction_roles', key: d => d.guildId },
-    { name: 'forms_settings', key: d => d.guildId },
-    { name: 'captcha_settings', key: d => d.guildId },
-    { name: 'log_settings', key: d => d.guildId },
-    { name: 'tempvoice_settings', key: d => d.guildId },
-    { name: 'jailed_users', key: d => `${d.userId}_${d.guildId}` },
-    { name: 'jail_settings', key: d => d.guildId },
-    { name: 'tempvoice_channels', key: d => d.channelId },
-    { name: 'bot_settings', key: d => d.id || 1 },
-    { name: 'tempvoice_user_settings', key: d => d.userId },
-    { name: 'tempvoice_bans', key: d => `${d.channelId}_${d.targetId}` },
-    { name: 'tempvoice_trusted', key: d => `${d.channelId}_${d.userId}` },
-    { name: 'stats_daily_members', key: d => `${d.guildId}_${d.date}` },
-    { name: 'stats_hourly_messages', key: d => `${d.guildId}_${d.date}_${d.hour}` },
-    { name: 'stats_daily_voice', key: d => `${d.guildId}_${d.date}` },
-    { name: 'snipe', key: d => d.channelId },
-    { name: 'automod_settings', key: d => d.guildId }
+    { name: 'guild_settings', key: (d) => d.guildId },
+    { name: 'levels', key: (d) => `${d.userId}_${d.guildId}` },
+    { name: 'level_settings', key: (d) => d.guildId },
+    { name: 'greet_settings', key: (d) => d.guildId },
+    { name: 'feelings_settings', key: (d) => d.guildId },
+    { name: 'boost_settings', key: (d) => d.guildId },
+    { name: 'bank_settings', key: (d) => d.guildId },
+    { name: 'active_games', key: (d) => d.channelId },
+    { name: 'giveaways', key: (d) => d.messageId },
+    { name: 'protection_settings', key: (d) => d.guildId },
+    { name: 'invites', key: (d) => `${d.userId}_${d.guildId}` },
+    { name: 'invite_uses', key: (d) => `${d.code}_${d.guildId}` },
+    { name: 'invite_logs', key: (d) => d.guildId },
+    { name: 'ticket_settings', key: (d) => d.guildId },
+    { name: 'reaction_roles', key: (d) => d.guildId },
+    { name: 'forms_settings', key: (d) => d.guildId },
+    { name: 'captcha_settings', key: (d) => d.guildId },
+    { name: 'log_settings', key: (d) => d.guildId },
+    { name: 'tempvoice_settings', key: (d) => d.guildId },
+    { name: 'jailed_users', key: (d) => `${d.userId}_${d.guildId}` },
+    { name: 'jail_settings', key: (d) => d.guildId },
+    { name: 'tempvoice_channels', key: (d) => d.channelId },
+    { name: 'bot_settings', key: (d) => d.id || 1 },
+    { name: 'tempvoice_user_settings', key: (d) => d.userId },
+    { name: 'tempvoice_bans', key: (d) => `${d.channelId}_${d.targetId}` },
+    { name: 'tempvoice_trusted', key: (d) => `${d.channelId}_${d.userId}` },
+    { name: 'stats_daily_members', key: (d) => `${d.guildId}_${d.date}` },
+    { name: 'stats_hourly_messages', key: (d) => `${d.guildId}_${d.date}_${d.hour}` },
+    { name: 'stats_daily_voice', key: (d) => `${d.guildId}_${d.date}` },
+    { name: 'snipe', key: (d) => d.channelId },
+    { name: 'automod_settings', key: (d) => d.guildId },
+    { name: 'suggestion_settings', key: (d) => d.guildId },
+    { name: 'suggestions', key: (d) => d.messageId },
+    { name: 'afk_users', key: (d) => `${d.userId}_${d.guildId}` },
+    { name: 'starboard_settings', key: (d) => d.guildId },
+    { name: 'starboard_posts', key: (d) => d.originalMessageId },
+    { name: 'sticky_messages', key: (d) => d.channelId }
   ];
 
   const arrayCollections = [
-    'warnings', 'automation', 'whitelist', 'blacklist', 'invite_ranks',
-    'tickets', 'auto_reply', 'reactroles', 'aliases', 'social_alerts',
-    'ticket_blacklist', 'ticket_warnings', 'custom_commands', 'ticket_categories', 'command_restrictions'
+    'warnings',
+    'automation',
+    'whitelist',
+    'blacklist',
+    'invite_ranks',
+    'tickets',
+    'auto_reply',
+    'reactroles',
+    'aliases',
+    'social_alerts',
+    'ticket_blacklist',
+    'ticket_warnings',
+    'custom_commands',
+    'ticket_categories',
+    'command_restrictions',
+    'mod_actions',
+    'form_submissions'
   ];
 
   for (const col of mapCollections) {
@@ -155,127 +193,188 @@ async function loadMongoCache() {
     }
   }
 
-  console.log('[MongoDB] In-memory cache loaded successfully');
+  logger.info('[MongoDB] In-memory cache loaded successfully');
 }
 
 async function connect() {
-  await client.connect();
-  const dbName = client.options?.dbName || client.options?.databaseName || mongoUri.split('/').pop().split('?')[0] || 'e246';
-  mongoDb = client.db(dbName);
-  if (!mongoDb) throw new Error('MongoDB client.db() returned null — check your connection string');
-  console.log('✅ [MongoDB] Connected successfully to database');
-  
-  // Auto-delete message cache entries after 3 days (259200 seconds) to save database space
-  await safeCollection('message_cache').createIndex({ createdAt: 1 }, { expireAfterSeconds: 259200 }).catch(() => {});
-  
-  await loadMongoCache();
+  if (connectionAttempted) {
+    if (isConnected) return;
+    throw new Error('MongoDB connection already attempted and failed');
+  }
+  connectionAttempted = true;
+
+  try {
+    await client.connect();
+
+    // Verify connection by pinging
+    await client.db('admin').command({ ping: 1 });
+
+    const dbName =
+      client.options?.dbName || client.options?.databaseName || mongoUri.split('/').pop().split('?')[0] || 'e246';
+    mongoDb = client.db(dbName);
+    if (!mongoDb) throw new Error('MongoDB client.db() returned null — check your connection string');
+
+    isConnected = true;
+    logger.info('✅ [MongoDB] Connected successfully to database');
+
+    await safeCollection('message_cache')
+      .createIndex({ createdAt: 1 }, { expireAfterSeconds: 259200 })
+      .catch(() => {});
+
+    await loadMongoCache();
+  } catch (error) {
+    connectionAttempted = true;
+    isConnected = false;
+    logger.error('❌ [MongoDB] Connection failed:', error.message);
+    throw error;
+  }
+}
+
+function saveMessage(id, channelId, guildId, authorId, authorTag, authorAvatar, content, attachments = []) {
+  const now = Math.floor(Date.now() / 1000);
+  const newDoc = { id, channelId, guildId, authorId, authorTag, authorAvatar, content, attachments, timestamp: now };
+  cache.messages.push(newDoc);
+  safeCollection('messages')
+    .insertOne(newDoc)
+    .catch(() => null);
+
+  const cutoff = now - 259200;
+  cache.messages = cache.messages.filter((m) => m.timestamp >= cutoff);
+  safeCollection('messages')
+    .deleteMany({ timestamp: { $lt: cutoff } })
+    .catch(() => null);
 }
 
 function translateSql(opType, sql, args) {
-  if (!mongoDb) { console.error('[DB] translateSql called before MongoDB was connected'); return opType === 'get' ? null : { changes: 0 }; }
+  if (!mongoDb) {
+    logger.error('[DB] translateSql called before MongoDB was connected');
+    return opType === 'get' ? null : { changes: 0 };
+  }
   const cleanSql = sql.replace(/\s+/g, ' ').trim();
 
   if (/UPDATE log_settings SET (\w+) = \? WHERE guildId = \?/i.test(cleanSql)) {
     const colName = cleanSql.match(/UPDATE log_settings SET (\w+) = \? WHERE guildId = \?/i)[1];
     const [value, guildId] = args;
-    let doc = cache.log_settings.get(guildId) || { guildId };
+    const doc = cache.log_settings.get(guildId) || { guildId };
     doc[colName] = value;
     cache.log_settings.set(guildId, doc);
-    safeCollection('log_settings').updateOne({ guildId }, { $set: { [colName]: value } }, { upsert: true }).catch(console.error);
+    safeCollection('log_settings')
+      .updateOne({ guildId }, { $set: { [colName]: value } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/INSERT OR REPLACE INTO reactroles/i.test(cleanSql)) {
     const [messageId, guildId, emoji, roleId] = args;
-    const idx = cache.reactroles.findIndex(r => r.messageId === messageId && r.emoji === emoji);
+    const idx = cache.reactroles.findIndex((r) => r.messageId === messageId && r.emoji === emoji);
     const newDoc = { messageId, guildId, emoji, roleId };
     if (idx !== -1) {
       cache.reactroles[idx] = newDoc;
     } else {
       cache.reactroles.push(newDoc);
     }
-    safeCollection('reactroles').updateOne({ messageId, emoji }, { $set: stripId(newDoc) }, { upsert: true }).catch(console.error);
+    safeCollection('reactroles')
+      .updateOne({ messageId, emoji }, { $set: stripId(newDoc) }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE greet_settings SET channel = \?, enabled = 1 WHERE guildId = \?/i.test(cleanSql)) {
     const [channel, guildId] = args;
-    let doc = cache.greet_settings.get(guildId) || { guildId };
+    const doc = cache.greet_settings.get(guildId) || { guildId };
     doc.channel = channel;
     doc.enabled = 1;
     cache.greet_settings.set(guildId, doc);
-    safeCollection('greet_settings').updateOne({ guildId }, { $set: { channel, enabled: 1 } }, { upsert: true }).catch(console.error);
+    safeCollection('greet_settings')
+      .updateOne({ guildId }, { $set: { channel, enabled: 1 } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE greet_settings SET delete_after = \? WHERE guildId = \?/i.test(cleanSql)) {
     const [delete_after, guildId] = args;
-    let doc = cache.greet_settings.get(guildId) || { guildId };
+    const doc = cache.greet_settings.get(guildId) || { guildId };
     doc.delete_after = delete_after;
     cache.greet_settings.set(guildId, doc);
-    safeCollection('greet_settings').updateOne({ guildId }, { $set: { delete_after } }, { upsert: true }).catch(console.error);
+    safeCollection('greet_settings')
+      .updateOne({ guildId }, { $set: { delete_after } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE greet_settings SET dm_message = \? WHERE guildId = \?/i.test(cleanSql)) {
     const [dm_message, guildId] = args;
-    let doc = cache.greet_settings.get(guildId) || { guildId };
+    const doc = cache.greet_settings.get(guildId) || { guildId };
     doc.dm_message = dm_message;
     cache.greet_settings.set(guildId, doc);
-    safeCollection('greet_settings').updateOne({ guildId }, { $set: { dm_message } }, { upsert: true }).catch(console.error);
+    safeCollection('greet_settings')
+      .updateOne({ guildId }, { $set: { dm_message } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE greet_settings SET message = \? WHERE guildId = \?/i.test(cleanSql)) {
     const [message, guildId] = args;
-    let doc = cache.greet_settings.get(guildId) || { guildId };
+    const doc = cache.greet_settings.get(guildId) || { guildId };
     doc.message = message;
     cache.greet_settings.set(guildId, doc);
-    safeCollection('greet_settings').updateOne({ guildId }, { $set: { message } }, { upsert: true }).catch(console.error);
+    safeCollection('greet_settings')
+      .updateOne({ guildId }, { $set: { message } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/INSERT INTO invite_logs/i.test(cleanSql)) {
     const [guildId, channelId] = args;
     cache.invite_logs.set(guildId, { guildId, channelId });
-    safeCollection('invite_logs').updateOne({ guildId }, { $set: { channelId } }, { upsert: true }).catch(console.error);
+    safeCollection('invite_logs')
+      .updateOne({ guildId }, { $set: { channelId } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE level_settings SET enabled = \? WHERE guildId = \?/i.test(cleanSql)) {
     const [enabled, guildId] = args;
-    let doc = cache.level_settings.get(guildId) || { guildId };
+    const doc = cache.level_settings.get(guildId) || { guildId };
     doc.enabled = enabled;
     cache.level_settings.set(guildId, doc);
-    safeCollection('level_settings').updateOne({ guildId }, { $set: { enabled } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings')
+      .updateOne({ guildId }, { $set: { enabled } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE level_settings SET channel = \? WHERE guildId = \?/i.test(cleanSql)) {
     const [channel, guildId] = args;
-    let doc = cache.level_settings.get(guildId) || { guildId };
+    const doc = cache.level_settings.get(guildId) || { guildId };
     doc.channel = channel;
     cache.level_settings.set(guildId, doc);
-    safeCollection('level_settings').updateOne({ guildId }, { $set: { channel } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings')
+      .updateOne({ guildId }, { $set: { channel } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE level_settings SET xp_min = \?, xp_max = \? WHERE guildId = \?/i.test(cleanSql)) {
     const [xp_min, xp_max, guildId] = args;
-    let doc = cache.level_settings.get(guildId) || { guildId };
+    const doc = cache.level_settings.get(guildId) || { guildId };
     doc.xp_min = xp_min;
     doc.xp_max = xp_max;
     cache.level_settings.set(guildId, doc);
-    safeCollection('level_settings').updateOne({ guildId }, { $set: { xp_min, xp_max } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings')
+      .updateOne({ guildId }, { $set: { xp_min, xp_max } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE level_settings SET xp_cooldown = \? WHERE guildId = \?/i.test(cleanSql)) {
     const [xp_cooldown, guildId] = args;
-    let doc = cache.level_settings.get(guildId) || { guildId };
+    const doc = cache.level_settings.get(guildId) || { guildId };
     doc.xp_cooldown = xp_cooldown;
     cache.level_settings.set(guildId, doc);
-    safeCollection('level_settings').updateOne({ guildId }, { $set: { xp_cooldown } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings')
+      .updateOne({ guildId }, { $set: { xp_cooldown } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
@@ -290,10 +389,12 @@ function translateSql(opType, sql, args) {
       }
     }
     if (!Array.isArray(rewards)) rewards = [];
-    let doc = cache.level_settings.get(guildId) || { guildId };
+    const doc = cache.level_settings.get(guildId) || { guildId };
     doc.role_rewards = rewards;
     cache.level_settings.set(guildId, doc);
-    safeCollection('level_settings').updateOne({ guildId }, { $set: { role_rewards: rewards } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings')
+      .updateOne({ guildId }, { $set: { role_rewards: rewards } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
@@ -302,22 +403,32 @@ function translateSql(opType, sql, args) {
     if (!cache.protection_settings.has(guildId)) {
       const newDoc = { guildId, enabled: 0 };
       cache.protection_settings.set(guildId, newDoc);
-      safeCollection('protection_settings').insertOne(newDoc).catch(() => null);
+      safeCollection('protection_settings')
+        .insertOne(newDoc)
+        .catch(() => null);
     }
     return { changes: 1 };
   }
 
-  if (/UPDATE protection_settings SET (\w+) = \?, bypass_role = COALESCE\(\?, bypass_role\) WHERE guildId = \?/i.test(cleanSql)) {
-    const match = cleanSql.match(/UPDATE protection_settings SET (\w+) = \?, bypass_role = COALESCE\(\?, bypass_role\) WHERE guildId = \?/i);
+  if (
+    /UPDATE protection_settings SET (\w+) = \?, bypass_role = COALESCE\(\?, bypass_role\) WHERE guildId = \?/i.test(
+      cleanSql
+    )
+  ) {
+    const match = cleanSql.match(
+      /UPDATE protection_settings SET (\w+) = \?, bypass_role = COALESCE\(\?, bypass_role\) WHERE guildId = \?/i
+    );
     const colName = match[1];
     const [val, bypass, guildId] = args;
-    let doc = cache.protection_settings.get(guildId) || { guildId };
+    const doc = cache.protection_settings.get(guildId) || { guildId };
     doc[colName] = val;
     if (bypass !== null) doc.bypass_role = bypass;
     cache.protection_settings.set(guildId, doc);
     const updateObj = { [colName]: val };
     if (bypass !== null) updateObj.bypass_role = bypass;
-    safeCollection('protection_settings').updateOne({ guildId }, { $set: updateObj }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings')
+      .updateOne({ guildId }, { $set: updateObj }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
@@ -325,43 +436,51 @@ function translateSql(opType, sql, args) {
     const match = cleanSql.match(/UPDATE protection_settings SET (\w+) = \? WHERE guildId = \?/i);
     const colName = match[1];
     const [val, guildId] = args;
-    let doc = cache.protection_settings.get(guildId) || { guildId };
+    const doc = cache.protection_settings.get(guildId) || { guildId };
     doc[colName] = val;
     cache.protection_settings.set(guildId, doc);
-    safeCollection('protection_settings').updateOne({ guildId }, { $set: { [colName]: val } }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings')
+      .updateOne({ guildId }, { $set: { [colName]: val } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE protection_settings SET enabled = 1 WHERE guildId = \?/i.test(cleanSql)) {
     const [guildId] = args;
-    let doc = cache.protection_settings.get(guildId) || { guildId };
+    const doc = cache.protection_settings.get(guildId) || { guildId };
     doc.enabled = 1;
     cache.protection_settings.set(guildId, doc);
-    safeCollection('protection_settings').updateOne({ guildId }, { $set: { enabled: 1 } }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings')
+      .updateOne({ guildId }, { $set: { enabled: 1 } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE protection_settings SET enabled = 0 WHERE guildId = \?/i.test(cleanSql)) {
     const [guildId] = args;
-    let doc = cache.protection_settings.get(guildId) || { guildId };
+    const doc = cache.protection_settings.get(guildId) || { guildId };
     doc.enabled = 0;
     cache.protection_settings.set(guildId, doc);
-    safeCollection('protection_settings').updateOne({ guildId }, { $set: { enabled: 0 } }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings')
+      .updateOne({ guildId }, { $set: { enabled: 0 } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/UPDATE protection_settings SET action = \? WHERE guildId = \?/i.test(cleanSql)) {
     const [action, guildId] = args;
-    let doc = cache.protection_settings.get(guildId) || { guildId };
+    const doc = cache.protection_settings.get(guildId) || { guildId };
     doc.action = action;
     cache.protection_settings.set(guildId, doc);
-    safeCollection('protection_settings').updateOne({ guildId }, { $set: { action: action } }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings')
+      .updateOne({ guildId }, { $set: { action: action } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/INSERT INTO ticket_settings/i.test(cleanSql)) {
-    const [guildId, category_id, staff_role, log_channel, ticket_message, feedbacks_channel, owners_role] = args;
-    let doc = cache.ticket_settings.get(guildId) || { guildId };
+    const [guildId, category_id, staff_role, log_channel, ticket_message] = args;
+    const doc = cache.ticket_settings.get(guildId) || { guildId };
     doc.category_id = category_id;
     doc.staff_role = staff_role;
     if (log_channel !== null) doc.log_channel = log_channel;
@@ -370,25 +489,26 @@ function translateSql(opType, sql, args) {
     const updateObj = { category_id, staff_role };
     if (log_channel !== null) updateObj.log_channel = log_channel;
     if (ticket_message !== null) updateObj.ticket_message = ticket_message;
-    safeCollection('ticket_settings').updateOne({ guildId }, { $set: updateObj }, { upsert: true }).catch(console.error);
+    safeCollection('ticket_settings')
+      .updateOne({ guildId }, { $set: updateObj }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/SELECT \* FROM reactroles WHERE guildId = \?/i.test(cleanSql)) {
     const [guildId] = args;
-    return cache.reactroles.filter(r => r.guildId === guildId);
+    return cache.reactroles.filter((r) => r.guildId === guildId);
   }
 
   if (/SELECT \* FROM reactroles WHERE messageId = \? AND emoji = \?/i.test(cleanSql)) {
     const [messageId, emoji] = args;
-    return cache.reactroles.find(r => r.messageId === messageId && r.emoji === emoji) || null;
+    return cache.reactroles.find((r) => r.messageId === messageId && r.emoji === emoji) || null;
   }
-
 
   if (/SELECT \* FROM levels WHERE guildId = \? ORDER BY messages DESC LIMIT 10/i.test(cleanSql)) {
     const [guildId] = args;
     return Array.from(cache.levels.values())
-      .filter(u => u.guildId === guildId)
+      .filter((u) => u.guildId === guildId)
       .sort((a, b) => (b.messages || 0) - (a.messages || 0))
       .slice(0, 10);
   }
@@ -396,7 +516,7 @@ function translateSql(opType, sql, args) {
   if (/SELECT \* FROM levels WHERE guildId = \? ORDER BY voice_xp DESC LIMIT 10/i.test(cleanSql)) {
     const [guildId] = args;
     return Array.from(cache.levels.values())
-      .filter(u => u.guildId === guildId)
+      .filter((u) => u.guildId === guildId)
       .sort((a, b) => (b.voice_xp || 0) - (a.voice_xp || 0))
       .slice(0, 10);
   }
@@ -404,44 +524,61 @@ function translateSql(opType, sql, args) {
   if (/SELECT \* FROM levels WHERE guildId = \? ORDER BY reactionsCount DESC LIMIT 10/i.test(cleanSql)) {
     const [guildId] = args;
     return Array.from(cache.levels.values())
-      .filter(u => u.guildId === guildId)
+      .filter((u) => u.guildId === guildId)
       .sort((a, b) => (b.reactionsCount || 0) - (a.reactionsCount || 0))
       .slice(0, 10);
   }
 
   if (/DELETE FROM reactroles WHERE guildId = \? AND messageId = \? AND emoji = \?/i.test(cleanSql)) {
     const [guildId, messageId, emoji] = args;
-    const idx = cache.reactroles.findIndex(r => r.guildId === guildId && r.messageId === messageId && r.emoji === emoji);
+    const idx = cache.reactroles.findIndex(
+      (r) => r.guildId === guildId && r.messageId === messageId && r.emoji === emoji
+    );
     if (idx !== -1) cache.reactroles.splice(idx, 1);
-    safeCollection('reactroles').deleteOne({ guildId, messageId, emoji }).catch(console.error);
+    safeCollection('reactroles').deleteOne({ guildId, messageId, emoji }).catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/SELECT \* FROM invites WHERE guildId = \?/i.test(cleanSql)) {
     const [guildId] = args;
-    return Array.from(cache.invites.values()).filter(i => i.guildId === guildId);
+    return Array.from(cache.invites.values()).filter((i) => i.guildId === guildId);
   }
 
   if (/SELECT \* FROM tickets WHERE guildId = \? AND userId = \? AND status = 'open'/i.test(cleanSql)) {
     const [guildId, userId] = args;
-    return cache.tickets.find(t => t.guildId === guildId && t.userId === userId && t.status === 'open');
+    return cache.tickets.find((t) => t.guildId === guildId && t.userId === userId && t.status === 'open');
   }
 
   if (/INSERT INTO level_settings/i.test(cleanSql)) {
     const [guildId, enabled, channel, xp_min, xp_max] = args.slice(0, 5);
-    let doc = cache.level_settings.get(guildId) || { guildId };
+    const doc = cache.level_settings.get(guildId) || { guildId };
     doc.enabled = enabled;
     doc.channel = channel;
     doc.xp_min = xp_min;
     doc.xp_max = xp_max;
     cache.level_settings.set(guildId, doc);
-    safeCollection('level_settings').updateOne({ guildId }, { $set: { enabled, channel, xp_min, xp_max } }, { upsert: true }).catch(console.error);
+    safeCollection('level_settings')
+      .updateOne({ guildId }, { $set: { enabled, channel, xp_min, xp_max } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/INSERT INTO greet_settings/i.test(cleanSql)) {
-    const [guildId, enabled, channel, messageText, image_url, avatar_x, avatar_y, avatar_size, username_x, username_y, username_color, username_size] = args.slice(0, 12);
-    let doc = cache.greet_settings.get(guildId) || { guildId };
+    const [
+      guildId,
+      enabled,
+      channel,
+      messageText,
+      image_url,
+      avatar_x,
+      avatar_y,
+      avatar_size,
+      username_x,
+      username_y,
+      username_color,
+      username_size
+    ] = args.slice(0, 12);
+    const doc = cache.greet_settings.get(guildId) || { guildId };
     doc.enabled = enabled;
     doc.channel = channel;
     doc.message = messageText;
@@ -454,35 +591,52 @@ function translateSql(opType, sql, args) {
     doc.username_color = username_color;
     doc.username_size = username_size;
     cache.greet_settings.set(guildId, doc);
-    safeCollection('greet_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).catch(() => null);
+    safeCollection('greet_settings')
+      .updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true })
+      .catch(() => null);
     return { changes: 1 };
   }
 
   if (/INSERT INTO protection_settings/i.test(cleanSql)) {
     const [guildId, enabled, ban_limit, kick_limit, action] = args.slice(0, 5);
-    let doc = cache.protection_settings.get(guildId) || { guildId };
+    const doc = cache.protection_settings.get(guildId) || { guildId };
     doc.enabled = enabled;
     doc.ban_limit = ban_limit;
     doc.kick_limit = kick_limit;
     doc.action = action;
     cache.protection_settings.set(guildId, doc);
-    safeCollection('protection_settings').updateOne({ guildId }, { $set: { enabled, ban_limit, kick_limit, action } }, { upsert: true }).catch(console.error);
+    safeCollection('protection_settings')
+      .updateOne({ guildId }, { $set: { enabled, ban_limit, kick_limit, action } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   if (/INSERT INTO log_settings/i.test(cleanSql)) {
     const [guildId, ...channelVals] = args.slice(0, 15);
     const cols = [
-      'ban_channel', 'unban_channel', 'kick_channel', 'timeout_channel', 'warn_channel',
-      'message_delete_channel', 'message_edit_channel', 'member_join_channel', 'member_leave_channel',
-      'channel_create_channel', 'channel_delete_channel', 'role_create_channel', 'role_delete_channel', 'nick_change_channel'
+      'ban_channel',
+      'unban_channel',
+      'kick_channel',
+      'timeout_channel',
+      'warn_channel',
+      'message_delete_channel',
+      'message_edit_channel',
+      'member_join_channel',
+      'member_leave_channel',
+      'channel_create_channel',
+      'channel_delete_channel',
+      'role_create_channel',
+      'role_delete_channel',
+      'nick_change_channel'
     ];
-    let doc = cache.log_settings.get(guildId) || { guildId };
+    const doc = cache.log_settings.get(guildId) || { guildId };
     for (let i = 0; i < cols.length; i++) {
       doc[cols[i]] = channelVals[i];
     }
     cache.log_settings.set(guildId, doc);
-    safeCollection('log_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('log_settings')
+      .updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
@@ -494,9 +648,19 @@ function translateSql(opType, sql, args) {
   if (/INSERT INTO levels \(userId, guildId\)/i.test(cleanSql)) {
     const [userId, guildId] = args;
     const now = Math.floor(Date.now() / 1000);
-    const newDoc = { userId, guildId, xp: 0, voice_xp: 0, level: 0, voice_level: 0, messages: 0, last_message: now, reactionsCount: 0 };
+    const newDoc = {
+      userId,
+      guildId,
+      xp: 0,
+      voice_xp: 0,
+      level: 0,
+      voice_level: 0,
+      messages: 0,
+      last_message: now,
+      reactionsCount: 0
+    };
     cache.levels.set(`${userId}_${guildId}`, newDoc);
-    safeCollection('levels').insertOne(newDoc).catch(console.error);
+    safeCollection('levels').insertOne(newDoc).catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
@@ -505,17 +669,34 @@ function translateSql(opType, sql, args) {
     let doc = cache.levels.get(`${userId}_${guildId}`);
     if (!doc) {
       const now = Math.floor(Date.now() / 1000);
-      doc = { userId, guildId, xp: 0, voice_xp: 0, level: 0, voice_level: 0, messages: 0, last_message: now, reactionsCount: 1 };
+      doc = {
+        userId,
+        guildId,
+        xp: 0,
+        voice_xp: 0,
+        level: 0,
+        voice_level: 0,
+        messages: 0,
+        last_message: now,
+        reactionsCount: 1
+      };
     } else {
       doc.reactionsCount = (doc.reactionsCount || 0) + 1;
     }
     cache.levels.set(`${userId}_${guildId}`, doc);
-    safeCollection('levels').updateOne({ userId, guildId }, { $set: { reactionsCount: doc.reactionsCount } }, { upsert: true }).catch(console.error);
+    safeCollection('levels')
+      .updateOne({ userId, guildId }, { $set: { reactionsCount: doc.reactionsCount } }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
   unhandledSqlStatements.push({ sql, args, timestamp: Date.now() });
-  console.error('[DB Mock] Unhandled SQL statement executed. Add a handler for this query. Statement:', sql, 'Args:', args);
+  logger.error(
+    '[DB Mock] Unhandled SQL statement executed. Add a handler for this query. Statement:',
+    sql,
+    'Args:',
+    args
+  );
   if (opType === 'get') return null;
   if (opType === 'all') return [];
   return { changes: 0 };
@@ -525,13 +706,34 @@ const helpers = {
   connect,
 
   get db() {
-    return {
+    const obj = {
       prepare(sql) {
         return {
-          run(...args) { return translateSql('run', sql, args); },
-          get(...args) { return translateSql('get', sql, args); },
-          all(...args) { return translateSql('all', sql, args); }
+          run(...args) {
+            return translateSql('run', sql, args);
+          },
+          get(...args) {
+            return translateSql('get', sql, args);
+          },
+          all(...args) {
+            return translateSql('all', sql, args);
+          }
         };
+      }
+    };
+    obj.db = obj;
+    return obj;
+  },
+  prepare(sql) {
+    return {
+      run(...args) {
+        return translateSql('run', sql, args);
+      },
+      get(...args) {
+        return translateSql('get', sql, args);
+      },
+      all(...args) {
+        return translateSql('all', sql, args);
       }
     };
   },
@@ -541,7 +743,9 @@ const helpers = {
     if (!row) {
       row = { guildId, prefix: '#', giveaway_emoji: '🎉', reply_type: 'embed', tax_line_image: null };
       cache.guild_settings.set(guildId, row);
-      safeCollection('guild_settings').insertOne(row).catch(() => null);
+      safeCollection('guild_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
@@ -550,109 +754,155 @@ const helpers = {
     if (!row) {
       row = { guildId, channelId: null, anonymous: false };
       cache.feelings_settings.set(guildId, row);
-      safeCollection('feelings_settings').insertOne(row).catch(() => null);
+      safeCollection('feelings_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   setFeelingsSettings(guildId, channelId, anonymous) {
     const doc = { guildId, channelId, anonymous };
     cache.feelings_settings.set(guildId, doc);
-    return safeCollection('feelings_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('feelings_settings')
+      .updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   getBoostSettings(guildId) {
     let row = cache.boost_settings.get(guildId);
     if (!row) {
       row = { guildId, channelId: null, message: null, useEmbed: false };
       cache.boost_settings.set(guildId, row);
-      safeCollection('boost_settings').insertOne(row).catch(() => null);
+      safeCollection('boost_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   setBoostSettings(guildId, channelId, message, useEmbed) {
     const doc = { guildId, channelId, message, useEmbed };
     cache.boost_settings.set(guildId, doc);
-    return safeCollection('boost_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('boost_settings')
+      .updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   getBankSettings(guildId) {
     let row = cache.bank_settings.get(guildId);
     if (!row) {
-      row = { 
-        guildId, 
-        tradeCooldown: 10800000, // 3 hours default
-        investCooldown: 10800000, // 3 hours default
-        dailyCooldown: 172800000, // 48 hours default
-        salaryCooldown: 86400000, // 24 hours default
-        gambleCooldown: 14400000, // 4 hours default
-        diceCooldown: 14400000, // 4 hours default
-        coinflipCooldown: 7200000 // 2 hours default
+      row = {
+        guildId,
+        tradeCooldown: 10800000,
+        investCooldown: 10800000,
+        dailyCooldown: 172800000,
+        salaryCooldown: 86400000,
+        gambleCooldown: 14400000,
+        diceCooldown: 14400000,
+        coinflipCooldown: 7200000
       };
       cache.bank_settings.set(guildId, row);
-      safeCollection('bank_settings').insertOne(row).catch(() => null);
+      safeCollection('bank_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   setBankSettings(guildId, settings) {
     const doc = { guildId, ...settings };
     cache.bank_settings.set(guildId, doc);
-    return safeCollection('bank_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('bank_settings')
+      .updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   addActiveGame(channelId, guildId, gameType, participants) {
     const doc = { channelId, guildId, gameType, participants, startTime: Date.now() };
     cache.active_games.set(channelId, doc);
-    safeCollection('active_games').insertOne(doc).catch(console.error);
+    safeCollection('active_games').insertOne(doc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeActiveGame(channelId, guildId) {
     cache.active_games.delete(channelId);
-    safeCollection('active_games').deleteMany({ channelId, guildId }).catch(console.error);
+    safeCollection('active_games').deleteMany({ channelId, guildId }).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   getActiveGame(channelId) {
     return cache.active_games.get(channelId);
   },
   getCommandRestrictions(guildId, commandName) {
-    return cache.command_restrictions.find(r => r.guildId === guildId && r.commandName === commandName);
+    return cache.command_restrictions.find((r) => r.guildId === guildId && r.commandName === commandName);
   },
   setCommandRestrictions(guildId, commandName, allowedRoles, allowedChannels) {
-    const existingIndex = cache.command_restrictions.findIndex(r => r.guildId === guildId && r.commandName === commandName);
+    const existingIndex = cache.command_restrictions.findIndex(
+      (r) => r.guildId === guildId && r.commandName === commandName
+    );
     const doc = { guildId, commandName, allowedRoles, allowedChannels };
     if (existingIndex !== -1) {
       cache.command_restrictions[existingIndex] = doc;
     } else {
       cache.command_restrictions.push(doc);
     }
-    safeCollection('command_restrictions').updateOne({ guildId, commandName }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('command_restrictions')
+      .updateOne({ guildId, commandName }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeCommandRestrictions(guildId, commandName) {
-    cache.command_restrictions = cache.command_restrictions.filter(r => !(r.guildId === guildId && r.commandName === commandName));
-    safeCollection('command_restrictions').deleteMany({ guildId, commandName }).catch(console.error);
+    cache.command_restrictions = cache.command_restrictions.filter(
+      (r) => !(r.guildId === guildId && r.commandName === commandName)
+    );
+    safeCollection('command_restrictions').deleteMany({ guildId, commandName }).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   setGuildSetting(guildId, key, value) {
-    const allowed = ['prefix', 'giveaway_emoji', 'log_channel', 'setlog_channel', 'line_image', 'autoboost_channel', 'autoboost_message', 'reply_type', 'bank_channel'];
+    const allowed = [
+      'prefix',
+      'giveaway_emoji',
+      'log_channel',
+      'setlog_channel',
+      'line_image',
+      'autoboost_channel',
+      'autoboost_message',
+      'reply_type',
+      'bank_channel',
+      'tax_line_image'
+    ];
     if (!allowed.includes(key)) throw new Error(`Invalid setting key: ${key}`);
 
-    let doc = cache.guild_settings.get(guildId) || { guildId };
+    const doc = cache.guild_settings.get(guildId) || { guildId };
     doc[key] = value;
     cache.guild_settings.set(guildId, doc);
-    safeCollection('guild_settings').updateOne({ guildId }, { $set: { [key]: value } }, { upsert: true }).catch(console.error);
+    safeCollection('guild_settings')
+      .updateOne({ guildId }, { $set: { [key]: value } }, { upsert: true })
+      .catch((err) => logger.error(err));
   },
 
   addWarning(userId, guildId, reason, moderatorId) {
     const timestamp = Math.floor(Date.now() / 1000);
     const newDoc = { userId, guildId, reason, moderatorId, timestamp };
     cache.warnings.push(newDoc);
-    safeCollection('warnings').insertOne(newDoc).catch(console.error);
+    safeCollection('warnings').insertOne(newDoc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   getWarnings(userId, guildId) {
-    return cache.warnings.filter(w => w.userId === userId && w.guildId === guildId).sort((a, b) => b.timestamp - a.timestamp);
+    return cache.warnings
+      .filter((w) => w.userId === userId && w.guildId === guildId)
+      .sort((a, b) => b.timestamp - a.timestamp);
   },
   clearWarnings(userId, guildId) {
-    cache.warnings = cache.warnings.filter(w => !(w.userId === userId && w.guildId === guildId));
-    safeCollection('warnings').deleteMany({ userId, guildId }).catch(console.error);
+    cache.warnings = cache.warnings.filter((w) => !(w.userId === userId && w.guildId === guildId));
+    safeCollection('warnings').deleteMany({ userId, guildId }).catch((err) => logger.error(err));
     return { changes: 1 };
+  },
+  removeWarning(userId, guildId, index) {
+    const userWarnings = cache.warnings
+      .filter((w) => w.userId === userId && w.guildId === guildId)
+      .sort((a, b) => b.timestamp - a.timestamp);
+    if (index < 0 || index >= userWarnings.length) return false;
+    const targetWarning = userWarnings[index];
+    cache.warnings = cache.warnings.filter((w) => w !== targetWarning);
+    safeCollection('warnings').deleteOne({ userId, guildId, timestamp: targetWarning.timestamp }).catch((err) => logger.error(err));
+    return true;
   },
 
   getLevel(userId, guildId) {
@@ -662,118 +912,201 @@ const helpers = {
     const now = Math.floor(Date.now() / 1000);
     let doc = cache.levels.get(`${userId}_${guildId}`);
     if (!doc) {
-      doc = { userId, guildId, xp, voice_xp: 0, level: 0, voice_level: 0, messages: 1, last_message: now, reactionsCount: 0 };
+      doc = {
+        userId,
+        guildId,
+        xp,
+        voice_xp: 0,
+        level: 0,
+        voice_level: 0,
+        messages: 1,
+        last_message: now,
+        reactionsCount: 0
+      };
     } else {
       doc.xp = (doc.xp || 0) + xp;
       doc.messages = (doc.messages || 0) + 1;
       doc.last_message = now;
     }
     cache.levels.set(`${userId}_${guildId}`, doc);
-    safeCollection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('levels')
+      .updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
   },
   addVoiceXP(userId, guildId, xp) {
     let doc = cache.levels.get(`${userId}_${guildId}`);
     if (!doc) {
-      doc = { userId, guildId, xp: 0, voice_xp: xp, level: 0, voice_level: 0, messages: 0, last_message: 0, reactionsCount: 0 };
+      doc = {
+        userId,
+        guildId,
+        xp: 0,
+        voice_xp: xp,
+        level: 0,
+        voice_level: 0,
+        messages: 0,
+        last_message: 0,
+        reactionsCount: 0
+      };
     } else {
       doc.voice_xp = (doc.voice_xp || 0) + xp;
     }
     cache.levels.set(`${userId}_${guildId}`, doc);
-    safeCollection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('levels')
+      .updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
   },
   setLevel(userId, guildId, level, xp, voice_level, voice_xp) {
-    let doc = cache.levels.get(`${userId}_${guildId}`) || { userId, guildId, messages: 0, last_message: 0, reactionsCount: 0 };
+    const doc = cache.levels.get(`${userId}_${guildId}`) || {
+      userId,
+      guildId,
+      messages: 0,
+      last_message: 0,
+      reactionsCount: 0
+    };
     doc.level = level;
     doc.xp = xp;
     doc.voice_level = voice_level;
     doc.voice_xp = voice_xp;
     cache.levels.set(`${userId}_${guildId}`, doc);
-    safeCollection('levels').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('levels')
+      .updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
   },
   getLeaderboard(guildId, limit = 10) {
     return Array.from(cache.levels.values())
-      .filter(u => u.guildId === guildId)
-      .sort((a, b) => ((b.xp || 0) + (b.voice_xp || 0)) - ((a.xp || 0) + (a.voice_xp || 0)))
+      .filter((u) => u.guildId === guildId)
+      .sort((a, b) => (b.xp || 0) + (b.voice_xp || 0) - ((a.xp || 0) + (a.voice_xp || 0)))
       .slice(0, limit);
   },
   getUserRank(userId, guildId) {
     const list = Array.from(cache.levels.values())
-      .filter(u => u.guildId === guildId)
-      .sort((a, b) => ((b.xp || 0) + (b.voice_xp || 0)) - ((a.xp || 0) + (a.voice_xp || 0)));
-    const idx = list.findIndex(u => u.userId === userId);
+      .filter((u) => u.guildId === guildId)
+      .sort((a, b) => (b.xp || 0) + (b.voice_xp || 0) - ((a.xp || 0) + (a.voice_xp || 0)));
+    const idx = list.findIndex((u) => u.userId === userId);
     return idx !== -1 ? idx + 1 : null;
   },
   getLevelSettings(guildId) {
     let row = cache.level_settings.get(guildId);
     if (!row) {
-      row = { guildId, enabled: 1, channel: null, xp_min: 15, xp_max: 25, xp_cooldown: 60, role_rewards: [] };
+      row = {
+        guildId,
+        enabled: 1,
+        channel: null,
+        xp_min: 15,
+        xp_max: 25,
+        xp_cooldown: 60,
+        role_rewards: [],
+        voice_enabled: 1,
+        voice_xp_min: 10,
+        voice_xp_max: 20
+      };
       cache.level_settings.set(guildId, row);
-      safeCollection('level_settings').insertOne(row).catch(() => null);
+      safeCollection('level_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
+  },
+  updateLevelSettings(guildId, data) {
+    const current = this.getLevelSettings(guildId);
+    Object.assign(current, data);
+    cache.level_settings.set(guildId, current);
+    return safeCollection('level_settings')
+      .updateOne({ guildId }, { $set: stripId(current) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
 
   getGreetSettings(guildId) {
     let row = cache.greet_settings.get(guildId);
     if (!row) {
       row = {
-        guildId, channel: null, message: 'Welcome {user} to {server}!', dm_message: null, delete_after: 0,
-        enabled: 0, image_url: null, avatar_x: 100, avatar_y: 100, avatar_size: 150,
-        username_x: 100, username_y: 300, username_color: '#ffffff', username_size: 40,
-        image_scale_mode: 'fit', avatar_x_mm: 0, avatar_y_mm: 0, avatar_size_mm: 0,
-        username_x_mm: 0, username_y_mm: 0, username_size_mm: 0
+        guildId,
+        channel: null,
+        message: 'Welcome {user} to {server}!',
+        dm_message: null,
+        delete_after: 0,
+        enabled: 0,
+        image_url: null,
+        avatar_x: 100,
+        avatar_y: 100,
+        avatar_size: 150,
+        username_x: 100,
+        username_y: 300,
+        username_color: '#ffffff',
+        username_size: 40,
+        image_scale_mode: 'fit',
+        avatar_x_mm: 0,
+        avatar_y_mm: 0,
+        avatar_size_mm: 0,
+        username_x_mm: 0,
+        username_y_mm: 0,
+        username_size_mm: 0
       };
       cache.greet_settings.set(guildId, row);
-      safeCollection('greet_settings').insertOne(row).catch(() => null);
+      safeCollection('greet_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   updateGreetSettings(guildId, settings) {
     cache.greet_settings.set(guildId, settings);
-    return safeCollection('greet_settings').updateOne({ guildId }, { $set: stripId(settings) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('greet_settings')
+      .updateOne({ guildId }, { $set: stripId(settings) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   getAutomation(guildId, channelId) {
-    return cache.automation.filter(a => a.guildId === guildId && a.channelId === channelId);
+    return cache.automation.filter((a) => a.guildId === guildId && a.channelId === channelId);
   },
   getAllAutomation(guildId) {
-    return cache.automation.filter(a => a.guildId === guildId);
+    return cache.automation.filter((a) => a.guildId === guildId);
   },
   addAutomation(guildId, channelId, type, value) {
-    cache.automation = cache.automation.filter(a => !(a.guildId === guildId && a.channelId === channelId && a.type === type));
-    safeCollection('automation').deleteMany({ guildId, channelId, type }).catch(() => null);
+    cache.automation = cache.automation.filter(
+      (a) => !(a.guildId === guildId && a.channelId === channelId && a.type === type)
+    );
+    safeCollection('automation')
+      .deleteMany({ guildId, channelId, type })
+      .catch(() => null);
 
     const newDoc = { guildId, channelId, type, value };
     cache.automation.push(newDoc);
-    safeCollection('automation').insertOne(newDoc).catch(console.error);
+    safeCollection('automation').insertOne(newDoc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeAutomation(guildId, channelId, type) {
-    cache.automation = cache.automation.filter(a => !(a.guildId === guildId && a.channelId === channelId && a.type === type));
-    safeCollection('automation').deleteMany({ guildId, channelId, type }).catch(console.error);
+    cache.automation = cache.automation.filter(
+      (a) => !(a.guildId === guildId && a.channelId === channelId && a.type === type)
+    );
+    safeCollection('automation').deleteMany({ guildId, channelId, type }).catch((err) => logger.error(err));
     return { changes: 1 };
   },
 
   createGiveaway(messageId, channelId, guildId, prize, winners, host, endTime, emoji) {
     const doc = { messageId, channelId, guildId, prize, winners, host, endTime, emoji, ended: 0, paused: 0 };
     cache.giveaways.set(messageId, doc);
-    safeCollection('giveaways').insertOne(doc).catch(console.error);
+    safeCollection('giveaways').insertOne(doc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   getGiveaway(messageId) {
     return cache.giveaways.get(messageId);
   },
   getActiveGiveaways(guildId) {
-    return Array.from(cache.giveaways.values()).filter(g => g.guildId === guildId && g.ended === 0);
+    return Array.from(cache.giveaways.values()).filter((g) => g.guildId === guildId && g.ended === 0);
   },
   getAllActiveGiveaways() {
-    return Array.from(cache.giveaways.values()).filter(g => g.ended === 0 && g.paused === 0);
+    return Array.from(cache.giveaways.values()).filter((g) => g.ended === 0 && g.paused === 0);
   },
   endGiveaway(messageId) {
-    let doc = cache.giveaways.get(messageId);
+    const doc = cache.giveaways.get(messageId);
     if (doc) {
       doc.ended = 1;
       cache.giveaways.set(messageId, doc);
-      safeCollection('giveaways').updateOne({ messageId }, { $set: { ended: 1 } }).catch(console.error);
+      safeCollection('giveaways')
+        .updateOne({ messageId }, { $set: { ended: 1 } })
+        .catch((err) => logger.error(err));
     }
     return { changes: 1 };
   },
@@ -781,11 +1114,13 @@ const helpers = {
     const allowed = ['prize', 'winners', 'emoji', 'endTime', 'ended', 'paused'];
     if (!allowed.includes(field)) throw new Error(`Invalid giveaway field: ${field}`);
 
-    let doc = cache.giveaways.get(messageId);
+    const doc = cache.giveaways.get(messageId);
     if (doc) {
       doc[field] = value;
       cache.giveaways.set(messageId, doc);
-      safeCollection('giveaways').updateOne({ messageId }, { $set: { [field]: value } }).catch(console.error);
+      safeCollection('giveaways')
+        .updateOne({ messageId }, { $set: { [field]: value } })
+        .catch((err) => logger.error(err));
     }
     return { changes: 1 };
   },
@@ -794,64 +1129,89 @@ const helpers = {
     let row = cache.protection_settings.get(guildId);
     if (!row) {
       row = {
-        guildId, enabled: 0, antilink: 0, antispam: 0, antiraid: 0, bypass_role: null,
-        ban_limit: 3, kick_limit: 3, channel_limit: 3, role_limit: 3, webhook_limit: 3, action: 'ban',
+        guildId,
+        enabled: 0,
+        antilink: 0,
+        antispam: 0,
+        antiraid: 0,
+        bypass_role: null,
+        ban_limit: 3,
+        kick_limit: 3,
+        channel_limit: 3,
+        role_limit: 3,
+        webhook_limit: 3,
+        action: 'ban',
         antilink_channels: []
       };
       cache.protection_settings.set(guildId, row);
-      safeCollection('protection_settings').insertOne(row).catch(() => null);
+      safeCollection('protection_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   updateProtection(guildId, data) {
-    let current = this.getProtection(guildId);
+    const current = this.getProtection(guildId);
     const fields = [
-      'enabled', 'antilink', 'antispam', 'antiraid', 'bypass_role',
-      'ban_limit', 'kick_limit', 'channel_limit', 'role_limit', 'webhook_limit', 'action', 'antilink_channels'
+      'enabled',
+      'antilink',
+      'antispam',
+      'antiraid',
+      'bypass_role',
+      'ban_limit',
+      'kick_limit',
+      'channel_limit',
+      'role_limit',
+      'webhook_limit',
+      'action',
+      'antilink_channels'
     ];
     for (const key of fields) {
       if (data[key] !== undefined) current[key] = data[key];
     }
     cache.protection_settings.set(guildId, current);
-    return safeCollection('protection_settings').updateOne(
-      { guildId },
-      { $set: stripId(current) },
-      { upsert: true }
-    ).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('protection_settings')
+      .updateOne({ guildId }, { $set: stripId(current) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   getWhitelist(guildId) {
-    return cache.whitelist.filter(w => w.guildId === guildId);
+    return cache.whitelist.filter((w) => w.guildId === guildId);
   },
   addWhitelist(guildId, targetId, type) {
-    const exists = cache.whitelist.some(w => w.guildId === guildId && w.targetId === targetId && w.type === type);
+    const exists = cache.whitelist.some((w) => w.guildId === guildId && w.targetId === targetId && w.type === type);
     if (!exists) {
       const newDoc = { guildId, targetId, type };
       cache.whitelist.push(newDoc);
-      safeCollection('whitelist').insertOne(newDoc).catch(() => null);
+      safeCollection('whitelist')
+        .insertOne(newDoc)
+        .catch(() => null);
     }
     return { changes: 1 };
   },
   removeWhitelist(guildId, targetId) {
-    cache.whitelist = cache.whitelist.filter(w => !(w.guildId === guildId && w.targetId === targetId));
-    safeCollection('whitelist').deleteMany({ guildId, targetId }).catch(console.error);
+    cache.whitelist = cache.whitelist.filter((w) => !(w.guildId === guildId && w.targetId === targetId));
+    safeCollection('whitelist').deleteMany({ guildId, targetId }).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   addBlacklist(guildId, targetId, type) {
-    const exists = cache.blacklist.some(b => b.guildId === guildId && b.targetId === targetId && b.type === type);
+    const exists = cache.blacklist.some((b) => b.guildId === guildId && b.targetId === targetId && b.type === type);
     if (!exists) {
       const newDoc = { guildId, targetId, type };
       cache.blacklist.push(newDoc);
-      safeCollection('blacklist').insertOne(newDoc).catch(() => null);
+      safeCollection('blacklist')
+        .insertOne(newDoc)
+        .catch(() => null);
     }
     return { changes: 1 };
   },
   removeBlacklist(guildId, targetId) {
-    cache.blacklist = cache.blacklist.filter(b => !(b.guildId === guildId && b.targetId === targetId));
-    safeCollection('blacklist').deleteMany({ guildId, targetId }).catch(console.error);
+    cache.blacklist = cache.blacklist.filter((b) => !(b.guildId === guildId && b.targetId === targetId));
+    safeCollection('blacklist').deleteMany({ guildId, targetId }).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   isWhitelisted(guildId, targetId) {
-    return cache.whitelist.some(w => w.guildId === guildId && w.targetId === targetId);
+    return cache.whitelist.some((w) => w.guildId === guildId && w.targetId === targetId);
   },
 
   getInvites(userId, guildId) {
@@ -859,7 +1219,9 @@ const helpers = {
     if (!row) {
       row = { userId, guildId, total: 0, fake: 0, left: 0, bonus: 0 };
       cache.invites.set(`${userId}_${guildId}`, row);
-      safeCollection('invites').insertOne(row).catch(() => null);
+      safeCollection('invites')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
@@ -871,34 +1233,48 @@ const helpers = {
     if (!doc) doc = { userId, guildId, total: 0, fake: 0, left: 0, bonus: 0 };
     doc[field] = (doc[field] || 0) + value;
     cache.invites.set(`${userId}_${guildId}`, doc);
-    safeCollection('invites').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('invites')
+      .updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
   },
   resetInvites(userId, guildId) {
-    let doc = cache.invites.get(`${userId}_${guildId}`);
+    const doc = cache.invites.get(`${userId}_${guildId}`);
     if (doc) {
-      doc.total = 0; doc.fake = 0; doc.left = 0; doc.bonus = 0;
+      doc.total = 0;
+      doc.fake = 0;
+      doc.left = 0;
+      doc.bonus = 0;
       cache.invites.set(`${userId}_${guildId}`, doc);
-      safeCollection('invites').updateOne({ userId, guildId }, { $set: { total: 0, fake: 0, left: 0, bonus: 0 } }).catch(console.error);
+      safeCollection('invites')
+        .updateOne({ userId, guildId }, { $set: { total: 0, fake: 0, left: 0, bonus: 0 } })
+        .catch((err) => logger.error(err));
     }
   },
   resetAllInvites(guildId) {
     for (const val of cache.invites.values()) {
       if (val.guildId === guildId) {
-        val.total = 0; val.fake = 0; val.left = 0; val.bonus = 0;
+        val.total = 0;
+        val.fake = 0;
+        val.left = 0;
+        val.bonus = 0;
       }
     }
-    safeCollection('invites').updateMany({ guildId }, { $set: { total: 0, fake: 0, left: 0, bonus: 0 } }).catch(console.error);
+    safeCollection('invites')
+      .updateMany({ guildId }, { $set: { total: 0, fake: 0, left: 0, bonus: 0 } })
+      .catch((err) => logger.error(err));
   },
   getInviteRanks(guildId) {
-    return cache.invite_ranks.filter(r => r.guildId === guildId).sort((a, b) => a.count - b.count);
+    return cache.invite_ranks.filter((r) => r.guildId === guildId).sort((a, b) => a.count - b.count);
   },
   addInviteRank(guildId, count, roleId) {
-    cache.invite_ranks = cache.invite_ranks.filter(r => !(r.guildId === guildId && r.count === count));
-    safeCollection('invite_ranks').deleteMany({ guildId, count }).catch(() => null);
+    cache.invite_ranks = cache.invite_ranks.filter((r) => !(r.guildId === guildId && r.count === count));
+    safeCollection('invite_ranks')
+      .deleteMany({ guildId, count })
+      .catch(() => null);
 
     const newDoc = { guildId, count, roleId };
     cache.invite_ranks.push(newDoc);
-    safeCollection('invite_ranks').insertOne(newDoc).catch(console.error);
+    safeCollection('invite_ranks').insertOne(newDoc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   getInviteLogs(guildId) {
@@ -909,167 +1285,151 @@ const helpers = {
     let row = cache.ticket_settings.get(guildId);
     if (!row) {
       row = {
-        guildId, category_id: null, log_channel: null, staff_role: null, panel_channel: null,
+        guildId,
+        category_id: null,
+        log_channel: null,
+        staff_role: null,
+        panel_channel: null,
         feedbacks_channel: null,
         owners_role: null,
         support_message: 'Click the button below to open a ticket!',
-        ticket_message: 'Thank you for opening a ticket! Support will be with you shortly.', panel_data: {}
+        ticket_message: 'Thank you for opening a ticket! Support will be with you shortly.',
+        panel_data: {}
       };
       cache.ticket_settings.set(guildId, row);
-      safeCollection('ticket_settings').insertOne(row).catch(() => null);
+      safeCollection('ticket_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   updateTicketSettings(guildId, data) {
-    let current = this.getTicketSettings(guildId);
+    const current = this.getTicketSettings(guildId);
     if (data.category_id !== undefined) current.category_id = data.category_id;
     if (data.log_channel !== undefined) current.log_channel = data.log_channel;
-    if (data.feedbacks_channel !== undefined ) current.feedbacks_channel = data.feedbacks_channel;
+    if (data.feedbacks_channel !== undefined) current.feedbacks_channel = data.feedbacks_channel;
     if (data.owners_role !== undefined) current.owners_role = data.owners_role;
     if (data.staff_role !== undefined) current.staff_role = data.staff_role;
     if (data.panel_channel !== undefined) current.panel_channel = data.panel_channel;
     if (data.support_message !== undefined) current.support_message = data.support_message;
     if (data.ticket_message !== undefined) current.ticket_message = data.ticket_message;
-    if (data.panel_data !== undefined) current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
+    if (data.panel_data !== undefined)
+      current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
 
     cache.ticket_settings.set(guildId, current);
-    return safeCollection('ticket_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('ticket_settings')
+      .updateOne({ guildId }, { $set: stripId(current) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   getTicketCategories(guildId) {
-    return cache.ticket_categories ? cache.ticket_categories.filter(c => c.guildId === guildId) : [];
+    return cache.ticket_categories ? cache.ticket_categories.filter((c) => c.guildId === guildId) : [];
   },
   addTicketCategory(guildId, category) {
     if (!cache.ticket_categories) cache.ticket_categories = [];
     const newDoc = { guildId, ...category };
     cache.ticket_categories.push(newDoc);
-    safeCollection('ticket_categories').insertOne(newDoc).catch(console.error);
+    safeCollection('ticket_categories').insertOne(newDoc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeTicketCategory(guildId, name) {
     if (cache.ticket_categories) {
-      cache.ticket_categories = cache.ticket_categories.filter(c => !(c.guildId === guildId && c.name === name));
+      cache.ticket_categories = cache.ticket_categories.filter((c) => !(c.guildId === guildId && c.name === name));
     }
-    safeCollection('ticket_categories').deleteMany({ guildId, name }).catch(console.error);
+    safeCollection('ticket_categories').deleteMany({ guildId, name }).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   createTicket(guildId, userId, channelId, category) {
     const timestamp = Math.floor(Date.now() / 1000);
     const doc = { guildId, userId, channelId, status: 'open', category, created_at: timestamp };
     cache.tickets.push(doc);
-    safeCollection('tickets').insertOne(doc).catch(console.error);
+    safeCollection('tickets').insertOne(doc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   getTicketByChannel(channelId) {
-    return cache.tickets.find(t => t.channelId === channelId);
+    return cache.tickets.find((t) => t.channelId === channelId);
   },
   updateTicketStatus(channelId, status) {
-    const t = cache.tickets.find(tk => tk.channelId === channelId);
+    const t = cache.tickets.find((tk) => tk.channelId === channelId);
     if (t) {
       t.status = status;
-      safeCollection('tickets').updateOne({ channelId }, { $set: { status } }).catch(console.error);
+      safeCollection('tickets').updateOne({ channelId }, { $set: { status } }).catch((err) => logger.error(err));
     }
     return { changes: 1 };
   },
   claimTicket(channelId, userId) {
-    const ticket = cache.tickets.find(t => t.channelId === channelId);
+    const ticket = cache.tickets.find((t) => t.channelId === channelId);
 
     if (!ticket) return false;
 
     ticket.claimedBy = userId;
 
-    safeCollection("tickets").updateOne(
-        { channelId },
-        { $set: { claimedBy: userId } }
-    ).catch(console.error);
+    safeCollection('tickets')
+      .updateOne({ channelId }, { $set: { claimedBy: userId } })
+      .catch((err) => logger.error(err));
 
     return true;
-},
+  },
 
-
-addTicketBlacklist(guildId, userId) {
-
+  addTicketBlacklist(guildId, userId) {
     const row = {
-        guildId,
-        userId,
-        createdAt: Date.now()
+      guildId,
+      userId,
+      createdAt: Date.now()
     };
 
     cache.ticket_blacklist ??= [];
     cache.ticket_blacklist.push(row);
 
-    return safeCollection("ticket_blacklist").insertOne(row);
-},
+    return safeCollection('ticket_blacklist').insertOne(row);
+  },
 
-removeTicketBlacklist(guildId, userId) {
+  removeTicketBlacklist(guildId, userId) {
+    cache.ticket_blacklist = (cache.ticket_blacklist || []).filter(
+      (x) => !(x.guildId === guildId && x.userId === userId)
+    );
 
-    cache.ticket_blacklist =
-        (cache.ticket_blacklist || [])
-        .filter(
-            x =>
-                !(
-                    x.guildId === guildId &&
-                    x.userId === userId
-                )
-        );
+    return safeCollection('ticket_blacklist').deleteOne({
+      guildId,
+      userId
+    });
+  },
 
-    return safeCollection("ticket_blacklist").deleteOne({
-            guildId,
-            userId
-        });
-},
+  isTicketBlacklisted(guildId, userId) {
+    return (cache.ticket_blacklist || []).some((x) => x.guildId === guildId && x.userId === userId);
+  },
 
-isTicketBlacklisted(guildId, userId) {
-
-    return (cache.ticket_blacklist || [])
-        .some(
-            x =>
-                x.guildId === guildId &&
-                x.userId === userId
-        );
-},
-
-
-addTicketWarning(guildId, userId, moderatorId, reason) {
-
+  addTicketWarning(guildId, userId, moderatorId, reason) {
     const row = {
-        guildId,
-        userId,
-        moderatorId,
-        reason,
-        createdAt: Date.now()
+      guildId,
+      userId,
+      moderatorId,
+      reason,
+      createdAt: Date.now()
     };
 
     cache.ticket_warnings ??= [];
     cache.ticket_warnings.push(row);
 
-    return safeCollection("ticket_warnings").insertOne(row);
-},
+    return safeCollection('ticket_warnings').insertOne(row);
+  },
 
-getTicketWarnings(guildId, userId) {
-
-    return (cache.ticket_warnings || [])
-        .filter(
-            x =>
-                x.guildId === guildId &&
-                x.userId === userId
-        );
-},
-
-
-
+  getTicketWarnings(guildId, userId) {
+    return (cache.ticket_warnings || []).filter((x) => x.guildId === guildId && x.userId === userId);
+  },
 
   getAutoReplies(guildId) {
-    return cache.auto_reply.filter(a => a.guildId === guildId);
+    return cache.auto_reply.filter((a) => a.guildId === guildId);
   },
   addAutoReply(guildId, trigger, response, deleteTrigger = 0, mode = 'reply') {
     const doc = { guildId, trigger, response, deleteTrigger: Number(deleteTrigger), mode };
     cache.auto_reply.push(doc);
-    safeCollection('auto_reply').insertOne(doc).catch(console.error);
+    safeCollection('auto_reply').insertOne(doc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeAutoReply(guildId, trigger) {
-    cache.auto_reply = cache.auto_reply.filter(a => !(a.guildId === guildId && a.trigger === trigger));
-    safeCollection('auto_reply').deleteMany({ guildId, trigger }).catch(console.error);
+    cache.auto_reply = cache.auto_reply.filter((a) => !(a.guildId === guildId && a.trigger === trigger));
+    safeCollection('auto_reply').deleteMany({ guildId, trigger }).catch((err) => logger.error(err));
     return { changes: 1 };
   },
 
@@ -1077,7 +1437,9 @@ getTicketWarnings(guildId, userId) {
     const now = Math.floor(Date.now() / 1000);
     const doc = { channelId, content, authorId, authorTag, authorAvatar, timestamp: now };
     cache.snipe.set(channelId, doc);
-    safeCollection('snipe').updateOne({ channelId }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('snipe')
+      .updateOne({ channelId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
   },
   getSnipe(channelId) {
     return cache.snipe.get(channelId);
@@ -1087,12 +1449,26 @@ getTicketWarnings(guildId, userId) {
     let row = cache.log_settings.get(guildId);
     if (!row) {
       row = {
-        guildId, ban_channel: null, unban_channel: null, kick_channel: null, timeout_channel: null, warn_channel: null,
-        message_delete_channel: null, message_edit_channel: null, member_join_channel: null, member_leave_channel: null,
-        channel_create_channel: null, channel_delete_channel: null, role_create_channel: null, role_delete_channel: null, nick_change_channel: null
+        guildId,
+        ban_channel: null,
+        unban_channel: null,
+        kick_channel: null,
+        timeout_channel: null,
+        warn_channel: null,
+        message_delete_channel: null,
+        message_edit_channel: null,
+        member_join_channel: null,
+        member_leave_channel: null,
+        channel_create_channel: null,
+        channel_delete_channel: null,
+        role_create_channel: null,
+        role_delete_channel: null,
+        nick_change_channel: null
       };
       cache.log_settings.set(guildId, row);
-      safeCollection('log_settings').insertOne(row).catch(() => null);
+      safeCollection('log_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
@@ -1102,17 +1478,17 @@ getTicketWarnings(guildId, userId) {
   },
 
   getAliases(guildId) {
-    return cache.aliases.filter(a => a.guildId === guildId);
+    return cache.aliases.filter((a) => a.guildId === guildId);
   },
   addAlias(guildId, shortcut, command) {
     const doc = { guildId, shortcut, command };
     cache.aliases.push(doc);
-    safeCollection('aliases').insertOne(doc).catch(console.error);
+    safeCollection('aliases').insertOne(doc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeAlias(guildId, shortcut) {
-    cache.aliases = cache.aliases.filter(a => !(a.guildId === guildId && a.shortcut === shortcut));
-    safeCollection('aliases').deleteMany({ guildId, shortcut }).catch(console.error);
+    cache.aliases = cache.aliases.filter((a) => !(a.guildId === guildId && a.shortcut === shortcut));
+    safeCollection('aliases').deleteMany({ guildId, shortcut }).catch((err) => logger.error(err));
     return { changes: 1 };
   },
 
@@ -1121,18 +1497,25 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { guildId, log_channel: null, panel_data: {}, questions: [] };
       cache.forms_settings.set(guildId, row);
-      safeCollection('forms_settings').insertOne(row).catch(() => null);
+      safeCollection('forms_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   updateFormsSettings(guildId, data) {
-    let current = this.getFormsSettings(guildId);
+    const current = this.getFormsSettings(guildId);
     if (data.log_channel !== undefined) current.log_channel = data.log_channel;
-    if (data.panel_data !== undefined) current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
-    if (data.questions !== undefined) current.questions = typeof data.questions === 'string' ? JSON.parse(data.questions) : data.questions;
+    if (data.panel_data !== undefined)
+      current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
+    if (data.questions !== undefined)
+      current.questions = typeof data.questions === 'string' ? JSON.parse(data.questions) : data.questions;
 
     cache.forms_settings.set(guildId, current);
-    return safeCollection('forms_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('forms_settings')
+      .updateOne({ guildId }, { $set: stripId(current) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
 
   getReactionRoles(guildId) {
@@ -1140,17 +1523,45 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { guildId, panel_data: {}, roles_data: [] };
       cache.reaction_roles.set(guildId, row);
-      safeCollection('reaction_roles').insertOne(row).catch(() => null);
+      safeCollection('reaction_roles')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   updateReactionRoles(guildId, data) {
-    let current = this.getReactionRoles(guildId);
-    if (data.panel_data !== undefined) current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
-    if (data.roles_data !== undefined) current.roles_data = typeof data.roles_data === 'string' ? JSON.parse(data.roles_data) : data.roles_data;
+    const current = this.getReactionRoles(guildId);
+    if (data.panel_data !== undefined)
+      current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
+    if (data.roles_data !== undefined)
+      current.roles_data = typeof data.roles_data === 'string' ? JSON.parse(data.roles_data) : data.roles_data;
 
     cache.reaction_roles.set(guildId, current);
-    return safeCollection('reaction_roles').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('reaction_roles')
+      .updateOne({ guildId }, { $set: stripId(current) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
+  },
+  addReactRole(messageId, guildId, emoji, roleId) {
+    if (!cache.reactroles) cache.reactroles = [];
+    cache.reactroles = cache.reactroles.filter((r) => !(r.messageId === messageId && r.emoji === emoji));
+    const newDoc = { messageId, guildId, emoji, roleId };
+    cache.reactroles.push(newDoc);
+    safeCollection('reactroles').insertOne(newDoc).catch((err) => logger.error(err));
+    return { changes: 1 };
+  },
+  getReactRole(messageId, emoji) {
+    return (cache.reactroles || []).find((r) => r.messageId === messageId && r.emoji === emoji);
+  },
+  incrementReactionsCount(userId, guildId) {
+    const levelData = this.getLevel(userId, guildId);
+    if (levelData) {
+      levelData.reactionsCount = (levelData.reactionsCount || 0) + 1;
+      cache.levels.set(`${userId}_${guildId}`, levelData);
+      safeCollection('levels')
+        .updateOne({ userId, guildId }, { $set: { reactionsCount: levelData.reactionsCount } })
+        .catch((err) => logger.error(err));
+    }
   },
 
   getCaptchaSettings(guildId) {
@@ -1158,20 +1569,26 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { guildId, enabled: 0, unverified_role: null, verified_role: null, panel_channel: null, panel_data: {} };
       cache.captcha_settings.set(guildId, row);
-      safeCollection('captcha_settings').insertOne(row).catch(() => null);
+      safeCollection('captcha_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   updateCaptchaSettings(guildId, data) {
-    let current = this.getCaptchaSettings(guildId);
+    const current = this.getCaptchaSettings(guildId);
     if (data.enabled !== undefined) current.enabled = data.enabled;
     if (data.unverified_role !== undefined) current.unverified_role = data.unverified_role;
     if (data.verified_role !== undefined) current.verified_role = data.verified_role;
     if (data.panel_channel !== undefined) current.panel_channel = data.panel_channel;
-    if (data.panel_data !== undefined) current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
+    if (data.panel_data !== undefined)
+      current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
 
     cache.captcha_settings.set(guildId, current);
-    return safeCollection('captcha_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('captcha_settings')
+      .updateOne({ guildId }, { $set: stripId(current) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
 
   getTempVoiceSettings(guildId) {
@@ -1179,22 +1596,30 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { guildId, master_channel: null, category_id: null, panel_channel: null };
       cache.tempvoice_settings.set(guildId, row);
-      safeCollection('tempvoice_settings').insertOne(row).catch(() => null);
+      safeCollection('tempvoice_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   updateTempVoiceSettings(guildId, master_channel, category_id) {
-    let doc = cache.tempvoice_settings.get(guildId) || { guildId };
+    const doc = cache.tempvoice_settings.get(guildId) || { guildId };
     doc.master_channel = master_channel;
     doc.category_id = category_id;
     cache.tempvoice_settings.set(guildId, doc);
-    return safeCollection('tempvoice_settings').updateOne({ guildId }, { $set: { master_channel, category_id } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_settings')
+      .updateOne({ guildId }, { $set: { master_channel, category_id } }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   updateTempVoicePanel(guildId, panel_channel) {
-    let doc = cache.tempvoice_settings.get(guildId) || { guildId };
+    const doc = cache.tempvoice_settings.get(guildId) || { guildId };
     doc.panel_channel = panel_channel;
     cache.tempvoice_settings.set(guildId, doc);
-    return safeCollection('tempvoice_settings').updateOne({ guildId }, { $set: { panel_channel } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_settings')
+      .updateOne({ guildId }, { $set: { panel_channel } }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
 
   getJailSettings(guildId) {
@@ -1202,14 +1627,19 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { guildId, jailRoleId: null, jailChannelId: null, staffVoiceId: null };
       cache.jail_settings.set(guildId, row);
-      safeCollection('jail_settings').insertOne(row).catch(() => null);
+      safeCollection('jail_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   setJailSettings(guildId, roleId, channelId, staffVoiceId, staffRoleId) {
     const doc = { guildId, jailRoleId: roleId, jailChannelId: channelId, staffVoiceId, staffRoleId };
     cache.jail_settings.set(guildId, doc);
-    return safeCollection('jail_settings').updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('jail_settings')
+      .updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   getJailedUser(userId, guildId) {
     return cache.jailed_users.get(`${userId}_${guildId}`);
@@ -1218,27 +1648,39 @@ getTicketWarnings(guildId, userId) {
     const now = Math.floor(Date.now() / 1000);
     const doc = { userId, guildId, oldRoles, jailedAt: now };
     cache.jailed_users.set(`${userId}_${guildId}`, doc);
-    return safeCollection('jailed_users').updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('jailed_users')
+      .updateOne({ userId, guildId }, { $set: stripId(doc) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   removeJailedUser(userId, guildId) {
     cache.jailed_users.delete(`${userId}_${guildId}`);
-    return safeCollection('jailed_users').deleteOne({ userId, guildId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('jailed_users')
+      .deleteOne({ userId, guildId })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
-  
+
   addTempVoiceChannel(channelId, ownerId, guildId) {
     const doc = { channelId, ownerId, guildId };
     cache.tempvoice_channels.set(channelId, doc);
-    return safeCollection('tempvoice_channels').insertOne(doc).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_channels')
+      .insertOne(doc)
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   getTempVoiceChannel(channelId) {
     return cache.tempvoice_channels.get(channelId);
   },
   removeTempVoiceChannel(channelId) {
     cache.tempvoice_channels.delete(channelId);
-    return safeCollection('tempvoice_channels').deleteOne({ channelId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_channels')
+      .deleteOne({ channelId })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   getTempVoiceChannelsByGuild(guildId) {
-    return Array.from(cache.tempvoice_channels.values()).filter(c => c.guildId === guildId);
+    return Array.from(cache.tempvoice_channels.values()).filter((c) => c.guildId === guildId);
   },
 
   getBotSettings() {
@@ -1246,15 +1688,28 @@ getTicketWarnings(guildId, userId) {
     if (!row) {
       row = { id: 1, status: 'online', activity_type: 'PLAYING', activity_name: 'E-246 System' };
       cache.bot_settings.set(1, row);
-      safeCollection('bot_settings').insertOne(row).catch(() => null);
+      safeCollection('bot_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
   updateBotSettings(status, activity_type, activity_name, emoji_color, broadcast_tokens) {
-    let doc = cache.bot_settings.get(1) || { id: 1 };
-    doc.status = status; doc.activity_type = activity_type; doc.activity_name = activity_name; doc.emoji_color = emoji_color; doc.broadcast_tokens = broadcast_tokens;
+    const doc = cache.bot_settings.get(1) || { id: 1 };
+    doc.status = status;
+    doc.activity_type = activity_type;
+    doc.activity_name = activity_name;
+    doc.emoji_color = emoji_color;
+    doc.broadcast_tokens = broadcast_tokens;
     cache.bot_settings.set(1, doc);
-    return safeCollection('bot_settings').updateOne({ id: 1 }, { $set: { status, activity_type, activity_name, emoji_color, broadcast_tokens } }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('bot_settings')
+      .updateOne(
+        { id: 1 },
+        { $set: { status, activity_type, activity_name, emoji_color, broadcast_tokens } },
+        { upsert: true }
+      )
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
 
   getTempVoiceUserSettings(userId) {
@@ -1263,78 +1718,117 @@ getTicketWarnings(guildId, userId) {
   saveTempVoiceUserSettings(userId, name, limit) {
     const doc = { userId, preferredName: name, preferredLimit: limit };
     cache.tempvoice_user_settings.set(userId, doc);
-    return safeCollection('tempvoice_user_settings').updateOne({ userId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_user_settings')
+      .updateOne({ userId }, { $set: stripId(doc) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
 
   addTempVoiceBan(channelId, targetId) {
     const doc = { channelId, targetId };
     cache.tempvoice_bans.set(`${channelId}_${targetId}`, doc);
-    return safeCollection('tempvoice_bans').updateOne({ channelId, targetId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_bans')
+      .updateOne({ channelId, targetId }, { $set: stripId(doc) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   removeTempVoiceBan(channelId, targetId) {
     cache.tempvoice_bans.delete(`${channelId}_${targetId}`);
-    return safeCollection('tempvoice_bans').deleteOne({ channelId, targetId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_bans')
+      .deleteOne({ channelId, targetId })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   isTempVoiceBanned(channelId, targetId) {
     return cache.tempvoice_bans.has(`${channelId}_${targetId}`);
   },
   getTempVoiceBans(channelId) {
-    return Array.from(cache.tempvoice_bans.values()).filter(b => b.channelId === channelId);
+    return Array.from(cache.tempvoice_bans.values()).filter((b) => b.channelId === channelId);
   },
 
   addTempVoiceTrusted(channelId, userId) {
     const doc = { channelId, userId };
     cache.tempvoice_trusted.set(`${channelId}_${userId}`, doc);
-    return safeCollection('tempvoice_trusted').updateOne({ channelId, userId }, { $set: stripId(doc) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_trusted')
+      .updateOne({ channelId, userId }, { $set: stripId(doc) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   removeTempVoiceTrusted(channelId, userId) {
     cache.tempvoice_trusted.delete(`${channelId}_${userId}`);
-    return safeCollection('tempvoice_trusted').deleteOne({ channelId, userId }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('tempvoice_trusted')
+      .deleteOne({ channelId, userId })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
   isTempVoiceTrusted(channelId, userId) {
     return cache.tempvoice_trusted.has(`${channelId}_${userId}`);
   },
   getTempVoiceTrustedUsers(channelId) {
-    return Array.from(cache.tempvoice_trusted.values()).filter(t => t.channelId === channelId);
+    return Array.from(cache.tempvoice_trusted.values()).filter((t) => t.channelId === channelId);
   },
 
   incrementDailyJoins(guildId) {
     const today = new Date().toISOString().split('T')[0];
     let doc = cache.stats_daily_members.get(`${guildId}_${today}`);
-    if (!doc) { doc = { guildId, date: today, joins: 1, leaves: 0 }; } else { doc.joins = (doc.joins || 0) + 1; }
+    if (!doc) {
+      doc = { guildId, date: today, joins: 1, leaves: 0 };
+    } else {
+      doc.joins = (doc.joins || 0) + 1;
+    }
     cache.stats_daily_members.set(`${guildId}_${today}`, doc);
-    safeCollection('stats_daily_members').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('stats_daily_members')
+      .updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   incrementDailyLeaves(guildId) {
     const today = new Date().toISOString().split('T')[0];
     let doc = cache.stats_daily_members.get(`${guildId}_${today}`);
-    if (!doc) { doc = { guildId, date: today, joins: 0, leaves: 1 }; } else { doc.leaves = (doc.leaves || 0) + 1; }
+    if (!doc) {
+      doc = { guildId, date: today, joins: 0, leaves: 1 };
+    } else {
+      doc.leaves = (doc.leaves || 0) + 1;
+    }
     cache.stats_daily_members.set(`${guildId}_${today}`, doc);
-    safeCollection('stats_daily_members').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('stats_daily_members')
+      .updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   incrementHourlyMessages(guildId) {
     const today = new Date().toISOString().split('T')[0];
     const hour = new Date().getHours();
     let doc = cache.stats_hourly_messages.get(`${guildId}_${today}_${hour}`);
-    if (!doc) { doc = { guildId, date: today, hour, message_count: 1 }; } else { doc.message_count = (doc.message_count || 0) + 1; }
+    if (!doc) {
+      doc = { guildId, date: today, hour, message_count: 1 };
+    } else {
+      doc.message_count = (doc.message_count || 0) + 1;
+    }
     cache.stats_hourly_messages.set(`${guildId}_${today}_${hour}`, doc);
-    safeCollection('stats_hourly_messages').updateOne({ guildId, date: today, hour }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('stats_hourly_messages')
+      .updateOne({ guildId, date: today, hour }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   addDailyVoiceSeconds(guildId, seconds) {
     const today = new Date().toISOString().split('T')[0];
     let doc = cache.stats_daily_voice.get(`${guildId}_${today}`);
-    if (!doc) { doc = { guildId, date: today, seconds }; } else { doc.seconds = (doc.seconds || 0) + seconds; }
+    if (!doc) {
+      doc = { guildId, date: today, seconds };
+    } else {
+      doc.seconds = (doc.seconds || 0) + seconds;
+    }
     cache.stats_daily_voice.set(`${guildId}_${today}`, doc);
-    safeCollection('stats_daily_voice').updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true }).catch(console.error);
+    safeCollection('stats_daily_voice')
+      .updateOne({ guildId, date: today }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
 
   getDailyMembersStats(guildId, daysCount = 7) {
     return Array.from(cache.stats_daily_members.values())
-      .filter(s => s.guildId === guildId)
+      .filter((s) => s.guildId === guildId)
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, daysCount)
       .reverse();
@@ -1342,20 +1836,24 @@ getTicketWarnings(guildId, userId) {
   getHourlyMessagesStats(guildId) {
     const statsMap = {};
     for (const val of cache.stats_hourly_messages.values()) {
-      if (val.guildId === guildId) { statsMap[val.hour] = (statsMap[val.hour] || 0) + (val.message_count || 0); }
+      if (val.guildId === guildId) {
+        statsMap[val.hour] = (statsMap[val.hour] || 0) + (val.message_count || 0);
+      }
     }
-    return Object.keys(statsMap).map(h => ({ hour: parseInt(h), count: statsMap[h] })).sort((a, b) => a.hour - b.hour);
+    return Object.keys(statsMap)
+      .map((h) => ({ hour: parseInt(h), count: statsMap[h] }))
+      .sort((a, b) => a.hour - b.hour);
   },
   getDailyVoiceStats(guildId, daysCount = 7) {
     return Array.from(cache.stats_daily_voice.values())
-      .filter(s => s.guildId === guildId)
+      .filter((s) => s.guildId === guildId)
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, daysCount)
       .reverse();
   },
 
   getSocialAlerts(guildId) {
-    return cache.social_alerts.filter(a => a.guildId === guildId);
+    return cache.social_alerts.filter((a) => a.guildId === guildId);
   },
   getAllSocialAlerts() {
     return cache.social_alerts;
@@ -1363,27 +1861,27 @@ getTicketWarnings(guildId, userId) {
   addSocialAlert(guildId, platform, channelId, socialId, message) {
     const doc = { id: Date.now().toString(36), guildId, platform, channelId, socialId, lastVideoId: null, message };
     cache.social_alerts.push(doc);
-    safeCollection('social_alerts').insertOne(doc).catch(console.error);
+    safeCollection('social_alerts').insertOne(doc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeSocialAlert(id, guildId) {
-    cache.social_alerts = cache.social_alerts.filter(a => !(a.id === id && a.guildId === guildId));
-    safeCollection('social_alerts').deleteOne({ id, guildId }).catch(console.error);
+    cache.social_alerts = cache.social_alerts.filter((a) => !(a.id === id && a.guildId === guildId));
+    safeCollection('social_alerts').deleteOne({ id, guildId }).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   updateSocialAlertLastVideo(id, lastVideoId) {
-    const idx = cache.social_alerts.findIndex(a => a.id === id);
+    const idx = cache.social_alerts.findIndex((a) => a.id === id);
     if (idx !== -1) {
       cache.social_alerts[idx].lastVideoId = lastVideoId;
-      safeCollection('social_alerts').updateOne({ id }, { $set: { lastVideoId } }).catch(console.error);
+      safeCollection('social_alerts').updateOne({ id }, { $set: { lastVideoId } }).catch((err) => logger.error(err));
     }
     return { changes: 1 };
   },
   updateSocialAlertSocialId(id, socialId) {
-    const idx = cache.social_alerts.findIndex(a => a.id === id);
+    const idx = cache.social_alerts.findIndex((a) => a.id === id);
     if (idx !== -1) {
       cache.social_alerts[idx].socialId = socialId;
-      safeCollection('social_alerts').updateOne({ id }, { $set: { socialId } }).catch(console.error);
+      safeCollection('social_alerts').updateOne({ id }, { $set: { socialId } }).catch((err) => logger.error(err));
     }
     return { changes: 1 };
   },
@@ -1399,56 +1897,78 @@ getTicketWarnings(guildId, userId) {
       attachments,
       createdAt: new Date()
     };
-    safeCollection('message_cache').insertOne(doc).catch(err => console.error('[DB] Mongo write failed:', err));
+    safeCollection('message_cache')
+      .insertOne(doc)
+      .catch((err) => logger.error('[DB] Mongo write failed:', err));
   },
   async getCachedMessage(messageId) {
     if (!mongoDb) return null;
-    const doc = await safeCollection('message_cache').findOne({ messageId }).catch(() => null);
+    const doc = await safeCollection('message_cache')
+      .findOne({ messageId })
+      .catch(() => null);
     return doc || null;
   },
   async getKV(key) {
     if (!mongoDb) return null;
-    const doc = await safeCollection('quick_db').findOne({ key }).catch(() => null);
+    const doc = await safeCollection('quick_db')
+      .findOne({ key })
+      .catch(() => null);
     return doc ? doc.value : null;
   },
   async setKV(key, value) {
     if (!mongoDb) return value;
-    await safeCollection('quick_db').updateOne({ key }, { $set: { value } }, { upsert: true }).catch(err => console.error('[DB] Mongo write failed:', err));
+    await safeCollection('quick_db')
+      .updateOne({ key }, { $set: { value } }, { upsert: true })
+      .catch((err) => logger.error('[DB] Mongo write failed:', err));
     return value;
   },
   async deleteKV(key) {
     if (!mongoDb) return false;
-    await safeCollection('quick_db').deleteOne({ key }).catch(err => console.error('[DB] Mongo write failed:', err));
+    await safeCollection('quick_db')
+      .deleteOne({ key })
+      .catch((err) => logger.error('[DB] Mongo write failed:', err));
     return true;
   },
   async getTopBalances(limit = 6) {
     if (!mongoDb) return [];
-    const docs = await safeCollection('quick_db').find({ key: { $regex: /^balance_/ } }).toArray().catch(() => []);
-    return docs.map(d => ({
-      userId: d.key.replace('balance_', ''),
-      balance: d.value
-    })).sort((a, b) => b.balance - a.balance).slice(0, limit);
+    const docs = await safeCollection('quick_db')
+      .find({ key: { $regex: /^balance_/ } })
+      .toArray()
+      .catch(() => []);
+    return docs
+      .map((d) => ({
+        userId: d.key.replace('balance_', ''),
+        balance: d.value
+      }))
+      .sort((a, b) => b.balance - a.balance)
+      .slice(0, limit);
   },
-  
+
   getAutomod(guildId) {
     let row = cache.automod_settings.get(guildId);
     if (!row) {
       row = { guildId, enabled: 0, action: 'delete', words: [], bypass_roles: [] };
       cache.automod_settings.set(guildId, row);
-      safeCollection('automod_settings').insertOne(row).catch(() => null);
+      safeCollection('automod_settings')
+        .insertOne(row)
+        .catch(() => null);
     }
     return row;
   },
-  
+
   updateAutomod(guildId, data) {
-    let current = this.getAutomod(guildId);
+    const current = this.getAutomod(guildId);
     if (data.enabled !== undefined) current.enabled = data.enabled;
     if (data.action !== undefined) current.action = data.action;
     if (data.words !== undefined) current.words = typeof data.words === 'string' ? JSON.parse(data.words) : data.words;
-    if (data.bypass_roles !== undefined) current.bypass_roles = typeof data.bypass_roles === 'string' ? JSON.parse(data.bypass_roles) : data.bypass_roles;
-    
+    if (data.bypass_roles !== undefined)
+      current.bypass_roles = typeof data.bypass_roles === 'string' ? JSON.parse(data.bypass_roles) : data.bypass_roles;
+
     cache.automod_settings.set(guildId, current);
-    return safeCollection('automod_settings').updateOne({ guildId }, { $set: stripId(current) }, { upsert: true }).then(() => ({ changes: 1 })).catch(() => ({ changes: 0 }));
+    return safeCollection('automod_settings')
+      .updateOne({ guildId }, { $set: stripId(current) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
   },
 
   isConnected() {
@@ -1456,25 +1976,261 @@ getTicketWarnings(guildId, userId) {
   },
 
   getCustomCommands(guildId) {
-    return cache.custom_commands.filter(c => c.guildId === guildId);
+    return cache.custom_commands.filter((c) => c.guildId === guildId);
   },
   addCustomCommand(guildId, id, trigger, actions) {
     const newDoc = { id, guildId, trigger, actions };
     cache.custom_commands.push(newDoc);
-    safeCollection('custom_commands').insertOne(newDoc).catch(console.error);
+    safeCollection('custom_commands').insertOne(newDoc).catch((err) => logger.error(err));
     return { changes: 1 };
   },
   deleteCustomCommand(guildId, id) {
-    cache.custom_commands = cache.custom_commands.filter(c => !(c.guildId === guildId && c.id === id));
-    safeCollection('custom_commands').deleteOne({ guildId, id }).catch(console.error);
+    cache.custom_commands = cache.custom_commands.filter((c) => !(c.guildId === guildId && c.id === id));
+    safeCollection('custom_commands').deleteOne({ guildId, id }).catch((err) => logger.error(err));
     return { changes: 1 };
+  },
+
+  // ═══════════════════════════════════════════
+  // Mod Actions (Punishment History)
+  // ═══════════════════════════════════════════
+  addModAction(guildId, targetId, targetTag, moderatorId, moderatorTag, action, reason, duration) {
+    const newDoc = {
+      guildId,
+      targetId,
+      targetTag,
+      moderatorId,
+      moderatorTag,
+      action,
+      reason,
+      duration: duration || null,
+      timestamp: Date.now()
+    };
+    cache.mod_actions.push(newDoc);
+    safeCollection('mod_actions').insertOne(newDoc).catch((err) => logger.error(err));
+    return newDoc;
+  },
+  getModHistory(guildId, targetId, limit = 50) {
+    return cache.mod_actions
+      .filter((a) => a.guildId === guildId && a.targetId === targetId)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, limit);
+  },
+  clearModHistory(guildId, targetId) {
+    cache.mod_actions = cache.mod_actions.filter((a) => !(a.guildId === guildId && a.targetId === targetId));
+    safeCollection('mod_actions').deleteMany({ guildId, targetId }).catch((err) => logger.error(err));
+    return { changes: 1 };
+  },
+  getAllModActions(guildId) {
+    return cache.mod_actions.filter((a) => a.guildId === guildId);
+  },
+  clearAllModActions(guildId) {
+    cache.mod_actions = cache.mod_actions.filter((a) => a.guildId !== guildId);
+    safeCollection('mod_actions').deleteMany({ guildId }).catch((err) => logger.error(err));
+    return { changes: 1 };
+  },
+
+  // ═══════════════════════════════════════════
+  // Suggestions
+  // ═══════════════════════════════════════════
+  getSuggestionSettings(guildId) {
+    return cache.suggestion_settings.get(guildId) || null;
+  },
+  setSuggestionSettings(guildId, data) {
+    const doc = { guildId, ...data };
+    cache.suggestion_settings.set(guildId, doc);
+    safeCollection('suggestion_settings')
+      .updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
+    return doc;
+  },
+  addSuggestion(guildId, messageId, userId, userTag, content) {
+    const newDoc = {
+      guildId,
+      messageId,
+      userId,
+      userTag,
+      content,
+      status: 'pending',
+      reviewedBy: null,
+      reviewNote: null,
+      timestamp: Date.now()
+    };
+    cache.suggestions.set(messageId, newDoc);
+    safeCollection('suggestions').insertOne(newDoc).catch((err) => logger.error(err));
+    return newDoc;
+  },
+  getSuggestion(messageId) {
+    return cache.suggestions.get(messageId) || null;
+  },
+  updateSuggestionStatus(messageId, status, reviewedBy, reviewNote) {
+    const doc = cache.suggestions.get(messageId);
+    if (doc) {
+      doc.status = status;
+      doc.reviewedBy = reviewedBy;
+      doc.reviewNote = reviewNote || null;
+      cache.suggestions.set(messageId, doc);
+    }
+    safeCollection('suggestions')
+      .updateOne({ messageId }, { $set: { status, reviewedBy, reviewNote: reviewNote || null } })
+      .catch((err) => logger.error(err));
+  },
+  updateSuggestionVotes(messageId, upvoters, downvoters) {
+    const doc = cache.suggestions.get(messageId);
+    if (doc) {
+      doc.upvoters = upvoters;
+      doc.downvoters = downvoters;
+      cache.suggestions.set(messageId, doc);
+    }
+    safeCollection('suggestions').updateOne({ messageId }, { $set: { upvoters, downvoters } }).catch((err) => logger.error(err));
+  },
+
+  // ═══════════════════════════════════════════
+  // AFK
+  // ═══════════════════════════════════════════
+  setAFK(guildId, userId, reason) {
+    const key = `${userId}_${guildId}`;
+    const doc = { guildId, userId, reason, timestamp: Date.now() };
+    cache.afk_users.set(key, doc);
+    safeCollection('afk_users')
+      .updateOne({ guildId, userId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
+    return doc;
+  },
+  getAFK(guildId, userId) {
+    return cache.afk_users.get(`${userId}_${guildId}`) || null;
+  },
+  removeAFK(guildId, userId) {
+    cache.afk_users.delete(`${userId}_${guildId}`);
+    safeCollection('afk_users').deleteOne({ guildId, userId }).catch((err) => logger.error(err));
+  },
+  getAllAFK(guildId) {
+    const result = [];
+    for (const [, doc] of cache.afk_users) {
+      if (doc.guildId === guildId) result.push(doc);
+    }
+    return result;
+  },
+
+  // ═══════════════════════════════════════════
+  // Starboard
+  // ═══════════════════════════════════════════
+  getStarboardSettings(guildId) {
+    return cache.starboard_settings.get(guildId) || null;
+  },
+  setStarboardSettings(guildId, data) {
+    const doc = { guildId, ...data };
+    cache.starboard_settings.set(guildId, doc);
+    safeCollection('starboard_settings')
+      .updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
+    return doc;
+  },
+  getStarboardPost(originalMessageId) {
+    return cache.starboard_posts.get(originalMessageId) || null;
+  },
+  addStarboardPost(guildId, originalMessageId, starboardMessageId, stars) {
+    const doc = { guildId, originalMessageId, starboardMessageId, stars };
+    cache.starboard_posts.set(originalMessageId, doc);
+    safeCollection('starboard_posts').insertOne(doc).catch((err) => logger.error(err));
+    return doc;
+  },
+  updateStarboardPost(originalMessageId, stars, starboardMessageId) {
+    const doc = cache.starboard_posts.get(originalMessageId);
+    if (doc) {
+      doc.stars = stars;
+      if (starboardMessageId) doc.starboardMessageId = starboardMessageId;
+      cache.starboard_posts.set(originalMessageId, doc);
+    }
+    const update = { stars };
+    if (starboardMessageId) update.starboardMessageId = starboardMessageId;
+    safeCollection('starboard_posts').updateOne({ originalMessageId }, { $set: update }).catch((err) => logger.error(err));
+  },
+  removeStarboardPost(originalMessageId) {
+    cache.starboard_posts.delete(originalMessageId);
+    safeCollection('starboard_posts').deleteOne({ originalMessageId }).catch((err) => logger.error(err));
+  },
+
+  // ═══════════════════════════════════════════
+  // Sticky Messages
+  // ═══════════════════════════════════════════
+  getStickyMessage(channelId) {
+    return cache.sticky_messages.get(channelId) || null;
+  },
+  setStickyMessage(guildId, channelId, content) {
+    const doc = { guildId, channelId, content, lastMessageId: null, enabled: true };
+    cache.sticky_messages.set(channelId, doc);
+    safeCollection('sticky_messages')
+      .updateOne({ channelId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error(err));
+    return doc;
+  },
+  updateStickyMessageId(channelId, messageId) {
+    const doc = cache.sticky_messages.get(channelId);
+    if (doc) {
+      doc.lastMessageId = messageId;
+      cache.sticky_messages.set(channelId, doc);
+    }
+    safeCollection('sticky_messages')
+      .updateOne({ channelId }, { $set: { lastMessageId: messageId } })
+      .catch((err) => logger.error(err));
+  },
+  removeStickyMessage(channelId) {
+    cache.sticky_messages.delete(channelId);
+    safeCollection('sticky_messages').deleteOne({ channelId }).catch((err) => logger.error(err));
+  },
+  getAllStickyMessages(guildId) {
+    return Array.from(cache.sticky_messages.values()).filter((m) => m.guildId === guildId);
+  },
+
+  // ═══════════════════════════════════════════
+  // Form Submissions
+  // ═══════════════════════════════════════════
+  addFormSubmission(guildId, formId, userId, userTag, answers) {
+    const newDoc = {
+      guildId,
+      formId,
+      userId,
+      userTag,
+      answers,
+      status: 'pending',
+      reviewedBy: null,
+      reviewNote: null,
+      timestamp: Date.now()
+    };
+    cache.form_submissions.push(newDoc);
+    safeCollection('form_submissions').insertOne(newDoc).catch((err) => logger.error(err));
+    return newDoc;
+  },
+  getFormSubmission(guildId, formId, userId) {
+    return (
+      cache.form_submissions.find(
+        (s) => s.guildId === guildId && s.formId === formId && s.userId === userId && s.status === 'pending'
+      ) || null
+    );
+  },
+  getFormSubmissions(guildId, formId) {
+    return cache.form_submissions.filter((s) => s.guildId === guildId && s.formId === formId);
+  },
+  updateFormSubmissionStatus(guildId, formId, userId, status, reviewedBy, reviewNote) {
+    const idx = cache.form_submissions.findIndex(
+      (s) => s.guildId === guildId && s.formId === formId && s.userId === userId && s.status === 'pending'
+    );
+    if (idx !== -1) {
+      cache.form_submissions[idx].status = status;
+      cache.form_submissions[idx].reviewedBy = reviewedBy;
+      cache.form_submissions[idx].reviewNote = reviewNote || null;
+    }
+    safeCollection('form_submissions')
+      .updateOne(
+        { guildId, formId, userId, status: 'pending' },
+        { $set: { status, reviewedBy, reviewNote: reviewNote || null } }
+      )
+      .catch((err) => logger.error(err));
   }
 };
-
 
 helpers.stripId = stripId;
 helpers.safeSet = safeSet;
 helpers.client = client;
 helpers.prepare = (sql) => helpers.db.prepare(sql);
 module.exports = helpers;
-

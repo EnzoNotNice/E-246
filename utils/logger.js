@@ -20,7 +20,6 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console({
       format: winston.format.combine(
-        winston.format.colorize({ all: true }),
         winston.format.printf(({ level, message, timestamp, stack }) => {
           const msg = typeof message === 'string' ? message : JSON.stringify(message);
           return `[${timestamp}] [${level.toUpperCase()}]: ${stack || msg}`;
@@ -41,4 +40,35 @@ const logger = winston.createLogger({
   ]
 });
 
+async function sendLog(client, guildId, embedOrPayload, eventType) {
+  try {
+    if (!client || !guildId) return;
+    const db = require('../database/db');
+
+    const logSettings = db.getLogSettings ? db.getLogSettings(guildId) : null;
+    const guildSettings = db.getGuildSettings ? db.getGuildSettings(guildId) : null;
+    const mainLogChannel = guildSettings?.log_channel || null;
+
+    let targetChannelId = null;
+    if (logSettings) {
+      const column = `${eventType}_channel`;
+      targetChannelId = logSettings[column] || mainLogChannel;
+    } else {
+      targetChannelId = mainLogChannel;
+    }
+
+    if (!targetChannelId) return;
+    const channel =
+      client.channels.cache.get(targetChannelId) || (await client.channels.fetch(targetChannelId).catch(() => null));
+    if (!channel) return;
+
+    const payload = embedOrPayload && embedOrPayload.embeds ? embedOrPayload : { embeds: [embedOrPayload] };
+    await channel.send(payload).catch(() => null);
+  } catch (err) {
+    logger.error(`Error in sendLog (${eventType}): ${err.message}`);
+  }
+}
+
 module.exports = logger;
+module.exports.logger = logger;
+module.exports.sendLog = sendLog;

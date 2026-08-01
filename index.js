@@ -1,4 +1,6 @@
-require('dotenv').config();
+const logger = require('./utils/logger');
+require('dotenv').config({ quiet: true });
+require('./utils/envValidator');
 require('./utils/env-config');
 
 if (!process.env.FONTCONFIG_PATH && !process.env.FONTCONFIG_FILE) {
@@ -44,9 +46,9 @@ if (process.env.HTTPS_PROXY) {
   try {
     const { HttpsProxyAgent } = require('https-proxy-agent');
     https.globalAgent = new HttpsProxyAgent(process.env.HTTPS_PROXY);
-    console.log(`[Proxy] Outbound HTTPS proxy configured successfully: ${process.env.HTTPS_PROXY}`);
+    logger.info(`[Proxy] Outbound HTTPS proxy configured successfully: ${process.env.HTTPS_PROXY}`);
   } catch (err) {
-    console.error('[Proxy] Failed to configure global HTTPS proxy:', err.message);
+    logger.error('[Proxy] Failed to configure global HTTPS proxy:', err.message);
   }
 }
 const { Client, GatewayIntentBits, Collection, Partials, Events } = require('discord.js');
@@ -63,7 +65,7 @@ const client = new Client({
     GatewayIntentBits.GuildInvites,
     GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildModeration
   ],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.GuildMember, Partials.User]
 });
@@ -76,32 +78,47 @@ client.voiceSessions = new Map();
 const { setupMusic } = require('./utils/music');
 setupMusic(client);
 
-const ACTIVE_COMMAND_DIRS = ['admin', 'greet', 'invite', 'levels', 'protection', 'giveaway', 'automation', 'ticket', 'public', 'games', 'utils', 'music'];
+const ACTIVE_COMMAND_DIRS = [
+  'admin',
+  'greet',
+  'invite',
+  'levels',
+  'protection',
+  'giveaway',
+  'automation',
+  'ticket',
+  'public',
+  'games',
+  'utils',
+  'music'
+];
 
+let slashCount = 0;
 for (const dir of ACTIVE_COMMAND_DIRS) {
   const dirPath = path.join(__dirname, 'commands', dir);
   if (!fs.existsSync(dirPath)) continue;
-  const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.js'));
+  const files = fs.readdirSync(dirPath).filter((f) => f.endsWith('.js'));
   for (const file of files) {
     const cmd = require(path.join(dirPath, file));
     if (cmd.data && cmd.execute) {
       const name = cmd.data.name;
       if (client.commands.has(name)) {
         const existing = client.commands.get(name);
-        console.warn(
+        logger.warn(
           `[Commands] Duplicate slash name "/${name}" — skipping ${dir}/${file} (kept ${existing.category || '?'})`
         );
         continue;
       }
       cmd.category = dir;
       client.commands.set(name, cmd);
-      console.log(`Loaded slash: ${name} (${dir})`);
+      slashCount++;
     }
   }
 }
+logger.info(`[Boot] Loaded ${slashCount} slash commands.`);
 
 const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v10');
+const { Routes } = require('discord.js');
 
 const commandsJson = [];
 const seenDeployNames = new Set();
@@ -115,7 +132,7 @@ async function deploySlashCommands(client) {
   const token = process.env.DISCORD_TOKEN;
   const clientId = process.env.CLIENT_ID || client?.user?.id;
   if (!token || !clientId) {
-    console.error('[Deploy] Missing DISCORD_TOKEN or CLIENT_ID — skip slash deploy');
+    logger.error('[Deploy] Missing DISCORD_TOKEN or CLIENT_ID — Skip slash deploy');
     return;
   }
 
@@ -124,12 +141,12 @@ async function deploySlashCommands(client) {
 
   const putGlobal = async (body) => {
     await rest.put(Routes.applicationCommands(clientId), { body });
-    console.log(`[Deploy] Set ${body.length} global commands`);
+    logger.info(`[Deploy] Set ${body.length} global commands`);
   };
 
   const putGuild = async (id, body) => {
     await rest.put(Routes.applicationGuildCommands(clientId, id), { body });
-    console.log(`[Deploy] Set ${body.length} guild commands for ${id}`);
+    logger.info(`[Deploy] Set ${body.length} guild commands for ${id}`);
   };
 
   const clearGuildCommands = async (id) => {
@@ -137,7 +154,7 @@ async function deploySlashCommands(client) {
       await putGuild(id, []);
     } catch (e) {
       if (e.code !== 50001 && e.status !== 403) {
-        console.warn(`[Deploy] Could not clear guild ${id} commands:`, e.message || e);
+        logger.warn(`[Deploy] Could not clear guild ${id} commands:`, e.message || e);
       }
     }
   };
@@ -154,21 +171,20 @@ async function deploySlashCommands(client) {
     if (guildId) {
       const inGuild = client?.guilds?.cache?.has(guildId);
       if (!inGuild) {
-        console.warn(`[Deploy] GUILD_ID=${guildId} is not a guild this bot is in — using global deploy`);
+        logger.warn(`[Deploy] GUILD_ID=${guildId} is not a guild this bot is in — using global deploy`);
         await putGlobal(commandsJson);
         await clearAllGuildCommands();
         return;
       }
       try {
         await putGuild(guildId, commandsJson);
-        // Clear global so Discord does not show each command twice (guild + global)
         await putGlobal([]);
         for (const id of client.guilds.cache.keys()) {
           if (id !== guildId) await clearGuildCommands(id);
         }
       } catch (guildErr) {
         if (guildErr.code === 50001 || guildErr.status === 403) {
-          console.warn(
+          logger.warn(
             `[Deploy] Missing Access for guild ${guildId} (re-invite bot with scope applications.commands). Falling back to global.`
           );
           await putGlobal(commandsJson);
@@ -179,33 +195,72 @@ async function deploySlashCommands(client) {
       }
     } else {
       await putGlobal(commandsJson);
-      // Clear any leftover guild-scoped commands that cause duplicates in /
       await clearAllGuildCommands();
     }
   } catch (error) {
-    console.error('[Deploy] Failed to auto-deploy commands:', error.code || '', error.message || error);
+    logger.error('[Deploy] Failed to auto-deploy commands:', error.code || '', error.message || error);
   }
 }
 
 client.deploySlashCommands = deploySlashCommands;
 client.once(Events.ClientReady, () => {
-  deploySlashCommands(client).catch((e) => console.error('[Deploy]', e.message || e));
+  deploySlashCommands(client).catch((e) => logger.error('[Deploy]', e.message || e));
+
+  // 🎙️ Voice Leveling Periodic Checker (every 60 seconds)
+  setInterval(async () => {
+    try {
+      const db = require('./database/db');
+      const { checkLevelUp } = require('./utils/levels');
+
+      for (const guild of client.guilds.cache.values()) {
+        const levelSettings = db.getLevelSettings(guild.id);
+        if (!levelSettings || !levelSettings.enabled || !levelSettings.voice_enabled) continue;
+
+        for (const channel of guild.channels.cache.filter((c) => c.type === 2).values()) {
+          if (channel.id === guild.afkChannelId) continue;
+
+          // Get active members (exclude bots, muted, deafened users)
+          const activeMembers = channel.members.filter(
+            (m) => !m.user.bot && !m.voice.selfMute && !m.voice.serverMute && !m.voice.selfDeaf && !m.voice.serverDeaf
+          );
+
+          // Prevent XP farming alone: channel must have at least 2 active non-bot members
+          if (activeMembers.size < 2) continue;
+
+          const minXp = levelSettings.voice_xp_min !== undefined ? levelSettings.voice_xp_min : 10;
+          const maxXp = levelSettings.voice_xp_max !== undefined ? levelSettings.voice_xp_max : 20;
+
+          for (const member of activeMembers.values()) {
+            const xpToGive = Math.floor(Math.random() * (maxXp - minXp + 1)) + minXp;
+            db.addVoiceXP(member.id, guild.id, xpToGive);
+            db.addDailyVoiceSeconds(guild.id, 60);
+            await checkLevelUp(client, member.id, guild.id).catch(() => null);
+          }
+        }
+      }
+    } catch (e) {
+      logger.error('[VoiceLeveling Cron Error]:', e);
+    }
+  }, 60000);
 });
 
 const prefixDir = path.join(__dirname, 'commands', 'prefix');
+let prefixCount = 0;
 if (fs.existsSync(prefixDir)) {
-  const files = fs.readdirSync(prefixDir).filter(f => f.endsWith('.js'));
+  const files = fs.readdirSync(prefixDir).filter((f) => f.endsWith('.js'));
   for (const file of files) {
     const cmd = require(path.join(prefixDir, file));
     if (cmd.name && cmd.execute) {
       client.prefixCommands.set(cmd.name, cmd);
-      console.log(`Loaded prefix: ${cmd.name}`);
+      prefixCount++;
     }
   }
 }
+logger.info(`[Boot] Loaded ${prefixCount} prefix commands.`);
 
 const eventsDir = path.join(__dirname, 'events');
-const eventFiles = fs.readdirSync(eventsDir).filter(f => f.endsWith('.js'));
+const eventFiles = fs.readdirSync(eventsDir).filter((f) => f.endsWith('.js'));
+let eventCount = 0;
 
 for (const file of eventFiles) {
   const event = require(path.join(eventsDir, file));
@@ -214,7 +269,7 @@ for (const file of eventFiles) {
       try {
         await event.execute(...args);
       } catch (err) {
-        console.error(`Error in event ${event.name}:`, err);
+        logger.error(`Error in event ${event.name}:`, err);
       }
     };
     if (event.once) {
@@ -222,16 +277,17 @@ for (const file of eventFiles) {
     } else {
       client.on(event.name, handler);
     }
-    console.log(`Loaded event: ${event.name}`);
+    eventCount++;
   }
 }
+logger.info(`[Boot] Loaded ${eventCount} events.`);
 
-process.on('unhandledRejection', err => {
-  console.error('[Unhandled Rejection]', err);
+process.on('unhandledRejection', (err) => {
+  logger.error('[Unhandled Rejection]', err);
 });
 
-process.on('uncaughtException', err => {
-  console.error('[Uncaught Exception]', err);
+process.on('uncaughtException', (err) => {
+  logger.error('[Uncaught Exception]', err);
 });
 
 (async () => {
@@ -240,13 +296,13 @@ process.on('uncaughtException', err => {
     try {
       await db.connect();
     } catch (error) {
-      console.error('⚠️ MongoDB connection failed, continuing without database:', error.message);
+      logger.error('⚠️ MongoDB connection failed, continuing without database:', error.message);
     }
 
     require('./dashboard/server')(client);
     client.login(process.env.DISCORD_TOKEN);
   } catch (error) {
-    console.error('❌ Failed to start bot:', error);
+    logger.error('❌ Failed to start bot:', error);
     process.exit(1);
   }
 })();

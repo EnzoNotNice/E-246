@@ -1,26 +1,27 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
-const { success } = require('../../utils/embeds');
+const logger = require('../../utils/logger');
+
 const db = require('../../database/db');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setlimits')
     .setDescription('حدود نظام الحماية')
-    .addIntegerOption(o => o.setName('ban').setDescription('الحد الأقصى للباند').setMinValue(1).setMaxValue(20))
-    .addIntegerOption(o => o.setName('kick').setDescription('الحد الأقصى للكيك').setMinValue(1).setMaxValue(20))
-    .addIntegerOption(o => o.setName('channel').setDescription('أقصى عمليات الرومات').setMinValue(1).setMaxValue(20))
-    .addIntegerOption(o => o.setName('role').setDescription('أقصى عمليات الرتب').setMinValue(1).setMaxValue(20))
-    .addIntegerOption(o => o.setName('webhook').setDescription('أقصى الويب هوكات').setMinValue(1).setMaxValue(20))
+    .addIntegerOption((o) => o.setName('ban').setDescription('الحد الأقصى للباند').setMinValue(1).setMaxValue(20))
+    .addIntegerOption((o) => o.setName('kick').setDescription('الحد الأقصى للكيك').setMinValue(1).setMaxValue(20))
+    .addIntegerOption((o) => o.setName('channel').setDescription('أقصى عمليات الرومات').setMinValue(1).setMaxValue(20))
+    .addIntegerOption((o) => o.setName('role').setDescription('أقصى عمليات الرتب').setMinValue(1).setMaxValue(20))
+    .addIntegerOption((o) => o.setName('webhook').setDescription('أقصى الويب هوكات').setMinValue(1).setMaxValue(20))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
-    try {  
+    try {
       const ban = interaction.options.getInteger('ban');
       const kick = interaction.options.getInteger('kick');
       const channel = interaction.options.getInteger('channel');
       const role = interaction.options.getInteger('role');
       const webhook = interaction.options.getInteger('webhook');
-  
+
       const prot = db.getProtection(interaction.guildId);
       const updates = {};
       if (ban !== null) updates.ban_limit = ban;
@@ -28,30 +29,28 @@ module.exports = {
       if (channel !== null) updates.channel_limit = channel;
       if (role !== null) updates.role_limit = role;
       if (webhook !== null) updates.webhook_limit = webhook;
-  
-      for (const [key, val] of Object.entries(updates)) {
-        db.db.prepare(`UPDATE protection_settings SET ${key} = ? WHERE guildId = ?`).run(val, interaction.guildId);
-      }
-  
+      db.updateProtection(interaction.guildId, updates);
+
       const embed = new EmbedBuilder()
-        .setColor(0xFF6B6B)
+        .setColor(0xff6b6b)
         .setTitle('{emoji:shield} تم تحديث حدود الحماية')
         .addFields(
           { name: '{emoji:shieldlock} حد الباند', value: String(ban ?? prot.ban_limit), inline: true },
           { name: '{emoji:circlex} حد الطرد', value: String(kick ?? prot.kick_limit), inline: true },
           { name: '{emoji:folder} حد القنوات', value: String(channel ?? prot.channel_limit), inline: true },
           { name: '{emoji:user} حد الرتب', value: String(role ?? prot.role_limit), inline: true },
-          { name: '{emoji:settings} حد الويب هوك', value: String(webhook ?? prot.webhook_limit), inline: true },
+          { name: '{emoji:settings} حد الويب هوك', value: String(webhook ?? prot.webhook_limit), inline: true }
         )
         .setTimestamp();
-  
+
       return interaction.reply({ embeds: [embed] });
-    
     } catch (err) {
-      console.error('[Command Error - setlimits.js]:', err);
+      logger.error('[Command Error - setlimits.js]:', err);
       if (interaction && typeof interaction.reply === 'function') {
-        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+        await interaction
+          .reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] })
+          .catch(() => null);
       }
     }
-}
+  }
 };

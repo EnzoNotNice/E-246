@@ -38,10 +38,39 @@
             </div>
 
             <ul class="nav-menu">
+                <!-- إعدادات عامة -->
+                <li class="nav-divider"><span class="sidebar-text">إعدادات عامة</span></li>
                 <li>
                     <a href="/dashboard/<%= guild.id %>" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'general') ? 'active' : '' %>">
                         <i class="fa-solid fa-sliders nav-icon"></i>
                         <span class="sidebar-text">الإعدادات العامة</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/stats" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'stats') ? 'active' : '' %>">
+                        <i class="fa-solid fa-chart-column nav-icon"></i>
+                        <span class="sidebar-text">الإحصائيات</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/logs" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'logs') ? 'active' : '' %>">
+                        <i class="fa-solid fa-clipboard-list nav-icon"></i>
+                        <span class="sidebar-text">سجلات الأحداث</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/status" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'status') ? 'active' : '' %>">
+                        <i class="fa-solid fa-heart-pulse nav-icon"></i>
+                        <span class="sidebar-text">حالة البوت والخادم</span>
+                    </a>
+                </li>
+
+                <!-- التفاعل والمجتمع -->
+                <li class="nav-divider"><span class="sidebar-text">التفاعل والمجتمع</span></li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/welcome" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'welcome') ? 'active' : '' %>">
+                        <i class="fa-solid fa-handshake nav-icon"></i>
+                        <span class="sidebar-text">الترحيب</span>
                     </a>
                 </li>
                 <li>
@@ -51,11 +80,32 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/welcome" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'welcome') ? 'active' : '' %>">
-                        <i class="fa-solid fa-handshake nav-icon"></i>
-                        <span class="sidebar-text">الترحيب</span>
+                    <a href="/dashboard/<%= guild.id %>/tempvoice" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'tempvoice') ? 'active' : '' %>">
+                        <i class="fa-solid fa-microphone-lines nav-icon"></i>
+                        <span class="sidebar-text">الغرف المؤقتة</span>
                     </a>
                 </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/suggestions" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'suggestions') ? 'active' : '' %>">
+                        <i class="fa-solid fa-lightbulb nav-icon"></i>
+                        <span class="sidebar-text">نظام الاقتراحات</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/starboard" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'starboard') ? 'active' : '' %>">
+                        <i class="fa-solid fa-star nav-icon"></i>
+                        <span class="sidebar-text">الستاربورد</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/alerts" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'alerts') ? 'active' : '' %>">
+                        <i class="fa-brands fa-youtube nav-icon"></i>
+                        <span class="sidebar-text">تنبيهات المحتوى</span>
+                    </a>
+                </li>
+
+                <!-- الحماية والإشراف -->
+                <li class="nav-divider"><span class="sidebar-text">الحماية والإشراف</span></li>
                 <li>
                     <a href="/dashboard/<%= guild.id %>/protection" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'protection') ? 'active' : '' %>">
                         <i class="fa-solid fa-shield-halved nav-icon"></i>
@@ -69,17 +119,14 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/tempvoice" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'tempvoice') ? 'active' : '' %>">
-                        <i class="fa-solid fa-microphone-lines nav-icon"></i>
-                        <span class="sidebar-text">الغرف المؤقتة</span>
+                    <a href="/dashboard/<%= guild.id %>/history" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'history') ? 'active' : '' %>">
+                        <i class="fa-solid fa-gavel nav-icon"></i>
+                        <span class="sidebar-text">سجل العقوبات</span>
                     </a>
                 </li>
-                <li>
-                    <a href="/dashboard/<%= guild.id %>/alerts" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'alerts') ? 'active' : '' %>">
-                        <i class="fa-brands fa-youtube nav-icon"></i>
-                        <span class="sidebar-text">تنبيهات المحتوى</span>
-                    </a>
-                </li>
+
+                <!-- أدوات وتلقائيات -->
+                <li class="nav-divider"><span class="sidebar-text">أدوات وتلقائيات</span></li>
                 <li>
                     <a href="/dashboard/<%= guild.id %>/autoreplies" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'autoreplies') ? 'active' : '' %>">
                         <i class="fa-solid fa-reply-all nav-icon"></i>
@@ -87,21 +134,9 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/aliases" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'aliases') ? 'active' : '' %>">
-                        <i class="fa-solid fa-link nav-icon"></i>
-                        <span class="sidebar-text">اختصارات الأوامر</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/dashboard/<%= guild.id %>/logs" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'logs') ? 'active' : '' %>">
-                        <i class="fa-solid fa-clipboard-list nav-icon"></i>
-                        <span class="sidebar-text">سجلات الأحداث</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/dashboard/<%= guild.id %>/tickets" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'tickets') ? 'active' : '' %>">
-                        <i class="fa-solid fa-ticket nav-icon"></i>
-                        <span class="sidebar-text">التذاكر</span>
+                    <a href="/dashboard/<%= guild.id %>/sticky" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'sticky') ? 'active' : '' %>">
+                        <i class="fa-solid fa-thumbtack nav-icon"></i>
+                        <span class="sidebar-text">الرسائل المثبتة</span>
                     </a>
                 </li>
                 <li>
@@ -111,13 +146,20 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/stats" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'stats') ? 'active' : '' %>">
-                        <i class="fa-solid fa-chart-column nav-icon"></i>
-                        <span class="sidebar-text">الإحصائيات</span>
+                    <a href="/dashboard/<%= guild.id %>/customcmds" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'customcmds') ? 'active' : '' %>">
+                        <i class="fa-solid fa-wand-magic-sparkles nav-icon"></i>
+                        <span class="sidebar-text">الأوامر المخصصة</span>
                     </a>
                 </li>
 
-                <li class="nav-divider"><span class="sidebar-text">أدوات متقدمة</span></li>
+                <!-- أنظمة متقدمة -->
+                <li class="nav-divider"><span class="sidebar-text">أنظمة متقدمة</span></li>
+                <li>
+                    <a href="/dashboard/<%= guild.id %>/tickets" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'tickets') ? 'active' : '' %>">
+                        <i class="fa-solid fa-ticket nav-icon"></i>
+                        <span class="sidebar-text">التذاكر</span>
+                    </a>
+                </li>
                 <li>
                     <a href="/dashboard/<%= guild.id %>/reactionroles" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'reactionroles') ? 'active' : '' %>">
                         <i class="fa-solid fa-masks-theater nav-icon"></i>
@@ -137,9 +179,9 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/dashboard/<%= guild.id %>/customcmds" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'customcmds') ? 'active' : '' %>">
-                        <i class="fa-solid fa-wand-magic-sparkles nav-icon"></i>
-                        <span class="sidebar-text">الأوامر المخصصة</span>
+                    <a href="/dashboard/<%= guild.id %>/bank" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'bank') ? 'active' : '' %>">
+                        <i class="fa-solid fa-piggy-bank nav-icon"></i>
+                        <span class="sidebar-text">إعدادات البنك</span>
                     </a>
                 </li>
             </ul>

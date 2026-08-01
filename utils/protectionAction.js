@@ -8,14 +8,14 @@ function track(guildId, userId, type) {
   const key = `${guildId}_${userId}_${type}`;
   const now = Date.now();
   let times = actionTracker.get(key) || [];
-  times = times.filter(t => now - t < 60000);
+  times = times.filter((t) => now - t < 60000);
   times.push(now);
   actionTracker.set(key, times);
   return times.length;
 }
 
 async function punish(guild, executor, action, reason) {
-  if (!executor || executor.id === guild.ownerId || executor.bot) return;
+  if (!executor || executor.id === guild.ownerId || executor.id === guild.client.user.id) return;
   if (db.isWhitelisted(guild.id, executor.id)) return;
 
   const member = await guild.members.fetch(executor.id).catch(() => null);
@@ -46,7 +46,7 @@ async function handleLimit(guild, executor, type, limitField, title) {
 
   const embed = new EmbedBuilder()
     .setTitle(`{emoji:shield} ${title}`)
-    .setColor(0xFF0000)
+    .setColor(0xff0000)
     .addFields(
       { name: '{emoji:user} الفاعل', value: `<@${executor.id}>`, inline: true },
       { name: '{emoji:alerttriangle} النوع', value: type, inline: true },

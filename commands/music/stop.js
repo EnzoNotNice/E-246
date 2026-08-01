@@ -1,45 +1,40 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const logger = require('../../utils/logger');
 
 module.exports = {
-  data: new SlashCommandBuilder()
-	.setName("stop")
-	.setDescription('إيقاف الموسيقى')
-	,
+  data: new SlashCommandBuilder().setName('stop').setDescription('إيقاف الموسيقى'),
   async execute(interaction) {
-    try {  
+    try {
       const client = interaction.client;
-  		const channel = interaction.member.voice.channel;
-  		if (!channel) return interaction.reply({ content: "{emoji:circlex} يجب أن تكون في غرفة صوتية", ephemeral: true });
-  
-  		const player = client.manager?.getPlayer(interaction.guild.id);
-  		if (!player) {
-  			return interaction.reply({
-  				embeds: [new EmbedBuilder().setColor(0xff0000).setDescription("I'm not in a channel.")],
-  				ephemeral: true,
-  			});
-  		}
-  
-  		if (player.get("twentyFourSeven")) {
-  			await player.queue.splice(0, player.queue.tracks.length);
-  			await player.stopPlaying(true, false);
-  			player.set("autoQueue", false);
-  		} else {
-  			player.destroy();
-  		}
-  
-  		return interaction.reply({
-  			embeds: [
-  				new EmbedBuilder()
-  					.setColor(0x5865F2)
-  					.setDescription(":wave: | **Bye Bye!**"),
-  			],
-  		});
-  	  
+      const channel = interaction.member.voice.channel;
+      if (!channel) return interaction.reply({ content: '{emoji:circlex} يجب أن تكون في غرفة صوتية', ephemeral: true });
+
+      const player = client.manager?.getPlayer(interaction.guild.id);
+      if (!player) {
+        return interaction.reply({
+          embeds: [new EmbedBuilder().setColor(0xff0000).setDescription("I'm not in a channel.")],
+          ephemeral: true
+        });
+      }
+
+      if (player.get('twentyFourSeven')) {
+        await player.queue.splice(0, player.queue.tracks.length);
+        await player.stopPlaying(true, false);
+        player.set('autoQueue', false);
+      } else {
+        player.destroy();
+      }
+
+      return interaction.reply({
+        embeds: [new EmbedBuilder().setColor(0x5865f2).setDescription(':wave: | **Bye Bye!**')]
+      });
     } catch (err) {
-      console.error('[Command Error - stop.js]:', err);
+      logger.error('[Command Error - stop.js]:', err);
       if (interaction && typeof interaction.reply === 'function') {
-        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+        await interaction
+          .reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] })
+          .catch(() => null);
       }
     }
-}
+  }
 };

@@ -1,33 +1,34 @@
 const { Events, EmbedBuilder, AuditLogEvent } = require('discord.js');
-const { sendLog } = require('../utils/logger');
+const { sendLog, logger } = require('../utils/logger');
 const { handleLimit } = require('../utils/protectionAction');
 
 module.exports = {
-    name: Events.ChannelDelete,
-    async execute(channel) {
-        try {
-            if (!channel?.guild) return;
+  name: Events.ChannelDelete,
+  async execute(channel) {
+    try {
+      if (!channel?.guild) return;
 
-            const embed = new EmbedBuilder()
-                .setTitle('{emoji:circlex} تم حذف روم')
-                .addFields(
-                    { name: 'اسم الروم', value: channel.name, inline: true }
-                )
-                .setColor(0xFF0000)
-                .setTimestamp()
-                .setFooter({ text: `ID: ${channel.id}` });
+      const embed = new EmbedBuilder()
+        .setTitle('{emoji:circlex} تم حذف روم')
+        .addFields({ name: 'اسم الروم', value: channel.name, inline: true })
+        .setColor(0xff0000)
+        .setTimestamp()
+        .setFooter({ text: `ID: ${channel.id}` });
 
-            await sendLog(channel.client, channel.guild.id, embed, 'channel_delete');
+      await sendLog(channel.client, channel.guild.id, embed, 'channel_delete');
 
-            try {
-                const logs = await channel.guild.fetchAuditLogs({ type: AuditLogEvent.ChannelDelete, limit: 1 });
-                const entry = logs.entries.first();
-                if (entry && entry.target?.id === channel.id && Date.now() - entry.createdTimestamp < 15000) {
-                    await handleLimit(channel.guild, entry.executor, 'channel', 'channel_limit', 'تجاوز حد القنوات');
-                }
-            } catch (_) {}
-        } catch (err) {
-            console.error('Error in channelDelete event:', err);
+      try {
+        const logs = await channel.guild.fetchAuditLogs({ type: AuditLogEvent.ChannelDelete, limit: 1 });
+        const entry = logs.entries.first();
+        if (entry && entry.target?.id === channel.id && Date.now() - entry.createdTimestamp < 15000) {
+          await handleLimit(channel.guild, entry.executor, 'channel', 'channel_limit', 'تجاوز حد القنوات');
         }
-    },
+      } catch (error) {
+        // Ignore errors in audit log fetching - not critical
+        logger.debug('Could not fetch audit log for channel delete:', error.message);
+      }
+    } catch (err) {
+      logger.error('Error in channelDelete event:', err);
+    }
+  }
 };

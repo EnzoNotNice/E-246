@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const db = require('../database/db');
-
+const logger = require('./logger');
 
 function parseDuration(str) {
   if (!str) return null;
@@ -42,32 +42,46 @@ async function endGiveawayTimer(client, giveaway) {
     const reaction = message.reactions.cache.get(giveaway.emoji) || message.reactions.cache.first();
     if (!reaction) {
       db.endGiveaway(giveaway.messageId);
-      return channel.send({ embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`{emoji:confetti} الجيف أواي على **${giveaway.prize}** انتهى بدون مشاركين`)] });
+      return channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xed4245)
+            .setDescription(`{emoji:confetti} الجيف أواي على **${giveaway.prize}** انتهى بدون مشاركين`)
+        ]
+      });
     }
 
     const users = await reaction.users.fetch();
-    const eligible = users.filter(u => !u.bot);
+    const eligible = users.filter((u) => !u.bot);
 
     if (!eligible.size) {
       db.endGiveaway(giveaway.messageId);
-      return channel.send({ embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`{emoji:confetti} الجيف أواي على **${giveaway.prize}** انتهى بدون مشاركين مؤهلين`)] });
+      return channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xed4245)
+            .setDescription(`{emoji:confetti} الجيف أواي على **${giveaway.prize}** انتهى بدون مشاركين مؤهلين`)
+        ]
+      });
     }
 
     const winnersCount = Math.min(giveaway.winners, eligible.size);
     const winners = eligible.random(winnersCount);
-    const winnerMentions = (Array.isArray(winners) ? winners : [winners]).map(w => `<@${w.id}>`).join(', ');
+    const winnerMentions = (Array.isArray(winners) ? winners : [winners]).map((w) => `<@${w.id}>`).join(', ');
 
     const endEmbed = new EmbedBuilder()
-      .setColor(0xFFD700)
+      .setColor(0xffd700)
       .setTitle('{emoji:confetti} انتهى الجيف أواي')
       .setDescription(`**الجائزة** ${giveaway.prize}\n**الفائز** ${winnerMentions}`)
       .setTimestamp();
 
     await message.edit({ embeds: [endEmbed], components: [] }).catch(() => null);
-    await channel.send({ content: `{emoji:confetti} مبروك ${winnerMentions} ربحت **${giveaway.prize}**`, embeds: [endEmbed] }).catch(() => null);
+    await channel
+      .send({ content: `{emoji:confetti} مبروك ${winnerMentions} ربحت **${giveaway.prize}**`, embeds: [endEmbed] })
+      .catch(() => null);
     db.endGiveaway(giveaway.messageId);
   } catch (e) {
-    console.error('Giveaway end error:', e);
+    logger.error('Giveaway end error:', e);
     db.endGiveaway(giveaway.messageId);
   }
 }

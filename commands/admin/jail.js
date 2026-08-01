@@ -1,38 +1,49 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } = require('discord.js');
 const { success, error } = require('../../utils/embeds');
 const db = require('../../database/db');
+const logger = require('../../utils/logger');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('jail')
     .setDescription('نظام السجن والاستدعاء')
-    .addSubcommand(sub =>
+    .addSubcommand((sub) =>
       sub
         .setName('setup')
         .setDescription('إعداد نظام السجن')
-        .addRoleOption(o => o.setName('role').setDescription('رتبة السجن').setRequired(true))
-        .addChannelOption(o => o.setName('channel').setDescription('روم السجن').addChannelTypes(ChannelType.GuildText).setRequired(true))
-        .addChannelOption(o => o.setName('staff_voice').setDescription('روم الاستدعاء الصوتي').addChannelTypes(ChannelType.GuildVoice).setRequired(false))
-        .addRoleOption(o => o.setName('staff_role').setDescription('رتبة المسؤولين الذين يمكنهم استخدام أوامر السجن').setRequired(false))
+        .addRoleOption((o) => o.setName('role').setDescription('رتبة السجن').setRequired(true))
+        .addChannelOption((o) =>
+          o.setName('channel').setDescription('روم السجن').addChannelTypes(ChannelType.GuildText).setRequired(true)
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('staff_voice')
+            .setDescription('روم الاستدعاء الصوتي')
+            .addChannelTypes(ChannelType.GuildVoice)
+            .setRequired(false)
+        )
+        .addRoleOption((o) =>
+          o.setName('staff_role').setDescription('رتبة المسؤولين الذين يمكنهم استخدام أوامر السجن').setRequired(false)
+        )
     )
-    .addSubcommand(sub =>
+    .addSubcommand((sub) =>
       sub
         .setName('add')
         .setDescription('سجن عضو')
-        .addUserOption(o => o.setName('user').setDescription('العضو للسجن').setRequired(true))
-        .addStringOption(o => o.setName('reason').setDescription('السبب').setRequired(false))
+        .addUserOption((o) => o.setName('user').setDescription('العضو للسجن').setRequired(true))
+        .addStringOption((o) => o.setName('reason').setDescription('السبب').setRequired(false))
     )
-    .addSubcommand(sub =>
+    .addSubcommand((sub) =>
       sub
         .setName('remove')
         .setDescription('فك سجن عضو')
-        .addUserOption(o => o.setName('user').setDescription('عضو فك السجن').setRequired(true))
+        .addUserOption((o) => o.setName('user').setDescription('عضو فك السجن').setRequired(true))
     )
-    .addSubcommand(sub =>
+    .addSubcommand((sub) =>
       sub
         .setName('summon')
         .setDescription('استدعاء مسجون')
-        .addUserOption(o => o.setName('user').setDescription('العضو للاستدعاء').setRequired(true))
+        .addUserOption((o) => o.setName('user').setDescription('العضو للاستدعاء').setRequired(true))
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
@@ -46,20 +57,36 @@ module.exports = {
       const staffVoice = interaction.options.getChannel('staff_voice');
       const staffRole = interaction.options.getRole('staff_role');
 
-      db.setJailSettings(guild.id, role.id, channel.id, staffVoice ? staffVoice.id : null, staffRole ? staffRole.id : null);
+      db.setJailSettings(
+        guild.id,
+        role.id,
+        channel.id,
+        staffVoice ? staffVoice.id : null,
+        staffRole ? staffRole.id : null
+      );
 
       return interaction.reply({
-        embeds: [success(`تم إعداد نظام السجن بنجاح\n\n**رتبة السجن** <@&${role.id}>\n**روم السجن** <#${channel.id}>\n**روم الاستدعاء** ${staffVoice ? `<#${staffVoice.id}>` : 'غير محدد'}\n**رتبة المسؤولين** ${staffRole ? `<@&${staffRole.id}>` : 'يعتمد على الصلاحيات'}`)]
+        embeds: [
+          success(
+            `تم إعداد نظام السجن بنجاح\n\n**رتبة السجن** <@&${role.id}>\n**روم السجن** <#${channel.id}>\n**روم الاستدعاء** ${staffVoice ? `<#${staffVoice.id}>` : 'غير محدد'}\n**رتبة المسؤولين** ${staffRole ? `<@&${staffRole.id}>` : 'يعتمد على الصلاحيات'}`
+          )
+        ]
       });
     }
 
     const settings = db.getJailSettings(guild.id);
     if (!settings || !settings.jailRoleId || !settings.jailChannelId) {
-      return interaction.reply({ embeds: [error('يرجى إعداد نظام السجن أولاً باستخدام `/jail setup`')], flags: ['Ephemeral'] });
+      return interaction.reply({
+        embeds: [error('يرجى إعداد نظام السجن أولاً باستخدام `/jail setup`')],
+        flags: ['Ephemeral']
+      });
     }
 
-    // Check if user has staff role or is admin
-    if (settings.staffRoleId && !interaction.member.roles.cache.has(settings.staffRoleId) && !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+    if (
+      settings.staffRoleId &&
+      !interaction.member.roles.cache.has(settings.staffRoleId) &&
+      !interaction.member.permissions.has(PermissionFlagsBits.Administrator)
+    ) {
       return interaction.reply({ embeds: [error('ليس لديك الصلاحية لاستخدام هذا الأمر')], flags: ['Ephemeral'] });
     }
 
@@ -75,8 +102,14 @@ module.exports = {
         return interaction.reply({ embeds: [error('لا يمكنك سجن نفسك')], flags: ['Ephemeral'] });
       }
 
-      if (targetMember.roles.highest.position >= interaction.member.roles.highest.position && interaction.user.id !== guild.ownerId) {
-        return interaction.reply({ embeds: [error('لا تملك الصلاحية لسجن هذا العضو بسبب رتبته')], flags: ['Ephemeral'] });
+      if (
+        targetMember.roles.highest.position >= interaction.member.roles.highest.position &&
+        interaction.user.id !== guild.ownerId
+      ) {
+        return interaction.reply({
+          embeds: [error('لا تملك الصلاحية لسجن هذا العضو بسبب رتبته')],
+          flags: ['Ephemeral']
+        });
       }
 
       const isJailed = db.getJailedUser(targetMember.id, guild.id);
@@ -85,29 +118,43 @@ module.exports = {
       }
 
       const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
-      const originalRoles = targetMember.roles.cache.filter(r => r.id !== guild.id).map(r => r.id);
+      const originalRoles = targetMember.roles.cache.filter((r) => r.id !== guild.id).map((r) => r.id);
 
       db.addJailedUser(targetMember.id, guild.id, JSON.stringify(originalRoles));
 
       try {
         await targetMember.roles.set([settings.jailRoleId], reason);
+        db.addModAction(
+          guild.id,
+          targetMember.id,
+          targetUser.tag,
+          interaction.user.id,
+          interaction.user.tag,
+          'jail',
+          reason
+        );
       } catch (err) {
         db.removeJailedUser(targetMember.id, guild.id);
-        return interaction.reply({ embeds: [error('فشل في إزالة رتب العضو أو إعطائه رتبة السجن تأكد من صلاحيات البوت ترتيب رتبته')], flags: ['Ephemeral'] });
+        return interaction.reply({
+          embeds: [error('فشل في إزالة رتب العضو أو إعطائه رتبة السجن تأكد من صلاحيات البوت ترتيب رتبته')],
+          flags: ['Ephemeral']
+        });
       }
 
       const jailChannel = guild.channels.cache.get(settings.jailChannelId);
       if (jailChannel) {
-        jailChannel.send({
-          content: `<@${targetMember.id}>`,
-          embeds: [
-            new EmbedBuilder()
-              .setColor('#ED4245')
-              .setTitle('{emoji:lock} تم دخولك السجن')
-              .setDescription(`لقد تم سجنك بواسطة <@${interaction.user.id}>\n**السبب** ${reason}`)
-              .setTimestamp()
-          ]
-        }).catch(() => null);
+        jailChannel
+          .send({
+            content: `<@${targetMember.id}>`,
+            embeds: [
+              new EmbedBuilder()
+                .setColor('#ED4245')
+                .setTitle('{emoji:lock} تم دخولك السجن')
+                .setDescription(`لقد تم سجنك بواسطة <@${interaction.user.id}>\n**السبب** ${reason}`)
+                .setTimestamp()
+            ]
+          })
+          .catch(() => null);
       }
 
       return interaction.reply({ embeds: [success(`تم سجن العضو <@${targetMember.id}> بنجاح`)] });
@@ -124,7 +171,7 @@ module.exports = {
         try {
           rolesToRestore = JSON.parse(jailedData.oldRoles);
         } catch (e) {
-          console.error('[jail] Failed to parse oldRoles:', e.message);
+          logger.error('[jail] Failed to parse oldRoles:', e.message);
         }
       }
 
@@ -135,6 +182,15 @@ module.exports = {
       }
 
       db.removeJailedUser(targetMember.id, guild.id);
+      db.addModAction(
+        guild.id,
+        targetMember.id,
+        targetUser.tag,
+        interaction.user.id,
+        interaction.user.tag,
+        'unjail',
+        'تم فك السجن'
+      );
       return interaction.reply({ embeds: [success(`تم فك سجن العضو <@${targetMember.id}> بنجاح وإعادة رتبه`)] });
     }
 
@@ -146,16 +202,18 @@ module.exports = {
 
       const jailChannel = guild.channels.cache.get(settings.jailChannelId);
       if (jailChannel) {
-        jailChannel.send({
-          content: `<@${targetMember.id}>`,
-          embeds: [
-            new EmbedBuilder()
-              .setColor('#57F287')
-              .setTitle('{emoji:bellringing} استدعاء من الإدارة')
-              .setDescription(`تم استدعاؤك بواسطة الإداري <@${interaction.user.id}>\nيرجى التجاوب فوراً`)
-              .setTimestamp()
-          ]
-        }).catch(() => null);
+        jailChannel
+          .send({
+            content: `<@${targetMember.id}>`,
+            embeds: [
+              new EmbedBuilder()
+                .setColor('#57F287')
+                .setTitle('{emoji:bellringing} استدعاء من الإدارة')
+                .setDescription(`تم استدعاؤك بواسطة الإداري <@${interaction.user.id}>\nيرجى التجاوب فوراً`)
+                .setTimestamp()
+            ]
+          })
+          .catch(() => null);
       }
 
       if (targetMember.voice.channel) {

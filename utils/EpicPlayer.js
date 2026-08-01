@@ -1,5 +1,3 @@
-const { Message } = require("discord.js");
-
 function applyEpicPlayer(player) {
   player.twentyFourSeven = false;
 

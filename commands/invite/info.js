@@ -1,29 +1,32 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const db = require('../../database/db');
+const logger = require('../../utils/logger');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('info')
     .setDescription('عرض معلومات الدعوات')
-    .addUserOption(o => o.setName('user').setDescription('عضو معلومات الدعوات').setRequired(true)),
+    .addUserOption((o) => o.setName('user').setDescription('عضو معلومات الدعوات').setRequired(true)),
 
   async execute(interaction) {
-    try {  
+    try {
       const user = interaction.options.getUser('user');
       const member = await interaction.guild.members.fetch(user.id).catch(() => null);
       const inviteData = db.getInvites(user.id, interaction.guildId);
-  
+
       const real = inviteData.total - inviteData.fake - inviteData.left;
       const joinedAt = member ? `<t:${Math.floor(member.joinedTimestamp / 1000)}:F>` : 'غادر السيرفر';
       const createdAt = `<t:${Math.floor(user.createdTimestamp / 1000)}:F>`;
       const accountAge = Math.floor((Date.now() - user.createdTimestamp) / 86400000);
-  
+
       const ranks = db.getInviteRanks(interaction.guildId);
-      const nextRank = ranks.find(r => r.count > real);
-      const nextRankStr = nextRank ? `**${nextRank.count - real}** دعوة إضافية للحصول على <@&${nextRank.roleId}>` : 'أعلى رتبة';
-  
+      const nextRank = ranks.find((r) => r.count > real);
+      const nextRankStr = nextRank
+        ? `**${nextRank.count - real}** دعوة إضافية للحصول على <@&${nextRank.roleId}>`
+        : 'أعلى رتبة';
+
       const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
+        .setColor(0x5865f2)
         .setTitle(`{emoji:list} معلومات الدعوات - ${user.tag}`)
         .setThumbnail(user.displayAvatarURL())
         .addFields(
@@ -38,14 +41,15 @@ module.exports = {
           { name: '{emoji:trophy} الرتبة التالية', value: nextRankStr }
         )
         .setTimestamp();
-  
+
       return interaction.reply({ embeds: [embed] });
-    
     } catch (err) {
-      console.error('[Command Error - info.js]:', err);
+      logger.error('[Command Error - info.js]:', err);
       if (interaction && typeof interaction.reply === 'function') {
-        await interaction.reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] }).catch(() => null);
+        await interaction
+          .reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] })
+          .catch(() => null);
       }
     }
-}
+  }
 };
