@@ -174,7 +174,8 @@ async function loadMongoCache() {
     'ticket_categories',
     'command_restrictions',
     'mod_actions',
-    'form_submissions'
+    'form_submissions',
+    'theme_color'
   ];
 
   for (const col of mapCollections) {
