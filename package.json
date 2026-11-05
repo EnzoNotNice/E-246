@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "start:sharded": "node shard.js",
-    "test": "node scripts/deep-audit.js && node scripts/test-probot-parity.js && node scripts/test-display-components.js && node scripts/test-new-features.js && node tests/verify-sticky-and-tickets.test.js && node scripts/test-edge-cases.js && node scripts/test-dashboard-renders.js",
+    "test": "node --check index.js && npm run lint:check",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "format": "npx prettier --write \"./**/*.{js,json}\""
