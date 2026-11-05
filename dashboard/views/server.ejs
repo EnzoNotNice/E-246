@@ -81,6 +81,7 @@ messageStats = typeof messageStats !== 'undefined' && Array.isArray(messageStats
                 <div class="form-group">
                     <label for="reply_type">نوع ردود البوت</label>
                     <select id="reply_type" name="reply_type" class="glass-input">
+                        <option value="components_v2" <%= (!settings || !settings.reply_type || settings.reply_type === 'components_v2') ? 'selected' : '' %>>✨ مكوّنات العرض الحديثة (Display Components V2)</option>
                         <option value="embed" <%= (settings && settings.reply_type === 'embed') ? 'selected' : '' %>>بطاقة مدمجة (Embed Message)</option>
                         <option value="normal" <%= (settings && settings.reply_type === 'normal') ? 'selected' : '' %>>رسالة نصية عادية (Normal Message)</option>
                     </select>

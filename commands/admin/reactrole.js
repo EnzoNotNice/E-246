@@ -38,11 +38,16 @@ module.exports = {
         flags: ['Ephemeral']
       });
     } catch (error) {
-      logger.error(error);
-      await interaction.reply({
+      logger.error('[reactrole Error]:', error);
+      const replyPayload = {
         content: '❌ حدث خطأ، تأكد من أن البوت لديه صلاحيات إضافة ريأكشن وأنه يمكنه إعطاء هذه الرتبة.',
-        flags: 64
-      });
+        flags: ['Ephemeral']
+      };
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp(replyPayload).catch(() => null);
+      } else {
+        await interaction.reply(replyPayload).catch(() => null);
+      }
     }
   }
 };

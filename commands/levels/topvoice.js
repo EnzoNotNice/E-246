@@ -36,7 +36,12 @@ module.exports = {
       await interaction.reply({ embeds: [embed] }).catch(() => null);
     } catch (err) {
       logger.error('[topvoice Error]:', err);
-      await interaction.reply({ content: '❌ حدث خطأ أثناء إحضار البيانات.', flags: ['Ephemeral'] }).catch(() => null);
+      const replyPayload = { content: '❌ حدث خطأ أثناء إحضار البيانات.', flags: ['Ephemeral'] };
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp(replyPayload).catch(() => null);
+      } else {
+        await interaction.reply(replyPayload).catch(() => null);
+      }
     }
   }
 };

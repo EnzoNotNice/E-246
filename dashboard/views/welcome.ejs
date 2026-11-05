@@ -8,58 +8,88 @@ textChannels = textChannels && (Array.isArray(textChannels) || typeof textChanne
 
 <main class="app-content">
     <div class="content-header">
-        <h1><i class="fa-solid fa-handshake"></i> الترحيب والمغادرة</h1>
-        <p>قم بالترحيب بالأعضاء الجدد تلقائياً برسائل نصية أو بطاقات ترحيبية بصور مخصصة</p>
+        <h1><i class="fa-solid fa-handshake"></i> نظام الترحيب والمغادرة</h1>
+        <p>الترحيب التلقائي بالأعضاء الجدد برسائل نصية ذكية، ورسائل الخاص، وبطاقات الترحيب التفاعلية مثل بروبوت</p>
     </div>
 
     <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
         <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
     <% } %>
 
-    <form action="/dashboard/<%= guild.id %>/welcome" method="POST" class="settings-form">
+    <form action="/dashboard/<%= guild.id %>/welcome" method="POST" class="settings-form" data-ajax="true">
 
-        <!-- Core Welcome Settings -->
+        <!-- Core Welcome Settings (ProBot Switch) -->
         <div class="glass-panel reveal">
-            <div class="section-title"><i class="fa-solid fa-sliders"></i> الإعدادات الأساسية</div>
+            <div class="panel-header-with-switch">
+                <div>
+                    <div class="section-title mb-1"><i class="fa-solid fa-sliders"></i> تفعيل نظام الترحيب</div>
+                    <span class="text-muted font-sm">تشغيل أو إيقاف رسائل وبطاقات الترحيب في السيرفر</span>
+                </div>
+                <label class="pro-switch">
+                    <input type="checkbox" id="enabled_switch" <%= settings.enabled === 1 ? 'checked' : '' %> onchange="document.getElementById('enabled').value = this.checked ? '1' : '0'">
+                    <span class="pro-switch-slider"></span>
+                    <span class="pro-switch-label">مفعّل</span>
+                </label>
+                <input type="hidden" id="enabled" name="enabled" value="<%= settings.enabled === 1 ? '1' : '0' %>">
+            </div>
             
             <div class="grid-form-2">
                 <div class="form-group">
-                    <label for="enabled">تفعيل نظام الترحيب</label>
-                    <select id="enabled" name="enabled" class="glass-input">
-                        <option value="1" <%= settings.enabled === 1 ? 'selected' : '' %>>🟢 مفعّل</option>
-                        <option value="0" <%= settings.enabled === 0 ? 'selected' : '' %>>🔴 معطّل</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="channel">قناة الترحيب والتهنئة</label>
+                    <label for="channel"><i class="fa-solid fa-hashtag"></i> قناة الترحيب العامة</label>
                     <select id="channel" name="channel" class="glass-input">
-                        <option value="" <%= !settings.channel ? 'selected' : '' %>>تعطيل / بدون إرسال</option>
+                        <option value="" <%= !settings.channel ? 'selected' : '' %>>تعطيل / بدون إرسال في الروم</option>
                         <% textChannels.forEach(c => { %>
                             <option value="<%= c.id %>" <%= settings.channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
                         <% }) %>
                     </select>
                 </div>
+
+                <div class="form-group">
+                    <label for="delete_after"><i class="fa-solid fa-stopwatch"></i> الحذف التلقائي للرسالة (بالثواني)</label>
+                    <input type="number" id="delete_after" name="delete_after" class="glass-input" value="<%= settings.delete_after || 0 %>" min="0" max="300" placeholder="0 = لا يتم الحذف">
+                    <small class="text-muted">أدخل 0 للإبقاء على الرسالة، أو عدد الثواني (مثال: 30) لحذفها تلقائياً</small>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="message">رسالة الترحيب النصية</label>
-                <textarea id="message" name="message" class="glass-input" rows="3" placeholder="اكتب رسالة الترحيب هنا..."><%= settings.message %></textarea>
-                <small>المتغيرات المدعومة: <code>{user}</code> لذكر العضو، <code>{server}</code> لاسم السيرفر، <code>{membercount}</code> لعدد الأعضاء</small>
+            <!-- Welcome Message with ProBot Variable Insertion -->
+            <div class="form-group mt-3">
+                <label for="message"><i class="fa-solid fa-message"></i> رسالة الترحيب في الروم العام</label>
+                <textarea id="message" name="message" class="glass-input" rows="3" placeholder="مرحباً بك {user} في سيرفر {server}! أنت العضو رقم {memberCount}"><%= settings.message %></textarea>
+                
+                <div class="var-pills-container">
+                    <span class="var-pill" data-var="{user}" data-target="message"><i class="fa-solid fa-at"></i> {user}</span>
+                    <span class="var-pill" data-var="{username}" data-target="message"><i class="fa-solid fa-user"></i> {username}</span>
+                    <span class="var-pill" data-var="{server}" data-target="message"><i class="fa-solid fa-server"></i> {server}</span>
+                    <span class="var-pill" data-var="{memberCount}" data-target="message"><i class="fa-solid fa-users"></i> {memberCount}</span>
+                    <span class="var-pill" data-var="{inviter}" data-target="message"><i class="fa-solid fa-user-plus"></i> {inviter}</span>
+                </div>
+            </div>
+
+            <!-- DM Welcome Message (ProBot Feature) -->
+            <div class="form-group mt-4">
+                <label for="dm_message"><i class="fa-solid fa-envelope"></i> رسالة الترحيب في الخاص (DM)</label>
+                <textarea id="dm_message" name="dm_message" class="glass-input" rows="2" placeholder="أهلاً بك {user} في سيرفرنا، نرجو الاطلاع على القوانين..."><%= settings.dm_message || '' %></textarea>
+                <small class="text-muted">اتركه فارغاً لتعطيل إرسال رسالة الترحيب في الخاص للعضو الجديد</small>
+                
+                <div class="var-pills-container">
+                    <span class="var-pill" data-var="{user}" data-target="dm_message"><i class="fa-solid fa-at"></i> {user}</span>
+                    <span class="var-pill" data-var="{server}" data-target="dm_message"><i class="fa-solid fa-server"></i> {server}</span>
+                </div>
             </div>
         </div>
 
         <!-- Welcome Image Settings -->
         <div class="glass-panel reveal" style="animation-delay: 0.1s;">
-            <div class="section-title"><i class="fa-solid fa-image"></i> بطاقة وصورة الترحيب المخصصة</div>
+            <div class="section-title"><i class="fa-solid fa-image"></i> بطاقة وصورة الترحيب المخصصة (Canvas Card)</div>
 
             <div class="form-group">
                 <label for="image_url">رابط صورة الخلفية (Background Image URL)</label>
                 <div class="d-flex gap-2">
                     <input type="text" id="image_url" name="image_url" class="glass-input flex-grow-1" value="<%= settings.image_url || '' %>" placeholder="https://example.com/background.png">
                     <input type="file" id="bg_upload" accept="image/*" style="display: none;">
-                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('bg_upload').click()"><i class="fa-solid fa-upload"></i> رفع ملف</button>
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('bg_upload').click()"><i class="fa-solid fa-upload"></i> رفع خلفية</button>
                 </div>
-                <small id="upload_status" class="text-muted mt-1">اتركه فارغاً في حال أردت استخدام الترحيب النصي فقط بدون صورة بطاقة</small>
+                <small id="upload_status" class="text-muted mt-1">اتركه فارغاً في حال أردت استخدام بطاقة بروبوت الافتراضية الأنيقة تلقائياً</small>
             </div>
 
             <div class="grid-form-3">
@@ -77,7 +107,7 @@ textChannels = textChannels && (Array.isArray(textChannels) || typeof textChanne
                 </div>
             </div>
 
-            <div class="grid-form-2">
+            <div class="grid-form-3">
                 <div class="form-group">
                     <label for="username_x">موقع اسم المستخدم X</label>
                     <input type="number" id="username_x" name="username_x" class="glass-input" value="<%= settings.username_x || 100 %>">
@@ -86,24 +116,32 @@ textChannels = textChannels && (Array.isArray(textChannels) || typeof textChanne
                     <label for="username_y">موقع اسم المستخدم Y</label>
                     <input type="number" id="username_y" name="username_y" class="glass-input" value="<%= settings.username_y || 300 %>">
                 </div>
+                <div class="form-group">
+                    <label for="username_size">حجم خط الاسم</label>
+                    <input type="number" id="username_size" name="username_size" class="glass-input" value="<%= settings.username_size || 40 %>">
+                </div>
             </div>
 
             <div class="grid-form-2">
                 <div class="form-group">
                     <label for="username_color">لون خط الاسم</label>
-                    <input type="color" id="username_color" name="username_color" class="glass-input" value="<%= settings.username_color || '#ffffff' %>" style="height: 40px; padding: 4px; cursor: pointer;">
+                    <input type="color" id="username_color" name="username_color" class="glass-input" value="<%= settings.username_color || '#ffffff' %>" style="height: 42px; padding: 4px; cursor: pointer;">
                 </div>
                 <div class="form-group">
-                    <label for="username_size">حجم خط الاسم</label>
-                    <input type="number" id="username_size" name="username_size" class="glass-input" value="<%= settings.username_size || 40 %>">
+                    <label for="scale_mode">وضع ملء الخلفية</label>
+                    <select id="scale_mode" name="scale_mode" class="glass-input">
+                        <option value="fit" <%= settings.scale_mode === 'fit' ? 'selected' : '' %>>Fit (الحفاظ على النسبة)</option>
+                        <option value="cover" <%= settings.scale_mode === 'cover' ? 'selected' : '' %>>Cover (ملء اللوحة)</option>
+                        <option value="stretch" <%= settings.scale_mode === 'stretch' ? 'selected' : '' %>>Stretch (تمديد)</option>
+                    </select>
                 </div>
             </div>
         </div>
 
         <!-- Live Preview -->
         <div class="glass-panel reveal" style="animation-delay: 0.2s;">
-            <div class="section-title"><i class="fa-solid fa-eye"></i> معاينة مباشرة وتعديل تفاعلي</div>
-            <p class="text-muted mb-2">يمكنك تحريك صورة الأفتار والاسم يدوياً بالسحب بالفأرة مباشرة داخل اللوحة أدناه</p>
+            <div class="section-title"><i class="fa-solid fa-eye"></i> المعاينة المباشرة (WYSIWYG Live Canvas)</div>
+            <p class="text-muted mb-2">يمكنك تحريك صورة الأفتار والاسم يدوياً بالسحب بالفأرة مباشرة داخل لوحة المعاينة</p>
 
             <style>
                 @font-face {
@@ -114,30 +152,57 @@ textChannels = textChannels && (Array.isArray(textChannels) || typeof textChanne
                     overflow: auto;
                     width: 100%;
                     max-height: 600px;
-                    border: 1px solid var(--border);
-                    border-radius: var(--r-md);
+                    border: 1px solid var(--border, #1f222e);
+                    border-radius: var(--r-md, 12px);
                     background: #020202;
                     padding: 16px;
+                    display: flex;
+                    justify-content: center;
                 }
                 .preview-container {
                     width: 800px;
                     max-width: none !important;
                     height: 400px;
+                    position: relative;
+                    background: radial-gradient(circle at 50% 50%, #1a1d26 0%, #0d0f14 100%);
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                }
+                .preview-avatar {
+                    position: absolute;
+                    cursor: grab;
+                    user-select: none;
+                    transition: transform 0.05s ease;
+                }
+                .preview-avatar:active {
+                    cursor: grabbing;
+                    transform: scale(1.02);
+                }
+                .preview-username {
+                    position: absolute;
+                    cursor: grab;
+                    user-select: none;
+                    white-space: nowrap;
+                }
+                .preview-username:active {
+                    cursor: grabbing;
                 }
             </style>
             
             <div class="canvas-workspace">
-                <div id="preview-container" class="preview-container greet-canvas-container" style="border: 1px solid var(--border); border-radius: var(--r-md); background: #080808;">
-                    <div id="preview-avatar" class="preview-avatar" style="border: none; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.5); background-image: url('https://cdn.discordapp.com/embed/avatars/0.png'); background-size: cover; background-position: center;">
+                <div id="preview-container" class="preview-container greet-canvas-container">
+                    <div id="preview-avatar" class="preview-avatar" style="border: 3px solid rgba(255,255,255,0.8); border-radius: 50%; box-shadow: 0 4px 14px rgba(0,0,0,0.6); background-image: url('https://cdn.discordapp.com/embed/avatars/0.png'); background-size: cover; background-position: center;">
                     </div>
-                    <div id="preview-username" class="preview-username" style="font-family: 'CustomFont', sans-serif; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);">
-                        Username
+                    <div id="preview-username" class="preview-username" style="font-family: 'CustomFont', sans-serif; text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.9);">
+                        <%= (typeof user !== 'undefined' && user && user.username) ? user.username : 'Username#0000' %>
                     </div>
                 </div>
             </div>
  
-            <div class="form-group mt-3">
-                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ كافة التغييرات</button>
+            <div class="form-group mt-4 d-flex justify-content-between align-items-center">
+                <span class="text-muted font-sm"><i class="fa-solid fa-bolt"></i> يتم الحفظ فوراً دون إعادة تحميل الصفحة</span>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ كافة الإعدادات</button>
             </div>
         </div>
  
@@ -179,7 +244,7 @@ textChannels = textChannels && (Array.isArray(textChannels) || typeof textChanne
                 };
                 img.src = url;
             } else {
-                container.style.backgroundImage = 'none';
+                container.style.backgroundImage = 'radial-gradient(circle at 50% 50%, #1a1d26 0%, #0d0f14 100%)';
                 container.style.width = '800px';
                 container.style.height = '400px';
                 bgNativeWidth = 800;
@@ -188,120 +253,116 @@ textChannels = textChannels && (Array.isArray(textChannels) || typeof textChanne
             }
         }
  
-        function getScale() {
-            return 1;
-        }
- 
         function updatePositions() {
-            const scale = getScale();
- 
             const ax = parseInt(axInput.value) || 0;
             const ay = parseInt(ayInput.value) || 0;
             const asize = parseInt(asizeInput.value) || 150;
  
-            avatarEl.style.left = (ax * scale) + 'px';
-            avatarEl.style.top = (ay * scale) + 'px';
-            avatarEl.style.width = (asize * scale) + 'px';
-            avatarEl.style.height = (asize * scale) + 'px';
- 
-            const icon = avatarEl.querySelector('i');
-            if (icon) icon.style.fontSize = Math.max(10, (asize * scale * 0.4)) + 'px';
+            avatarEl.style.left = ax + 'px';
+            avatarEl.style.top = ay + 'px';
+            avatarEl.style.width = asize + 'px';
+            avatarEl.style.height = asize + 'px';
  
             const ux = parseInt(uxInput.value) || 0;
             const uy = parseInt(uyInput.value) || 0;
             const usize = parseInt(usizeInput.value) || 40;
+            const ucolor = ucolorInput.value || '#ffffff';
  
-            usernameEl.style.left = (ux * scale) + 'px';
-            usernameEl.style.top = (uy * scale - (usize * scale)) + 'px';
-            usernameEl.style.color = ucolorInput.value || '#ffffff';
-            usernameEl.style.fontSize = (usize * scale) + 'px';
+            usernameEl.style.left = ux + 'px';
+            usernameEl.style.top = uy + 'px';
+            usernameEl.style.fontSize = usize + 'px';
+            usernameEl.style.color = ucolor;
         }
-
-        function makeDraggable(el, xInput, yInput, isUsername = false) {
-            let isDragging = false;
-            let startX, startY, initialX, initialY;
-
-            el.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                initialX = parseInt(xInput.value) || 0;
-                initialY = parseInt(yInput.value) || 0;
-                e.preventDefault();
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                const scale = getScale();
-
-                const dx = (e.clientX - startX) / scale;
-                const dy = (e.clientY - startY) / scale;
-
-                xInput.value = Math.round(initialX + dx);
-                yInput.value = Math.round(initialY + dy);
-
-                updatePositions();
-            });
-
-            document.addEventListener('mouseup', () => {
-                isDragging = false;
-            });
-        }
-
-        bgInput.addEventListener('input', updateBackground);
-
-        [axInput, ayInput, asizeInput, uxInput, uyInput, ucolorInput, usizeInput].forEach(inp => {
-            inp.addEventListener('input', updatePositions);
-        });
-
-        window.addEventListener('resize', () => {
-            updateBackground();
-        });
-
-        makeDraggable(avatarEl, axInput, ayInput);
-        makeDraggable(usernameEl, uxInput, uyInput, true);
-
-        const bgUpload = document.getElementById('bg_upload');
+ 
+        // File upload handler
+        const fileInput = document.getElementById('bg_upload');
         const uploadStatus = document.getElementById('upload_status');
-
-        if (bgUpload) {
-            bgUpload.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
+        if (fileInput) {
+            fileInput.addEventListener('change', async () => {
+                const file = fileInput.files[0];
                 if (!file) return;
 
-                uploadStatus.textContent = 'جاري الرفع...';
-                uploadStatus.style.color = '#ffb000';
-                
+                uploadStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري رفع الصورة...';
                 const reader = new FileReader();
-                reader.onload = async (ev) => {
-                    const base64 = ev.target.result;
+                reader.onload = async () => {
                     try {
+                        const base64Data = reader.result;
                         const res = await fetch('/dashboard/<%= guild.id %>/welcome/upload', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ image: base64 })
+                            body: JSON.stringify({ image: base64Data })
                         });
                         const data = await res.json();
-                        if (data.success) {
+                        if (data.success && data.url) {
                             bgInput.value = data.url;
                             updateBackground();
-                            uploadStatus.textContent = 'تم رفع الصورة بنجاح! يرجى حفظ الإعدادات لتطبيقها.';
-                            uploadStatus.style.color = '#4ade80';
+                            uploadStatus.innerHTML = '<span class="text-success"><i class="fa-solid fa-check"></i> تم رفع الصورة وتطبيقها بنجاح</span>';
+                            if (window.showToast) window.showToast('تم رفع صورة الخلفية بنجاح', 'success');
                         } else {
-                            uploadStatus.textContent = 'فشل الرفع: ' + data.error;
-                            uploadStatus.style.color = '#f87171';
+                            uploadStatus.innerHTML = '<span class="text-danger">فشل الرفع: ' + (data.error || 'خطأ غير معروف') + '</span>';
                         }
-                    } catch (err) {
-                        uploadStatus.textContent = 'حدث خطأ أثناء الرفع.';
-                        uploadStatus.style.color = '#f87171';
+                    } catch (e) {
+                        uploadStatus.innerHTML = '<span class="text-danger">خطأ في الاتصال بالخادم أثناء الرفع</span>';
                     }
                 };
                 reader.readAsDataURL(file);
             });
         }
 
+        // Drag & Drop for Avatar
+        let isDraggingAvatar = false;
+        let startX, startY, initX, initY;
+
+        avatarEl.addEventListener('mousedown', (e) => {
+            isDraggingAvatar = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            initX = parseInt(axInput.value) || 0;
+            initY = parseInt(ayInput.value) || 0;
+            e.preventDefault();
+        });
+
+        // Drag & Drop for Username
+        let isDraggingUsername = false;
+        let uStartX, uStartY, uInitX, uInitY;
+
+        usernameEl.addEventListener('mousedown', (e) => {
+            isDraggingUsername = true;
+            uStartX = e.clientX;
+            uStartY = e.clientY;
+            uInitX = parseInt(uxInput.value) || 0;
+            uInitY = parseInt(uyInput.value) || 0;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDraggingAvatar) {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                axInput.value = Math.max(0, Math.min(bgNativeWidth - 50, initX + dx));
+                ayInput.value = Math.max(0, Math.min(bgNativeHeight - 50, initY + dy));
+                updatePositions();
+            }
+            if (isDraggingUsername) {
+                const dx = e.clientX - uStartX;
+                const dy = e.clientY - uStartY;
+                uxInput.value = Math.max(0, Math.min(bgNativeWidth - 50, uInitX + dx));
+                uyInput.value = Math.max(0, Math.min(bgNativeHeight - 20, uInitY + dy));
+                updatePositions();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDraggingAvatar = false;
+            isDraggingUsername = false;
+        });
+
+        [bgInput, axInput, ayInput, asizeInput, uxInput, uyInput, usizeInput, ucolorInput].forEach(inp => {
+            if (inp) inp.addEventListener('input', updatePositions);
+        });
+        if (bgInput) bgInput.addEventListener('change', updateBackground);
+
         updateBackground();
-        setTimeout(updateBackground, 100);
     });
 </script>
 

@@ -290,6 +290,9 @@ process.on('uncaughtException', (err) => {
   logger.error('[Uncaught Exception]', err);
 });
 
+const { startMemoryWatchdog } = require('./utils/memoryWatchdog');
+startMemoryWatchdog();
+
 (async () => {
   try {
     const db = require('./database/db');

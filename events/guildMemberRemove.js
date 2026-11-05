@@ -13,6 +13,38 @@ module.exports = {
 
       db.incrementDailyLeaves(guildId);
 
+      // Auto-cleanup booster custom role if departing member had one
+      const boosterRoleData = db.getBoosterRole(guildId, member.id);
+      if (boosterRoleData) {
+        try {
+          const role =
+            member.guild.roles.cache.get(boosterRoleData.roleId) ||
+            (await member.guild.roles.fetch(boosterRoleData.roleId).catch(() => null));
+          if (role) {
+            await role.delete('Booster left, was kicked, or banned from server - auto cleaning role').catch(() => null);
+          }
+        } catch (e) {
+          // Ignore if already deleted
+        }
+        db.deleteBoosterRole(guildId, member.id);
+      }
+
+      // Save sticky roles for restoration upon rejoining
+      try {
+        const stickySettings = db.getStickyRoleSettings(guildId);
+        if (stickySettings?.enabled && member.roles?.cache) {
+          const ignored = stickySettings.ignoredRoles || [];
+          const rolesToSave = member.roles.cache
+            .filter((r) => r.id !== guildId && !r.managed && !ignored.includes(r.id))
+            .map((r) => r.id);
+          if (rolesToSave.length > 0) {
+            db.saveStickyRoles(guildId, member.id, rolesToSave);
+          }
+        }
+      } catch (e) {
+        logger.error('[StickyRoles Save Error]', e);
+      }
+
       try {
         const logs = await member.guild.fetchAuditLogs({ type: AuditLogEvent.MemberKick, limit: 1 });
         const entry = logs.entries.first();

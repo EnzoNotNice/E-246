@@ -37,6 +37,8 @@ module.exports = {
         const useEmbed = interaction.options.getBoolean('embed') || false;
 
         db.setBoostSettings(guildId, channel.id, message, useEmbed);
+        db.setGuildSetting(guildId, 'autoboost_channel', channel.id);
+        db.setGuildSetting(guildId, 'autoboost_message', message);
 
         return interaction.reply({
           embeds: [
@@ -49,6 +51,8 @@ module.exports = {
 
       if (sub === 'disable') {
         db.setBoostSettings(guildId, null, null, false);
+        db.setGuildSetting(guildId, 'autoboost_channel', null);
+        db.setGuildSetting(guildId, 'autoboost_message', null);
         return interaction.reply({
           embeds: [success('تم تعطيل رسالة شكر البوست بنجاح')]
         });

@@ -26,6 +26,14 @@
       "rules": {
         "no-undef": "off"
       }
+    },
+    {
+      "files": ["scripts/**/*.js", "tests/**/*.js"],
+      "rules": {
+        "no-console": "off",
+        "no-unused-vars": "off",
+        "require-await": "off"
+      }
     }
   ],
   "ignorePatterns": ["node_modules/", "assets/"],

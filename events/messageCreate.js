@@ -1,22 +1,131 @@
 const { PermissionsBitField } = require('discord.js');
 const db = require('../database/db');
 const logger = require('../utils/logger');
+const { processAutoModAndSecurity } = require('../utils/automodEngine');
 
 const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]+/i;
-const spamTracker = new Map();
 
-function normalizeArabic(text) {
-  if (!text) return '';
-  return text
-    .replace(/[\u064B-\u065F\u0670]/g, '') // Remove diacritics (tashkeel)
-    .replace(/[أإآ]/g, 'ا') // Normalize Alif
-    .replace(/ة/g, 'ه') // Normalize Ta Marbuta
-    .replace(/ي/g, 'ى') // Normalize Ya
-    .replace(/ؤ/g, 'و') // Normalize Waw
-    .replace(/ئ/g, 'ى') // Normalize Ya
-    .replace(/\s+/g, '') // Remove all spaces
-    .toLowerCase();
-}
+const BILINGUAL_ALIASES = {
+  // Credits & Economy
+  credits: 'credits',
+  credit: 'credits',
+  كريدت: 'credits',
+  رصيد: 'credits',
+  فلوس: 'credits',
+  c: 'credits',
+
+  daily: 'daily',
+  راتب: 'daily',
+  يومي: 'daily',
+  يومية: 'daily',
+  salary: 'daily',
+
+  rep: 'rep',
+  سمعة: 'rep',
+  سمعه: 'rep',
+  point: 'rep',
+
+  title: 'title',
+  لقب: 'title',
+  بايو: 'title',
+  bio: 'title',
+
+  streak: 'streak',
+  ستريك: 'streak',
+
+  // Profile & Levels
+  profile: 'profile',
+  بروفايل: 'profile',
+  بروفايلي: 'profile',
+  حسابي: 'profile',
+  id: 'profile',
+
+  rank: 'rank',
+  رتبتي: 'rank',
+  رتبة: 'rank',
+  رتبه: 'rank',
+  level: 'rank',
+  مستواي: 'rank',
+
+  top: 'top',
+  توب: 'top',
+  متصدرين: 'top',
+  اوائل: 'top',
+  أوائل: 'top',
+  leaderboard: 'top',
+
+  // Moderation
+  clear: 'clear',
+  مسح: 'clear',
+  نظف: 'clear',
+  تنظيف: 'clear',
+  purge: 'clear',
+
+  mute: 'timeout',
+  timeout: 'timeout',
+  كتم: 'timeout',
+  اسكات: 'timeout',
+  إسكات: 'timeout',
+
+  unmute: 'untimeout',
+  untimeout: 'untimeout',
+  'فك-كتم': 'untimeout',
+  فك_كتم: 'untimeout',
+  تكلم: 'untimeout',
+
+  ban: 'ban',
+  باند: 'ban',
+  حظر: 'ban',
+
+  unban: 'unban',
+  'فك-باند': 'unban',
+  فك_باند: 'unban',
+  'فك-حظر': 'unban',
+  فك_حظر: 'unban',
+
+  kick: 'kick',
+  طرد: 'kick',
+
+  warn: 'warn',
+  تحذير: 'warn',
+  انذار: 'warn',
+  إنذار: 'warn',
+
+  warnings: 'warnings',
+  تحذيرات: 'warnings',
+  سجل: 'warnings',
+
+  unwarn: 'unwarn',
+  'فك-تحذير': 'unwarn',
+  'مسح-تحذير': 'unwarn',
+
+  lock: 'lock',
+  قفل: 'lock',
+
+  unlock: 'unlock',
+  فتح: 'unlock',
+
+  user: 'user',
+  معلومات: 'user',
+  يوزر: 'user',
+
+  server: 'server',
+  سيرفر: 'server',
+
+  avatar: 'avatar',
+  افتار: 'avatar',
+  أفتار: 'avatar',
+  صورة: 'avatar',
+
+  ping: 'ping',
+  بنق: 'ping',
+  بينج: 'ping',
+
+  help: 'help',
+  مساعدة: 'help',
+  اوامر: 'help',
+  أوامر: 'help'
+};
 
 module.exports = {
   name: 'messageCreate',
@@ -78,6 +187,16 @@ module.exports = {
     const guildId = message.guild.id;
     const userId = message.author.id;
 
+    // ── Ticket Activity & Metrics Tracking ──
+    const ticketDoc = db.getTicketByChannel(channelId);
+    if (ticketDoc && ticketDoc.status === 'open') {
+      const isStaff =
+        message.member?.permissions?.has(PermissionsBitField.Flags.ManageChannels) ||
+        message.member?.permissions?.has(PermissionsBitField.Flags.ManageGuild) ||
+        (ticketDoc.departmentRole && message.member?.roles?.cache?.has(ticketDoc.departmentRole));
+      db.updateTicketActivity(channelId, message.author.id, Boolean(isStaff));
+    }
+
     // ═══════════════════════════════════════════
     // AFK Check: Author is AFK
     // ═══════════════════════════════════════════
@@ -113,7 +232,14 @@ module.exports = {
         }
       }
     }
-    const prefix = db.getGuildSettings(guildId).prefix || '#';
+
+    // ═══════════════════════════════════════════
+    // Real-Time AutoMod & Security Engine with Smart Escalation Ladder
+    // ═══════════════════════════════════════════
+    const caughtByAutoMod = await processAutoModAndSecurity(message);
+    if (caughtByAutoMod) return;
+
+    const prefix = db.getGuildSettings(guildId)?.prefix || '#';
 
     let isCommand = false;
 
@@ -209,12 +335,18 @@ module.exports = {
         }
       };
 
+      const mappedName = BILINGUAL_ALIASES[commandName] || commandName;
+
       const cmd =
         client.prefixCommands.get(commandName) ||
-        client.prefixCommands.find((c) => c.aliases && c.aliases.includes(commandName));
+        client.prefixCommands.get(mappedName) ||
+        client.prefixCommands.find(
+          (c) => c.aliases && (c.aliases.includes(commandName) || c.aliases.includes(mappedName))
+        );
       if (cmd) {
         // Check command restrictions
-        const restrictions = db.getCommandRestrictions(guildId, commandName);
+        const restrictions =
+          db.getCommandRestrictions(guildId, commandName) || db.getCommandRestrictions(guildId, mappedName);
         if (restrictions) {
           // Check role restrictions
           if (
@@ -249,19 +381,23 @@ module.exports = {
         return;
       }
 
-      let slashCmd = client.commands.get(commandName);
+      let slashCmd = client.commands.get(commandName) || client.commands.get(mappedName);
       let runArgs = args;
 
       if (!slashCmd) {
-        const alias = resolvedAlias || customAliases.find((a) => normalizeShort(a.shortcut) === commandName);
+        const alias =
+          resolvedAlias ||
+          customAliases.find(
+            (a) => normalizeShort(a.shortcut) === commandName || normalizeShort(a.shortcut) === mappedName
+          );
         if (alias) {
           const aliasParts = String(alias.command || '')
             .replace(/^\//, '')
             .trim()
             .split(/ +/)
             .filter(Boolean);
-          const mappedName = (aliasParts.shift() || '').toLowerCase();
-          slashCmd = client.commands.get(mappedName);
+          const mappedName2 = (aliasParts.shift() || '').toLowerCase();
+          slashCmd = client.commands.get(mappedName2) || client.commands.get(BILINGUAL_ALIASES[mappedName2]);
           runArgs = [...aliasParts, ...args];
         }
       }
@@ -321,6 +457,7 @@ module.exports = {
     }
 
     db.incrementHourlyMessages(guildId);
+    db.incrementQuestProgress(userId, 'chat', 1);
 
     const replies = db.getAutoReplies(guildId);
     for (const r of replies) {
@@ -395,104 +532,45 @@ module.exports = {
         }
       }
       if (a.type === 'autotax') {
+        // Prevent autotax if the author is currently answering a transfer captcha
+        const creditsCmd = client.prefixCommands?.get('credits');
+        if (creditsCmd?.isUserTransferring && creditsCmd.isUserTransferring(userId)) {
+          continue;
+        }
+
         const amountStr = message.content.toLowerCase().trim();
-        let multiplier = 1;
-        if (amountStr.endsWith('k')) multiplier = 1000;
-        else if (amountStr.endsWith('m')) multiplier = 1000000;
-        else if (amountStr.endsWith('b')) multiplier = 1000000000;
+        // Autotax in ProBot must ONLY match pure numeric inputs (e.g. "5000", "50k", "1.5m")
+        if (/^\d+(\.\d+)?[kmb]?$/i.test(amountStr)) {
+          let multiplier = 1;
+          let numStr = amountStr;
+          if (numStr.endsWith('k')) {
+            multiplier = 1000;
+            numStr = numStr.slice(0, -1);
+          } else if (numStr.endsWith('m')) {
+            multiplier = 1000000;
+            numStr = numStr.slice(0, -1);
+          } else if (numStr.endsWith('b')) {
+            multiplier = 1000000000;
+            numStr = numStr.slice(0, -1);
+          }
 
-        const amount = parseFloat(amountStr.replace(/[^\d.]/g, '')) * multiplier;
-        if (!isNaN(amount) && amount > 0) {
-          const tax = Math.floor(amount * (20 / 19) + 1);
-          message.reply({ content: `{emoji:ProBot} **${tax}**` }).catch(() => null);
+          const amount = parseFloat(numStr) * multiplier;
+          if (!isNaN(amount) && amount > 0) {
+            const tax = Math.floor(amount * (20 / 19) + 1);
+            message.reply({ content: `{emoji:ProBot} **${tax}**` }).catch(() => null);
 
-          // Send line separator after tax if configured
-          const settings = db.getGuildSettings(guildId);
-          if (settings.tax_line_image) {
-            setTimeout(() => {
-              message.channel.send({ content: settings.tax_line_image }).catch(() => null);
-            }, 500);
+            // Send line separator after tax if configured
+            const settings = db.getGuildSettings(guildId);
+            if (settings.tax_line_image) {
+              setTimeout(() => {
+                message.channel.send({ content: settings.tax_line_image }).catch(() => null);
+              }, 500);
+            }
           }
         }
       }
       if (a.type === 'react' && a.value) {
         message.react(a.value).catch(() => null);
-      }
-    }
-
-    const protection = db.getProtection(guildId);
-    if (protection) {
-      const bypassRole = protection.bypass_role;
-      const member = message.member;
-      const hasBypass = member && bypassRole && member.roles.cache.has(bypassRole);
-
-      if (!hasBypass && protection.antilink) {
-        const linkRegex = /https?:\/\/[^\s]+/i;
-        // Check if channel is in antilink_channels or if antilink is server-wide (no channels specified)
-        const antilinkChannels = protection.antilink_channels || [];
-        const shouldBlock = antilinkChannels.length === 0 || antilinkChannels.includes(channelId);
-
-        if (shouldBlock && linkRegex.test(message.content)) {
-          await message.delete().catch(() => null);
-          const warnMsg = await message.channel.send({
-            content: `${message.author}, {emoji:circlex} ممنوع إرسال الروابط هنا`
-          });
-          setTimeout(() => warnMsg.delete().catch(() => null), 5000);
-          return;
-        }
-      }
-
-      if (!hasBypass && protection.antispam) {
-        const key = `${guildId}_${userId}`;
-        const now = Date.now();
-        let times = spamTracker.get(key) || [];
-        times = times.filter((t) => now - t < 5000);
-        times.push(now);
-        spamTracker.set(key, times);
-        if (times.length >= 6) {
-          await message.delete().catch(() => null);
-          if (member && member.moderatable) {
-            await member.timeout(60_000, 'Anti-Spam').catch(() => null);
-          }
-          const warnMsg = await message.channel.send({
-            content: `${message.author}, {emoji:alerttriangle} تم رصد سبام`
-          });
-          setTimeout(() => warnMsg.delete().catch(() => null), 5000);
-          spamTracker.set(key, []);
-          return;
-        }
-      }
-    }
-
-    const automod = db.getAutomod(guildId);
-    if (automod && automod.enabled && Array.isArray(automod.words) && automod.words.length > 0) {
-      const member = message.member;
-      const bypassRoles = Array.isArray(automod.bypass_roles) ? automod.bypass_roles : [];
-      const hasBypass = member && bypassRoles.some((roleId) => member.roles.cache.has(roleId));
-
-      if (!hasBypass) {
-        const normalizedMsg = normalizeArabic(message.content);
-        const hasBadWord = automod.words.some((word) => {
-          const normalizedWord = normalizeArabic(word);
-          return normalizedMsg.includes(normalizedWord);
-        });
-
-        if (hasBadWord) {
-          await message.delete().catch(() => null);
-          if (automod.action === 'warn') {
-            const warnMsg = await message.channel.send({
-              content: `${message.author}, {emoji:circlex} يرجى احترام قوانين الخادم وتجنب استخدام الكلمات الممنوعة.`
-            });
-            setTimeout(() => warnMsg.delete().catch(() => null), 5000);
-          } else if (automod.action === 'timeout' && member && member.moderatable) {
-            await member.timeout(60 * 60 * 1000, 'استخدام كلمات ممنوعة').catch(() => null);
-            const warnMsg = await message.channel.send({
-              content: `${message.author}, {emoji:alerttriangle} تم إعطائك تايم أوت لمدة ساعة بسبب استخدام كلمات ممنوعة.`
-            });
-            setTimeout(() => warnMsg.delete().catch(() => null), 5000);
-          }
-          return;
-        }
       }
     }
 
@@ -504,14 +582,23 @@ module.exports = {
         levelSettings.xp_cooldown !== undefined && levelSettings.xp_cooldown !== null ? levelSettings.xp_cooldown : 60;
 
       if (!userData || now - (userData.last_message || 0) >= cooldown) {
-        const xpGain = Math.floor(
+        let xpGain = Math.floor(
           Math.random() * (levelSettings.xp_max - levelSettings.xp_min + 1) + levelSettings.xp_min
         );
+
+        // 1.5x XP multiplier perk for server boosters
+        if (message.member?.premiumSince) {
+          xpGain = Math.floor(xpGain * 1.5);
+        }
 
         db.addXP(userId, guildId, xpGain);
         const { checkLevelUp } = require('../utils/levels');
         await checkLevelUp(client, userId, guildId, channelId);
       }
     }
+
+    // Record Streak Activity
+    const { recordUserStreakActivity } = require('../utils/streakManager');
+    recordUserStreakActivity(message.guild, message.author, 'chat').catch(() => null);
   }
 };

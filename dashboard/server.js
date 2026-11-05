@@ -103,8 +103,12 @@ module.exports = (client) => {
   app.use('/auth', require('./routes/auth'));
   app.use('/dashboard', dashboardLimiter, require('./routes/dashboard')(client));
 
-  app.use((err, req, res) => {
+  app.use((err, req, res, next) => {
     logger.error('Dashboard Error:', err);
+    if (res.headersSent) return next(err);
+    if (req.xhr || req.headers.accept?.includes('application/json')) {
+      return res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
     res.status(500).render('error', { error: 'Internal Server Error' });
   });
 

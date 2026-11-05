@@ -1,6 +1,7 @@
 const { Events, AuditLogEvent, EmbedBuilder } = require('discord.js');
 const db = require('../database/db');
-const { sendLog } = require('../utils/logger');
+const logger = require('../utils/logger');
+const { sendLog } = logger;
 const { handleLimit } = require('../utils/protectionAction');
 
 module.exports = {

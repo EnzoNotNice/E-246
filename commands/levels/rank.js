@@ -11,6 +11,14 @@ module.exports = {
 
   async execute(interaction) {
     try {
+      const levelSettings = db.getLevelSettings(interaction.guildId);
+      if (!levelSettings || !levelSettings.enabled) {
+        return interaction.reply({
+          content: '{emoji:circlex} **نظام المستويات معطّل في هذا السيرفر.**',
+          flags: ['Ephemeral']
+        });
+      }
+
       await interaction.deferReply();
       const user = interaction.options.getUser('user') || interaction.user;
       let data = db.getLevel(user.id, interaction.guildId);

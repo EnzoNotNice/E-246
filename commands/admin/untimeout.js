@@ -1,7 +1,8 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const locale = require('../../utils/locale');
 const { success, error, modlog } = require('../../utils/embeds');
-const { sendLog } = require('../../utils/logger');
+const logger = require('../../utils/logger');
+const { sendLog } = logger;
 
 module.exports = {
   data: new SlashCommandBuilder()

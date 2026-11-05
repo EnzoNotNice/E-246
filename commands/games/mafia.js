@@ -6,6 +6,7 @@ const {
   ButtonStyle,
   ComponentType
 } = require('discord.js');
+const logger = require('../../utils/logger');
 
 const activeGames = new Set();
 
@@ -387,7 +388,7 @@ module.exports = {
         return chunks;
       };
     } catch (err) {
-      console.error('[Command Error - mafia.js]:', err);
+      logger.error('[Command Error - mafia.js]:', err);
       if (interaction && typeof interaction.reply === 'function') {
         await interaction
           .reply({ content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] })

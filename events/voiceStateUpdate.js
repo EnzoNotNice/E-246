@@ -1,4 +1,5 @@
 const db = require('../database/db');
+const logger = require('../utils/logger');
 const { checkLevelUp } = require('../utils/levels');
 const {
   ChannelType,
@@ -13,15 +14,18 @@ module.exports = {
   name: 'voiceStateUpdate',
   async execute(oldState, newState) {
     try {
-      if (!newState.member || newState.member.user.bot) return;
+      const member = newState.member || oldState.member;
+      if (!member || member.user?.bot) return;
 
-      const guildId = newState.guild.id;
-      const userId = newState.member.id;
+      const guild = newState.guild || oldState.guild;
+      if (!guild) return;
+      const guildId = guild.id;
+      const userId = member.id;
 
       if (newState.channelId) {
         const tvChan = db.getTempVoiceChannel(newState.channelId);
         if (tvChan && db.isTempVoiceBanned(newState.channelId, userId)) {
-          await newState.member.voice.disconnect().catch(() => null);
+          await member.voice?.disconnect().catch(() => null);
           return;
         }
       }
@@ -35,33 +39,36 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setColor(0x57f287)
           .setTitle('{emoji:music_play} دخول روم صوتي')
-          .setThumbnail(newState.member.user.displayAvatarURL({ size: 256 }))
+          .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
           .addFields(
-            { name: 'العضو', value: `${newState.member} (${newState.member.user.tag})`, inline: true },
+            { name: 'العضو', value: `${member} (${member.user.tag})`, inline: true },
             { name: 'معرف العضو', value: `\`${userId}\``, inline: true },
             { name: 'الروم الصوتي', value: `<#${newState.channelId}>`, inline: false }
           )
           .setTimestamp();
         await sendLog(newState.client, guildId, embed, 'voice').catch(() => null);
       } else if (isLeaving) {
-        const embed = new EmbedBuilder()
-          .setColor(0xed4245)
-          .setTitle('{emoji:music_play} خروج من روم صوتي')
-          .setThumbnail(oldState.member.user.displayAvatarURL({ size: 256 }))
-          .addFields(
-            { name: 'العضو', value: `${oldState.member} (${oldState.member.user.tag})`, inline: true },
-            { name: 'معرف العضو', value: `\`${userId}\``, inline: true },
-            { name: 'الروم الصوتي', value: `<#${oldState.channelId}>`, inline: false }
-          )
-          .setTimestamp();
-        await sendLog(oldState.client, guildId, embed, 'voice').catch(() => null);
+        const leavingMember = oldState.member || newState.member;
+        if (leavingMember?.user) {
+          const embed = new EmbedBuilder()
+            .setColor(0xed4245)
+            .setTitle('{emoji:music_play} خروج من روم صوتي')
+            .setThumbnail(leavingMember.user.displayAvatarURL({ size: 256 }))
+            .addFields(
+              { name: 'العضو', value: `${leavingMember} (${leavingMember.user.tag})`, inline: true },
+              { name: 'معرف العضو', value: `\`${userId}\``, inline: true },
+              { name: 'الروم الصوتي', value: `<#${oldState.channelId}>`, inline: false }
+            )
+            .setTimestamp();
+          await sendLog(oldState.client, guildId, embed, 'voice').catch(() => null);
+        }
       } else if (isSwitching) {
         const embed = new EmbedBuilder()
           .setColor(0x5865f2)
           .setTitle('{emoji:music_play} انتقال بين رومات صوتية')
-          .setThumbnail(newState.member.user.displayAvatarURL({ size: 256 }))
+          .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
           .addFields(
-            { name: 'العضو', value: `${newState.member} (${newState.member.user.tag})`, inline: true },
+            { name: 'العضو', value: `${member} (${member.user.tag})`, inline: true },
             { name: 'معرف العضو', value: `\`${userId}\``, inline: true },
             { name: 'من الروم', value: `<#${oldState.channelId}>`, inline: true },
             { name: 'إلى الروم', value: `<#${newState.channelId}>`, inline: true }
@@ -100,8 +107,14 @@ module.exports = {
           newState.client.voiceSessions.delete(sessionKey);
 
           if (durationSeconds > 0) {
-            db.addVoiceXP(userId, guildId, durationSeconds);
+            let xpSeconds = durationSeconds;
+            const isBooster = Boolean(oldState.member?.premiumSince || newState.member?.premiumSince);
+            if (isBooster) {
+              xpSeconds = Math.floor(durationSeconds * 1.5);
+            }
+            db.addVoiceXP(userId, guildId, xpSeconds);
             db.addDailyVoiceSeconds(guildId, durationSeconds);
+            db.incrementQuestProgress(userId, 'voice', durationSeconds);
             await checkLevelUp(newState.client, userId, guildId);
           }
         }
@@ -135,8 +148,10 @@ module.exports = {
             const userSavedSettings = db.getTempVoiceUserSettings(userId);
             const channelName = userSavedSettings?.preferredName || `🔊・${newState.member.displayName}`;
             const channelLimit = userSavedSettings?.preferredLimit !== undefined ? userSavedSettings.preferredLimit : 0;
+            const isBooster = Boolean(newState.member?.premiumSince);
+            const maxBitrate = newState.guild.maximumBitrate || 96000;
 
-            const newChannel = await newState.guild.channels.create({
+            const channelCreatePayload = {
               name: channelName,
               type: ChannelType.GuildVoice,
               parent: tvSettings.category_id,
@@ -154,14 +169,29 @@ module.exports = {
                     PermissionFlagsBits.ManageChannels,
                     PermissionFlagsBits.MoveMembers,
                     PermissionFlagsBits.MuteMembers,
-                    PermissionFlagsBits.DeafMembers
+                    PermissionFlagsBits.DeafenMembers
                   ]
                 }
               ]
-            });
+            };
 
-            await newState.member.voice.setChannel(newChannel);
+            // Booster Perk: Set maximum voice bitrate supported by the guild
+            if (isBooster && maxBitrate) {
+              channelCreatePayload.bitrate = maxBitrate;
+            }
+
+            const newChannel = await newState.guild.channels.create(channelCreatePayload);
             db.addTempVoiceChannel(newChannel.id, userId, guildId);
+
+            try {
+              await newState.member.voice.setChannel(newChannel);
+            } catch (moveErr) {
+              if (newChannel.members.size === 0) {
+                await newChannel.delete().catch(() => null);
+                db.removeTempVoiceChannel(newChannel.id);
+                return;
+              }
+            }
 
             if (tvSettings.panel_channel) {
               await newChannel

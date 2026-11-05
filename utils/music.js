@@ -62,9 +62,7 @@ function setupMusic(client) {
   client.manager.nodeManager.on('connect', (node) => logger.info(`[Music] Node: ${node.id} connected.`));
   client.manager.nodeManager.on('reconnecting', (node) => logger.info(`[Music] Node: ${node.id} reconnecting.`));
   client.manager.nodeManager.on('disconnect', (node) => logger.info(`[Music] Node: ${node.id} disconnected.`));
-  client.manager.nodeManager.on('error', (node, err) =>
-    logger.error(`[Music] Node: ${node.id} error: ${err.message}`)
-  );
+  client.manager.nodeManager.on('error', (node, err) => logger.error(`[Music] Node: ${node.id} error: ${err.message}`));
 
   client.manager.on('playerCreate', (player) => {
     applyEpicPlayer(player);

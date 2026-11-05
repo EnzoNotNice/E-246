@@ -53,10 +53,21 @@ module.exports = (client) => {
       const guild = client.guilds.cache.get(guildId);
       if (!guild) return res.redirect('/dashboard?error=not_in_guild');
 
-      const userGuild = req.user.guilds.find((g) => g.id === guildId);
-      if (!userGuild) return res.redirect('/dashboard?error=no_access');
+      if (!req.user || !Array.isArray(req.user.guilds)) {
+        return res.redirect('/auth/login');
+      }
 
-      const perms = BigInt(userGuild.permissions);
+      const userGuild = req.user.guilds.find((g) => g && g.id === guildId);
+      if (!userGuild || userGuild.permissions === undefined || userGuild.permissions === null) {
+        return res.redirect('/dashboard?error=no_access');
+      }
+
+      let perms;
+      try {
+        perms = BigInt(userGuild.permissions);
+      } catch {
+        return res.redirect('/dashboard?error=missing_perms');
+      }
       const hasPerms = (perms & BigInt(0x8)) === BigInt(0x8) || (perms & BigInt(0x20)) === BigInt(0x20);
 
       if (!hasPerms) return res.redirect('/dashboard?error=missing_perms');
@@ -75,15 +86,50 @@ module.exports = (client) => {
     }
   }
 
+  // Smart AJAX Redirect Interceptor (Auto-Save JSON response for fetch/XHR requests)
+  router.use((req, res, next) => {
+    const originalRedirect = res.redirect.bind(res);
+    res.redirect = function (url) {
+      if (
+        req.xhr ||
+        req.headers.accept?.includes('application/json') ||
+        req.headers['x-requested-with'] === 'XMLHttpRequest'
+      ) {
+        let message = 'تم حفظ الإعدادات بنجاح ⚡';
+        try {
+          const parsed = new URL(url, 'http://localhost');
+          const successMsg = parsed.searchParams.get('success');
+          const errorMsg = parsed.searchParams.get('error');
+          if (successMsg) message = decodeURIComponent(successMsg.replace(/\+/g, ' '));
+          if (errorMsg) {
+            return res.status(400).json({ success: false, error: decodeURIComponent(errorMsg.replace(/\+/g, ' ')) });
+          }
+        } catch (_) {
+          // ignore parsing error
+        }
+        return res.json({ success: true, message, redirectUrl: url });
+      }
+      return originalRedirect(url);
+    };
+    next();
+  });
+
   router.get('/', checkAuth, (req, res, next) => {
     try {
-      const userGuilds = req.user.guilds.filter((g) => {
-        const perms = BigInt(g.permissions);
-        return (perms & BigInt(0x8)) === BigInt(0x8) || (perms & BigInt(0x20)) === BigInt(0x20);
+      const userGuilds = (Array.isArray(req.user?.guilds) ? req.user.guilds : []).filter((g) => {
+        if (!g || g.permissions === undefined || g.permissions === null) return false;
+        try {
+          const perms = BigInt(g.permissions);
+          return (perms & BigInt(0x8)) === BigInt(0x8) || (perms & BigInt(0x20)) === BigInt(0x20);
+        } catch {
+          return false;
+        }
       });
 
-      const totalGuilds = client.guilds.cache.size;
-      const totalUsers = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
+      const totalGuilds = client?.guilds?.cache?.size || 0;
+      const totalUsers = client?.guilds?.cache
+        ? client.guilds.cache.reduce((acc, guild) => acc + (guild.memberCount || 0), 0)
+        : 0;
 
       const uptime = process.uptime();
       const days = Math.floor(uptime / 86400);
@@ -281,17 +327,71 @@ module.exports = (client) => {
 
   router.post('/:id/levels', checkAuth, checkGuildAccess, async (req, res, next) => {
     try {
-      const { enabled, channel, xp_min, xp_max, voice_enabled, voice_xp_min, voice_xp_max } = req.body;
-      await db.updateLevelSettings(req.guild.id, {
-        enabled: parseInt(enabled),
+      const { enabled, channel, xp_min, xp_max, voice_enabled, voice_xp_min, voice_xp_max, role_rewards } = req.body;
+      const updateData = {
+        enabled: parseInt(enabled) || 0,
         channel: channel || null,
-        xp_min: parseInt(xp_min),
-        xp_max: parseInt(xp_max),
-        voice_enabled: parseInt(voice_enabled),
-        voice_xp_min: parseInt(voice_xp_min),
-        voice_xp_max: parseInt(voice_xp_max)
-      });
+        xp_min: parseInt(xp_min) || 15,
+        xp_max: parseInt(xp_max) || 25,
+        voice_enabled: parseInt(voice_enabled) || 0,
+        voice_xp_min: parseInt(voice_xp_min) || 10,
+        voice_xp_max: parseInt(voice_xp_max) || 20
+      };
+      if (role_rewards !== undefined) {
+        updateData.role_rewards = typeof role_rewards === 'string' ? role_rewards : JSON.stringify(role_rewards);
+      }
+      await db.updateLevelSettings(req.guild.id, updateData);
       res.redirect(`/dashboard/${req.guild.id}/levels?success=تم+تحديث+إعدادات+المستويات`);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/:id/streaks', checkAuth, checkGuildAccess, (req, res, next) => {
+    try {
+      const roles = Array.from(req.guild.roles.cache.values())
+        .filter((r) => r.name !== '@everyone' && !r.managed)
+        .sort((a, b) => b.position - a.position);
+
+      res.render('streaks', {
+        guild: req.guild,
+        settings: db.getStreakSettings(req.guild.id),
+        roles,
+        textChannels: Array.from(req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5).values()),
+        topStreaks: db.getTopStreaks(req.guild.id, 10)
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/:id/streaks', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const { enabled, channel_id, streak_type, bonus_credits, freeze_enabled, role_rewards } = req.body;
+      const updateData = {
+        enabled: parseInt(enabled, 10) || 0,
+        channel_id: channel_id && channel_id !== 'none' ? channel_id : null,
+        streak_type: streak_type || 'all',
+        bonus_credits: parseInt(bonus_credits, 10) || 200,
+        freeze_enabled: parseInt(freeze_enabled, 10) || 0
+      };
+
+      if (role_rewards !== undefined) {
+        let rewardsArr = [];
+        if (typeof role_rewards === 'string') {
+          try {
+            rewardsArr = JSON.parse(role_rewards);
+          } catch {
+            rewardsArr = [];
+          }
+        } else if (Array.isArray(role_rewards)) {
+          rewardsArr = role_rewards;
+        }
+        updateData.role_rewards = rewardsArr;
+      }
+
+      await db.updateStreakSettings(req.guild.id, updateData);
+      res.redirect(`/dashboard/${req.guild.id}/streaks?success=تم+حفظ+إعدادات+الستريك+بنجاح`);
     } catch (err) {
       next(err);
     }
@@ -315,6 +415,8 @@ module.exports = (client) => {
         enabled,
         channel,
         message,
+        dm_message,
+        delete_after,
         image_url,
         scale_mode,
         avatar_x,
@@ -330,6 +432,8 @@ module.exports = (client) => {
       settings.enabled = parseInt(enabled) || 0;
       settings.channel = channel || null;
       settings.message = message || '';
+      settings.dm_message = dm_message !== undefined ? dm_message : settings.dm_message || '';
+      settings.delete_after = delete_after !== undefined ? parseInt(delete_after) || 0 : settings.delete_after || 0;
       settings.image_url = image_url || null;
       settings.scale_mode = scale_mode || 'fit';
       settings.username_color = username_color || '#ffffff';
@@ -640,11 +744,17 @@ module.exports = (client) => {
     try {
       const settings = await db.getTicketSettings(req.guild.id);
       const ticketCategories = db.getTicketCategories(req.guild.id) || [];
+      const ticketAnalytics = db.getTicketAnalytics(req.guild.id);
+      const ticketRatings = db.getTicketRatings(req.guild.id);
+      const cannedResponses = db.getCannedResponses(req.guild.id);
 
       res.render('tickets', {
         guild: req.guild,
         settings,
         ticketCategories,
+        ticketAnalytics,
+        ticketRatings,
+        cannedResponses,
         roles: req.guild.roles.cache.sort((a, b) => b.position - a.position),
         channels: req.guild.channels.cache.filter((c) => c.type === 0 || c.type === 5),
         categories: req.guild.channels.cache.filter((c) => c.type === 4),
@@ -683,6 +793,34 @@ module.exports = (client) => {
       res.redirect(`/dashboard/${req.guild.id}/tickets?success=تم+إزالة+القسم+بنجاح`);
     } catch (err) {
       logger.error('Dashboard Delete Ticket Category Error:', err);
+      next(err);
+    }
+  });
+
+  router.post('/:id/tickets/canned/add', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const { name, content } = req.body;
+      if (!name || !content) {
+        return res.redirect(`/dashboard/${req.guild.id}/tickets?error=Name+and+content+are+required`);
+      }
+      await db.addCannedResponse(req.guild.id, name.trim(), content.trim(), req.user?.id || 'dashboard');
+      res.redirect(`/dashboard/${req.guild.id}/tickets?success=تم+إضافة+الرد+السريع+بنجاح`);
+    } catch (err) {
+      logger.error('Dashboard Add Canned Response Error:', err);
+      next(err);
+    }
+  });
+
+  router.post('/:id/tickets/canned/delete', checkAuth, checkGuildAccess, async (req, res, next) => {
+    try {
+      const { name } = req.body;
+      if (!name) {
+        return res.redirect(`/dashboard/${req.guild.id}/tickets?error=Name+is+required`);
+      }
+      await db.removeCannedResponse(req.guild.id, name.trim());
+      res.redirect(`/dashboard/${req.guild.id}/tickets?success=تم+حذف+الرد+السريع+بنجاح`);
+    } catch (err) {
+      logger.error('Dashboard Delete Canned Response Error:', err);
       next(err);
     }
   });
@@ -902,8 +1040,20 @@ module.exports = (client) => {
   router.get('/:id/reactionroles', checkAuth, checkGuildAccess, (req, res, next) => {
     try {
       const settings = db.getReactionRoles(req.guild.id);
-      if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
-      if (typeof settings.roles_data === 'string') settings.roles_data = JSON.parse(settings.roles_data || '[]');
+      if (typeof settings.panel_data === 'string') {
+        try {
+          settings.panel_data = JSON.parse(settings.panel_data || '{}');
+        } catch {
+          settings.panel_data = {};
+        }
+      }
+      if (typeof settings.roles_data === 'string') {
+        try {
+          settings.roles_data = JSON.parse(settings.roles_data || '[]');
+        } catch {
+          settings.roles_data = [];
+        }
+      }
 
       const nativeReactionRoles = db.db.prepare('SELECT * FROM reactroles WHERE guildId = ?').all(req.guild.id);
 
@@ -953,7 +1103,12 @@ module.exports = (client) => {
             if (panelData.thumbnail) embed.setThumbnail(panelData.thumbnail);
             if (panelData.image) embed.setImage(panelData.image);
 
-            const parsedRoles = JSON.parse(rolesData);
+            let parsedRoles = [];
+            try {
+              parsedRoles = JSON.parse(rolesData);
+            } catch {
+              parsedRoles = [];
+            }
             const components = [];
 
             if (panelData.comp_type === 'button') {
@@ -1010,7 +1165,13 @@ module.exports = (client) => {
   router.get('/:id/forms', checkAuth, checkGuildAccess, (req, res, next) => {
     try {
       const settings = db.getFormsSettings(req.guild.id);
-      if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
+      if (typeof settings.panel_data === 'string') {
+        try {
+          settings.panel_data = JSON.parse(settings.panel_data || '{}');
+        } catch {
+          settings.panel_data = {};
+        }
+      }
 
       res.render('forms', {
         guild: req.guild,
@@ -1085,7 +1246,13 @@ module.exports = (client) => {
   router.get('/:id/captcha', checkAuth, checkGuildAccess, (req, res, next) => {
     try {
       const settings = db.getCaptchaSettings(req.guild.id);
-      if (typeof settings.panel_data === 'string') settings.panel_data = JSON.parse(settings.panel_data || '{}');
+      if (typeof settings.panel_data === 'string') {
+        try {
+          settings.panel_data = JSON.parse(settings.panel_data || '{}');
+        } catch {
+          settings.panel_data = {};
+        }
+      }
 
       res.render('captcha', {
         guild: req.guild,

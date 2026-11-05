@@ -61,6 +61,7 @@ module.exports = {
       if (sub === 'channel') {
         const ch = interaction.options.getChannel('channel');
         db.setLogChannel(interaction.guildId, ch.id);
+        db.setGuildSetting(interaction.guildId, 'setlog_channel', ch.id);
         return interaction.reply({ embeds: [success(locale.get('moderation.logChannelSet', { channel: ch }))] });
       }
 

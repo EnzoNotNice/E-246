@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Minimalist Matte Graphite Squircle Base -->
+  <rect x="24" y="24" width="464" height="464" rx="120" fill="#121316" stroke="#25262b" stroke-width="2"/>
+
+  <!-- Single Continuous Sculpted 'E' Monogram in Matte Titanium Gray -->
+  <path d="M 166 140 L 346 140 A 23 23 0 0 1 346 186 L 205 186 A 14 14 0 0 0 191 200 L 191 219 A 14 14 0 0 0 205 233 L 295 233 A 23 23 0 0 1 295 279 L 205 279 A 14 14 0 0 0 191 293 L 191 312 A 14 14 0 0 0 205 326 L 346 326 A 23 23 0 0 1 346 372 L 166 372 A 23 23 0 0 1 143 349 L 143 163 A 23 23 0 0 1 166 140 Z" fill="#e4e4e7"/>
+</svg>

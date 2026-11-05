@@ -80,6 +80,12 @@
                     </a>
                 </li>
                 <li>
+                    <a href="/dashboard/<%= guild.id %>/streaks" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'streaks') ? 'active' : '' %>">
+                        <i class="fa-solid fa-fire-flame-curved nav-icon"></i>
+                        <span class="sidebar-text">نظام الستريك (Streaks)</span>
+                    </a>
+                </li>
+                <li>
                     <a href="/dashboard/<%= guild.id %>/tempvoice" class="nav-link <%= (typeof activeTab !== 'undefined' && activeTab === 'tempvoice') ? 'active' : '' %>">
                         <i class="fa-solid fa-microphone-lines nav-icon"></i>
                         <span class="sidebar-text">الغرف المؤقتة</span>

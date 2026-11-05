@@ -120,4 +120,28 @@ function modlog(action, target, moderator, reason, extra = {}, guildId = null) {
   return e;
 }
 
-module.exports = { embed, success, error, warn, info, modlog, colors };
+const { toDisplayComponents, convertEmbedToContainer } = require('./displayComponents');
+
+function toComponentsV2(embedOrOptions) {
+  if (embedOrOptions instanceof EmbedBuilder) {
+    return toDisplayComponents({ embeds: [embedOrOptions] });
+  }
+  return toDisplayComponents(embedOrOptions);
+}
+
+function v2Container(type = 'info', guildId = null) {
+  const e = embed(type, guildId);
+  return convertEmbedToContainer(e);
+}
+
+module.exports = {
+  embed,
+  success,
+  error,
+  warn,
+  info,
+  modlog,
+  colors,
+  toComponentsV2,
+  v2Container
+};

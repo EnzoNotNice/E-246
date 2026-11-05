@@ -14,7 +14,7 @@ module.exports = {
     try {
       const channel = interaction.options.getChannel('channel') || interaction.channel;
 
-      db.deleteActiveGame(channel.id);
+      db.removeActiveGame(channel.id, interaction.guildId);
       const embed = new EmbedBuilder()
         .setColor(0xed4245)
         .setTitle('{emoji:stop} تم إيقاف اللعبة')

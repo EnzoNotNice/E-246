@@ -1,0 +1,304 @@
+<%- include('partials/header') %>
+<%
+guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
+settings = typeof settings !== 'undefined' && settings ? settings : { enabled: 1, channel_id: null, streak_type: 'all', bonus_credits: 200, freeze_enabled: 1, role_rewards: [] };
+roles = typeof roles !== 'undefined' && Array.isArray(roles) ? roles : [];
+textChannels = typeof textChannels !== 'undefined' && Array.isArray(textChannels) ? textChannels : [];
+topStreaks = typeof topStreaks !== 'undefined' && Array.isArray(topStreaks) ? topStreaks : [];
+let roleRewards = settings.role_rewards;
+if (typeof roleRewards === 'string') {
+    try { roleRewards = JSON.parse(roleRewards); } catch(_) { roleRewards = []; }
+}
+if (!Array.isArray(roleRewards)) roleRewards = [];
+const emojiTheme = (typeof settings !== 'undefined' && settings && settings.emoji_color) ? settings.emoji_color : 'blue';
+%>
+<%- include('partials/sidebar', { guild, activeTab: 'streaks' }) %>
+
+<main class="app-content">
+
+    <div class="content-header mb-2">
+        <h1>
+            <img src="/assets/emojis/<%= emojiTheme %>/flame.png" alt="streak" style="width: 28px; height: 28px; vertical-align: middle; margin-left: 8px;">
+            نظام الستريك
+        </h1>
+        <p>تشجيع التفاعل اليومي المستمر وتكريم الأعضاء النشطين برتب ومكافآت تلقائية</p>
+    </div>
+
+    <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
+        <div class="alert alert-success">
+            <img src="/assets/emojis/<%= emojiTheme %>/circlecheck.png" alt="success" style="width: 20px; height: 20px; vertical-align: middle; margin-left: 6px;">
+            <%= req.query.success %>
+        </div>
+    <% } %>
+
+    <form action="/dashboard/<%= guild.id %>/streaks" method="POST" class="settings-form" id="streakForm">
+
+        <!-- General Streak Configuration Panel -->
+        <div class="glass-panel reveal">
+            <div class="panel-header-with-switch">
+                <div>
+                    <div class="section-title">
+                        <img src="/assets/emojis/<%= emojiTheme %>/settings.png" alt="settings" style="width: 22px; height: 22px; vertical-align: middle; margin-left: 6px;">
+                        الإعدادات العامة للستريك
+                    </div>
+                    <p class="text-muted" style="margin: 0; font-size: 0.92rem;">التحكم في طريقة احتساب السلسلة وروم التكريم</p>
+                </div>
+                <label class="pro-switch">
+                    <input type="checkbox" name="enabled" value="1" <%= settings.enabled ? 'checked' : '' %>>
+                    <span class="pro-switch-slider"></span>
+                    <span class="pro-switch-label">تفعيل النظام</span>
+                </label>
+            </div>
+
+            <div class="grid-form-2">
+                <div class="form-group">
+                    <label for="streak_type">طريقة احتساب الستريك</label>
+                    <select id="streak_type" name="streak_type" class="glass-input">
+                        <option value="all" <%= settings.streak_type === 'all' ? 'selected' : '' %>>الشات والراتب اليومي معاً</option>
+                        <option value="chat" <%= settings.streak_type === 'chat' ? 'selected' : '' %>>نشاط الرسائل في الشات فقط</option>
+                        <option value="daily" <%= settings.streak_type === 'daily' ? 'selected' : '' %>>المطالبة بالراتب اليومي فقط</option>
+                    </select>
+                    <small>النشاط المطلوب من العضو للحفاظ على استمرارية سلسلته اليومية</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="channel_id">روم إعلانات وتكريم الستريك</label>
+                    <select id="channel_id" name="channel_id" class="glass-input">
+                        <option value="none" <%= !settings.channel_id ? 'selected' : '' %>>بدون إعلانات / تعطيل الإشعار</option>
+                        <% textChannels.forEach(c => { %>
+                            <option value="<%= c.id %>" <%= settings.channel_id === c.id ? 'selected' : '' %>># <%= c.name %></option>
+                        <% }) %>
+                    </select>
+                    <small>القناة التي يُنشر فيها التكريم عند وصول العضو لرتبة ستريك جديدة</small>
+                </div>
+            </div>
+
+            <div class="grid-form-2 mt-2">
+                <div class="form-group">
+                    <label for="bonus_credits">بونص الكريدت اليومي لكل يوم ستريك</label>
+                    <input type="number" id="bonus_credits" name="bonus_credits" class="glass-input" value="<%= settings.bonus_credits || 200 %>" min="0" max="5000">
+                    <small>مبلغ الكريدت الإضافي الممنوح مع أمر <code>/daily</code> عن كل يوم ستريك متصل</small>
+                </div>
+
+                <div class="form-group" style="display: flex; flex-direction: column; justify-content: center;">
+                    <label class="pro-switch" style="margin-top: 10px;">
+                        <input type="checkbox" name="freeze_enabled" value="1" <%= settings.freeze_enabled ? 'checked' : '' %>>
+                        <span class="pro-switch-slider"></span>
+                        <div>
+                            <span class="pro-switch-label">حماية الستريك</span>
+                            <span class="pro-switch-desc">حماية العضو من تصفير الستريك لمرة واحدة إذا غاب أكثر من 48 ساعة</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Role Rewards Panel -->
+        <div class="glass-panel reveal" style="animation-delay: 0.05s;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div>
+                    <div class="section-title" style="margin-bottom: 4px;">
+                        <img src="/assets/emojis/<%= emojiTheme %>/crown.png" alt="crown" style="width: 22px; height: 22px; vertical-align: middle; margin-left: 6px;">
+                        رتب ومكافآت الستريك
+                    </div>
+                    <p class="text-muted" style="margin: 0; font-size: 0.92rem;">منح رتب تلقائية عندما يصل العضو إلى عدد محدد من الأيام المتتالية</p>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="addRewardBtn">
+                    <i class="fa-solid fa-plus"></i> إضافة مكافأة
+                </button>
+            </div>
+
+            <input type="hidden" name="role_rewards" id="roleRewardsInput" value="<%- JSON.stringify(roleRewards) %>">
+
+            <div id="rewardsContainer" style="display: flex; flex-direction: column; gap: 12px;">
+                <% if (roleRewards.length === 0) { %>
+                    <div id="noRewardsNotice" class="text-muted" style="padding: 24px; text-align: center; border: 1px dashed var(--border); border-radius: var(--r-sm);">
+                        لم يتم تعيين أي مكافآت رتب للستريك بعد انقر على إضافة مكافأة للبدء
+                    </div>
+                <% } %>
+
+                <% roleRewards.forEach((reward, index) => { %>
+                    <div class="role-row reward-item" data-index="<%= index %>" style="display: flex; align-items: center; gap: 14px; padding: 14px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--r-sm);">
+                        <div style="flex: 1;">
+                            <label style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 4px; display: block;">عدد الأيام المتتالية</label>
+                            <input type="number" class="glass-input reward-days" value="<%= reward.days %>" min="1" max="1000" placeholder="مثال 7" style="padding: 8px 12px;">
+                        </div>
+
+                        <div style="flex: 2;">
+                            <label style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 4px; display: block;">الرتبة الممنوحة</label>
+                            <select class="glass-input reward-role" style="padding: 8px 12px;">
+                                <% roles.forEach(r => { %>
+                                    <option value="<%= r.id %>" <%= reward.role_id === r.id ? 'selected' : '' %>>@ <%= r.name %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <button type="button" class="btn btn-danger btn-sm remove-reward-btn" style="margin-top: 22px;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                <% }) %>
+            </div>
+        </div>
+
+        <!-- Top Active Streaks Leaderboard -->
+        <div class="glass-panel reveal" style="animation-delay: 0.1s;">
+            <div class="section-title" style="margin-bottom: 8px;">
+                <img src="/assets/emojis/<%= emojiTheme %>/trophy.png" alt="trophy" style="width: 22px; height: 22px; vertical-align: middle; margin-left: 6px;">
+                متصدرو الستريك بالسيرفر
+            </div>
+            <p class="text-muted" style="margin-bottom: 16px; font-size: 0.92rem;">أعلى 10 أعضاء حفاظاً على سلاسل النشاط اليومي الحالية</p>
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px; text-align: center;">#</th>
+                            <th>العضو</th>
+                            <th style="text-align: center;">الستريك الحالي</th>
+                            <th style="text-align: center;">أعلى ستريك محقق</th>
+                            <th>آخر نشاط</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (topStreaks.length > 0) { %>
+                            <% topStreaks.forEach((row, idx) => { %>
+                                <tr>
+                                    <td style="text-align: center; font-weight: 700;">
+                                        <% if (idx === 0) { %>
+                                            <img src="/assets/emojis/<%= emojiTheme %>/trophy.png" alt="1" style="width: 20px; height: 20px; vertical-align: middle;">
+                                        <% } else if (idx === 1) { %>
+                                            <img src="/assets/emojis/<%= emojiTheme %>/num_2.png" alt="2" style="width: 18px; height: 18px; vertical-align: middle;">
+                                        <% } else if (idx === 2) { %>
+                                            <img src="/assets/emojis/<%= emojiTheme %>/num_3.png" alt="3" style="width: 18px; height: 18px; vertical-align: middle;">
+                                        <% } else { %>
+                                            <%= idx + 1 %>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <code><img src="/assets/emojis/<%= emojiTheme %>/user.png" alt="user" style="width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;"> <%= row.userId %></code>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <span class="guild-card-badge active" style="position: static; display: inline-flex; align-items: center; gap: 6px;">
+                                            <img src="/assets/emojis/<%= emojiTheme %>/flame.png" alt="streak" style="width: 16px; height: 16px; vertical-align: middle;">
+                                            <%= row.current_streak %> يوم
+                                        </span>
+                                    </td>
+                                    <td style="text-align: center; font-weight: 600; color: var(--text-2);">
+                                        <%= row.highest_streak || row.current_streak %> يوم
+                                    </td>
+                                    <td style="color: var(--text-3); font-size: 0.85rem;">
+                                        <%= row.last_active ? new Date(row.last_active).toLocaleString('ar-EG') : '—' %>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--text-3); padding: 32px 14px;">
+                                    لا توجد بيانات ستريك مسجلة في السيرفر حالياً
+                                </td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div style="margin-top: 24px;">
+            <button type="submit" class="btn btn-primary btn-large">
+                <i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات الستريك
+            </button>
+        </div>
+
+    </form>
+
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const rewardsContainer = document.getElementById('rewardsContainer');
+    const addBtn = document.getElementById('addRewardBtn');
+    const hiddenInput = document.getElementById('roleRewardsInput');
+    const form = document.getElementById('streakForm');
+    const noNotice = document.getElementById('noRewardsNotice');
+
+    const availableRoles = [
+        <% roles.forEach(r => { %>
+            { id: '<%= r.id %>', name: '<%= (r.name || "").replace(/'/g, "\\'") %>' },
+        <% }) %>
+    ];
+
+    function serializeRewards() {
+        const items = [];
+        document.querySelectorAll('.reward-item').forEach(el => {
+            const days = parseInt(el.querySelector('.reward-days').value, 10);
+            const role_id = el.querySelector('.reward-role').value;
+            if (days && role_id) {
+                items.push({ days, role_id });
+            }
+        });
+        hiddenInput.value = JSON.stringify(items);
+    }
+
+    if (addBtn && rewardsContainer) {
+        addBtn.addEventListener('click', () => {
+            if (noNotice) noNotice.style.display = 'none';
+
+            let optionsHtml = '';
+            availableRoles.forEach(r => {
+                optionsHtml += `<option value="${r.id}">@ ${r.name}</option>`;
+            });
+
+            const row = document.createElement('div');
+            row.className = 'role-row reward-item';
+            row.style.cssText = 'display: flex; align-items: center; gap: 14px; padding: 14px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--r-sm);';
+            row.innerHTML = `
+                <div style="flex: 1;">
+                    <label style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 4px; display: block;">عدد الأيام المتتالية</label>
+                    <input type="number" class="glass-input reward-days" value="7" min="1" max="1000" placeholder="مثال 7" style="padding: 8px 12px;">
+                </div>
+                <div style="flex: 2;">
+                    <label style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 4px; display: block;">الرتبة الممنوحة</label>
+                    <select class="glass-input reward-role" style="padding: 8px 12px;">
+                        ${optionsHtml}
+                    </select>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm remove-reward-btn" style="margin-top: 22px;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+
+            row.querySelector('.remove-reward-btn').addEventListener('click', () => {
+                row.remove();
+                serializeRewards();
+            });
+
+            row.querySelectorAll('input, select').forEach(input => {
+                input.addEventListener('change', serializeRewards);
+            });
+
+            rewardsContainer.appendChild(row);
+            serializeRewards();
+        });
+    }
+
+    document.querySelectorAll('.remove-reward-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.target.closest('.reward-item').remove();
+            serializeRewards();
+        });
+    });
+
+    document.querySelectorAll('.reward-days, .reward-role').forEach(el => {
+        el.addEventListener('change', serializeRewards);
+    });
+
+    if (form) {
+        form.addEventListener('submit', () => {
+            serializeRewards();
+        });
+    }
+});
+</script>
+
+<%- include('partials/footer') %>

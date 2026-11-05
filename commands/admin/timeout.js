@@ -16,42 +16,55 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 
   async execute(interaction) {
-    const target = interaction.options.getMember('user');
-    const duration = interaction.options.getInteger('duration');
-    const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
-
-    if (!target)
-      return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
-    if (!target.moderatable)
-      return interaction.reply({ embeds: [error(locale.get('moderation.cannotTimeout'))], flags: ['Ephemeral'] });
-
     try {
-      await target.timeout(duration * 60 * 1000, reason);
-      db.addModAction(
-        interaction.guildId,
-        target.id,
-        target.user.tag,
-        interaction.user.id,
-        interaction.user.tag,
-        'timeout',
-        reason,
-        `${duration}m`
-      );
-    } catch (e) {
-      return interaction.reply({ embeds: [error(locale.get('moderation.cannotTimeout'))], flags: ['Ephemeral'] });
+      const target = interaction.options.getMember('user');
+      const duration = interaction.options.getInteger('duration');
+      const reason = interaction.options.getString('reason') || 'لا يوجد سبب';
+
+      if (!target)
+        return interaction.reply({ embeds: [error(locale.get('general.userNotFound'))], flags: ['Ephemeral'] });
+      if (!target.moderatable)
+        return interaction.reply({ embeds: [error(locale.get('moderation.cannotTimeout'))], flags: ['Ephemeral'] });
+
+      try {
+        await target.timeout(duration * 60 * 1000, reason);
+        db.addModAction(
+          interaction.guildId,
+          target.id,
+          target.user.tag,
+          interaction.user.id,
+          interaction.user.tag,
+          'timeout',
+          reason,
+          `${duration}m`
+        );
+      } catch (e) {
+        return interaction.reply({ embeds: [error(locale.get('moderation.cannotTimeout'))], flags: ['Ephemeral'] });
+      }
+
+      const emojis = require('../../utils/emojis.json');
+      const eClock = emojis.clock || '{emoji:clock}';
+      const logEmbed = modlog('تم إسكات العضو', { tag: target.user.tag, id: target.id }, interaction.user, reason, {
+        [`${eClock} المدة`]: `${duration} دقيقة`
+      });
+      await sendLog(interaction.client, interaction.guildId, logEmbed, 'timeout');
+
+      return interaction.reply({
+        embeds: [
+          success(locale.get('moderation.timeoutSuccess', { user: target.user.tag, time: duration + ' دقيقة', reason }))
+        ]
+      });
+    } catch (err) {
+      const logger = require('../../utils/logger');
+      logger.error('[Command Error - timeout.js]:', err);
+      if (interaction) {
+        const replyPayload = { content: '❌ حدث خطأ أثناء تنفيذ هذا الأمر.', flags: ['Ephemeral'] };
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp(replyPayload).catch(() => null);
+        } else {
+          await interaction.reply(replyPayload).catch(() => null);
+        }
+      }
     }
-
-    const emojis = require('../../utils/emojis.json');
-    const eClock = emojis.clock || '{emoji:clock}';
-    const logEmbed = modlog('تم إسكات العضو', { tag: target.user.tag, id: target.id }, interaction.user, reason, {
-      [`${eClock} المدة`]: `${duration} دقيقة`
-    });
-    await sendLog(interaction.client, interaction.guildId, logEmbed, 'timeout');
-
-    return interaction.reply({
-      embeds: [
-        success(locale.get('moderation.timeoutSuccess', { user: target.user.tag, time: duration + ' دقيقة', reason }))
-      ]
-    });
   }
 };

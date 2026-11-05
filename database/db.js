@@ -25,15 +25,15 @@ function safeCollection(name) {
       logger.warn('[MongoDB] safeCollection called while disconnected — returning mock');
     }
     return {
-      insertOne: () => ({}),
-      updateOne: () => ({}),
-      updateMany: () => ({}),
-      deleteMany: () => ({}),
-      deleteOne: () => ({}),
-      findOne: () => null,
-      find: () => ({ toArray: () => [] }),
-      createIndex: () => null,
-      countDocuments: () => 0
+      insertOne: () => Promise.resolve({ acknowledged: true, insertedId: null }),
+      updateOne: () => Promise.resolve({ acknowledged: true, modifiedCount: 0 }),
+      updateMany: () => Promise.resolve({ acknowledged: true, modifiedCount: 0 }),
+      deleteMany: () => Promise.resolve({ acknowledged: true, deletedCount: 0 }),
+      deleteOne: () => Promise.resolve({ acknowledged: true, deletedCount: 0 }),
+      findOne: () => Promise.resolve(null),
+      find: () => ({ toArray: () => Promise.resolve([]) }),
+      createIndex: () => Promise.resolve(null),
+      countDocuments: () => Promise.resolve(0)
     };
   }
   return mongoDb.collection(name);
@@ -93,7 +93,18 @@ const cache = {
   starboard_settings: new Map(),
   starboard_posts: new Map(),
   sticky_messages: new Map(),
-  form_submissions: []
+  form_submissions: [],
+  booster_roles: new Map(),
+  shop_roles: new Map(),
+  shop_transactions: [],
+  daily_quests: new Map(),
+  sticky_roles: new Map(),
+  sticky_role_settings: new Map(),
+  ticket_ratings: [],
+  canned_responses: [],
+  ticket_transcripts: new Map(),
+  streak_settings: new Map(),
+  user_streaks: new Map()
 };
 
 const unhandledSqlStatements = [];
@@ -107,6 +118,16 @@ function stripId(doc) {
 
 function safeSet(doc) {
   return { $set: stripId(doc) };
+}
+
+function safeJsonParse(val, fallback = null) {
+  if (val === undefined || val === null) return fallback;
+  if (typeof val !== 'string') return val;
+  try {
+    return JSON.parse(val);
+  } catch {
+    return fallback;
+  }
 }
 
 async function loadMongoCache() {
@@ -154,7 +175,15 @@ async function loadMongoCache() {
     { name: 'afk_users', key: (d) => `${d.userId}_${d.guildId}` },
     { name: 'starboard_settings', key: (d) => d.guildId },
     { name: 'starboard_posts', key: (d) => d.originalMessageId },
-    { name: 'sticky_messages', key: (d) => d.channelId }
+    { name: 'sticky_messages', key: (d) => d.channelId },
+    { name: 'booster_roles', key: (d) => `${d.guildId}_${d.userId}` },
+    { name: 'shop_roles', key: (d) => `${d.guildId}_${d.roleId}` },
+    { name: 'daily_quests', key: (d) => `${d.userId}_${d.date}` },
+    { name: 'sticky_roles', key: (d) => `${d.guildId}_${d.userId}` },
+    { name: 'sticky_role_settings', key: (d) => d.guildId },
+    { name: 'ticket_transcripts', key: (d) => d.channelId },
+    { name: 'streak_settings', key: (d) => d.guildId },
+    { name: 'user_streaks', key: (d) => `${d.guildId}_${d.userId}` }
   ];
 
   const arrayCollections = [
@@ -174,7 +203,10 @@ async function loadMongoCache() {
     'ticket_categories',
     'command_restrictions',
     'mod_actions',
-    'form_submissions'
+    'form_submissions',
+    'shop_transactions',
+    'ticket_ratings',
+    'canned_responses'
   ];
 
   for (const col of mapCollections) {
@@ -228,21 +260,6 @@ async function connect() {
     logger.error('❌ [MongoDB] Connection failed:', error.message);
     throw error;
   }
-}
-
-function saveMessage(id, channelId, guildId, authorId, authorTag, authorAvatar, content, attachments = []) {
-  const now = Math.floor(Date.now() / 1000);
-  const newDoc = { id, channelId, guildId, authorId, authorTag, authorAvatar, content, attachments, timestamp: now };
-  cache.messages.push(newDoc);
-  safeCollection('messages')
-    .insertOne(newDoc)
-    .catch(() => null);
-
-  const cutoff = now - 259200;
-  cache.messages = cache.messages.filter((m) => m.timestamp >= cutoff);
-  safeCollection('messages')
-    .deleteMany({ timestamp: { $lt: cutoff } })
-    .catch(() => null);
 }
 
 function translateSql(opType, sql, args) {
@@ -535,7 +552,9 @@ function translateSql(opType, sql, args) {
       (r) => r.guildId === guildId && r.messageId === messageId && r.emoji === emoji
     );
     if (idx !== -1) cache.reactroles.splice(idx, 1);
-    safeCollection('reactroles').deleteOne({ guildId, messageId, emoji }).catch((err) => logger.error(err));
+    safeCollection('reactroles')
+      .deleteOne({ guildId, messageId, emoji })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
@@ -660,7 +679,9 @@ function translateSql(opType, sql, args) {
       reactionsCount: 0
     };
     cache.levels.set(`${userId}_${guildId}`, newDoc);
-    safeCollection('levels').insertOne(newDoc).catch((err) => logger.error(err));
+    safeCollection('levels')
+      .insertOne(newDoc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   }
 
@@ -741,7 +762,7 @@ const helpers = {
   getGuildSettings(guildId) {
     let row = cache.guild_settings.get(guildId);
     if (!row) {
-      row = { guildId, prefix: '#', giveaway_emoji: '🎉', reply_type: 'embed', tax_line_image: null };
+      row = { guildId, prefix: '#', giveaway_emoji: '🎉', reply_type: 'components_v2', tax_line_image: null };
       cache.guild_settings.set(guildId, row);
       safeCollection('guild_settings')
         .insertOne(row)
@@ -771,7 +792,7 @@ const helpers = {
   getBoostSettings(guildId) {
     let row = cache.boost_settings.get(guildId);
     if (!row) {
-      row = { guildId, channelId: null, message: null, useEmbed: false };
+      row = { guildId, channelId: null, message: null, useEmbed: false, anchorRoleId: null };
       cache.boost_settings.set(guildId, row);
       safeCollection('boost_settings')
         .insertOne(row)
@@ -779,8 +800,15 @@ const helpers = {
     }
     return row;
   },
-  setBoostSettings(guildId, channelId, message, useEmbed) {
-    const doc = { guildId, channelId, message, useEmbed };
+  setBoostSettings(guildId, channelId, message, useEmbed, anchorRoleId) {
+    const existing = cache.boost_settings.get(guildId) || {};
+    const doc = {
+      guildId,
+      channelId: channelId !== undefined ? channelId : existing.channelId || null,
+      message: message !== undefined ? message : existing.message || null,
+      useEmbed: useEmbed !== undefined ? Boolean(useEmbed) : Boolean(existing.useEmbed),
+      anchorRoleId: anchorRoleId !== undefined ? anchorRoleId : existing.anchorRoleId || null
+    };
     cache.boost_settings.set(guildId, doc);
     return safeCollection('boost_settings')
       .updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true })
@@ -818,13 +846,20 @@ const helpers = {
   addActiveGame(channelId, guildId, gameType, participants) {
     const doc = { channelId, guildId, gameType, participants, startTime: Date.now() };
     cache.active_games.set(channelId, doc);
-    safeCollection('active_games').insertOne(doc).catch((err) => logger.error(err));
+    safeCollection('active_games')
+      .insertOne(doc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeActiveGame(channelId, guildId) {
     cache.active_games.delete(channelId);
-    safeCollection('active_games').deleteMany({ channelId, guildId }).catch((err) => logger.error(err));
+    safeCollection('active_games')
+      .deleteMany({ channelId, guildId })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
+  },
+  deleteActiveGame(channelId, guildId) {
+    return this.removeActiveGame(channelId, guildId);
   },
   getActiveGame(channelId) {
     return cache.active_games.get(channelId);
@@ -851,7 +886,9 @@ const helpers = {
     cache.command_restrictions = cache.command_restrictions.filter(
       (r) => !(r.guildId === guildId && r.commandName === commandName)
     );
-    safeCollection('command_restrictions').deleteMany({ guildId, commandName }).catch((err) => logger.error(err));
+    safeCollection('command_restrictions')
+      .deleteMany({ guildId, commandName })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   setGuildSetting(guildId, key, value) {
@@ -881,7 +918,9 @@ const helpers = {
     const timestamp = Math.floor(Date.now() / 1000);
     const newDoc = { userId, guildId, reason, moderatorId, timestamp };
     cache.warnings.push(newDoc);
-    safeCollection('warnings').insertOne(newDoc).catch((err) => logger.error(err));
+    safeCollection('warnings')
+      .insertOne(newDoc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   getWarnings(userId, guildId) {
@@ -891,7 +930,9 @@ const helpers = {
   },
   clearWarnings(userId, guildId) {
     cache.warnings = cache.warnings.filter((w) => !(w.userId === userId && w.guildId === guildId));
-    safeCollection('warnings').deleteMany({ userId, guildId }).catch((err) => logger.error(err));
+    safeCollection('warnings')
+      .deleteMany({ userId, guildId })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeWarning(userId, guildId, index) {
@@ -901,7 +942,9 @@ const helpers = {
     if (index < 0 || index >= userWarnings.length) return false;
     const targetWarning = userWarnings[index];
     cache.warnings = cache.warnings.filter((w) => w !== targetWarning);
-    safeCollection('warnings').deleteOne({ userId, guildId, timestamp: targetWarning.timestamp }).catch((err) => logger.error(err));
+    safeCollection('warnings')
+      .deleteOne({ userId, guildId, timestamp: targetWarning.timestamp })
+      .catch((err) => logger.error(err));
     return true;
   },
 
@@ -1017,6 +1060,77 @@ const helpers = {
       .catch(() => ({ changes: 0 }));
   },
 
+  getStreakSettings(guildId) {
+    let row = cache.streak_settings.get(guildId);
+    if (!row) {
+      row = {
+        guildId,
+        enabled: 1,
+        channel_id: null,
+        streak_type: 'all',
+        bonus_credits: 200,
+        role_rewards: [],
+        freeze_enabled: 1
+      };
+      cache.streak_settings.set(guildId, row);
+      safeCollection('streak_settings')
+        .insertOne(row)
+        .catch(() => null);
+    }
+    if (typeof row.role_rewards === 'string') {
+      row.role_rewards = safeJsonParse(row.role_rewards, []);
+    }
+    return row;
+  },
+
+  updateStreakSettings(guildId, data) {
+    const current = this.getStreakSettings(guildId);
+    Object.assign(current, data);
+    cache.streak_settings.set(guildId, current);
+    return safeCollection('streak_settings')
+      .updateOne({ guildId }, { $set: stripId(current) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
+  },
+
+  getUserStreak(guildId, userId) {
+    const key = `${guildId}_${userId}`;
+    let row = cache.user_streaks.get(key);
+    if (!row) {
+      row = {
+        guildId,
+        userId,
+        current_streak: 0,
+        highest_streak: 0,
+        last_active: 0,
+        freezes: 1
+      };
+      cache.user_streaks.set(key, row);
+    }
+    return row;
+  },
+
+  updateUserStreak(guildId, userId, data) {
+    const key = `${guildId}_${userId}`;
+    const current = this.getUserStreak(guildId, userId);
+    Object.assign(current, data);
+    cache.user_streaks.set(key, current);
+    return safeCollection('user_streaks')
+      .updateOne({ guildId, userId }, { $set: stripId(current) }, { upsert: true })
+      .then(() => ({ changes: 1 }))
+      .catch(() => ({ changes: 0 }));
+  },
+
+  getTopStreaks(guildId, limit = 10) {
+    const list = [];
+    for (const row of cache.user_streaks.values()) {
+      if (row.guildId === guildId && (row.current_streak || 0) > 0) {
+        list.push({ ...row });
+      }
+    }
+    return list.sort((a, b) => (b.current_streak || 0) - (a.current_streak || 0)).slice(0, limit);
+  },
+
   getGreetSettings(guildId) {
     let row = cache.greet_settings.get(guildId);
     if (!row) {
@@ -1057,6 +1171,18 @@ const helpers = {
       .then(() => ({ changes: 1 }))
       .catch(() => ({ changes: 0 }));
   },
+  setGreetSettings(settingsOrGuildId, maybeSettings) {
+    let guildId;
+    let settings;
+    if (typeof settingsOrGuildId === 'string') {
+      guildId = settingsOrGuildId;
+      settings = maybeSettings || {};
+    } else {
+      settings = settingsOrGuildId || {};
+      guildId = settings.guildId;
+    }
+    return this.updateGreetSettings(guildId, settings);
+  },
   getAutomation(guildId, channelId) {
     return cache.automation.filter((a) => a.guildId === guildId && a.channelId === channelId);
   },
@@ -1073,21 +1199,27 @@ const helpers = {
 
     const newDoc = { guildId, channelId, type, value };
     cache.automation.push(newDoc);
-    safeCollection('automation').insertOne(newDoc).catch((err) => logger.error(err));
+    safeCollection('automation')
+      .insertOne(newDoc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeAutomation(guildId, channelId, type) {
     cache.automation = cache.automation.filter(
       (a) => !(a.guildId === guildId && a.channelId === channelId && a.type === type)
     );
-    safeCollection('automation').deleteMany({ guildId, channelId, type }).catch((err) => logger.error(err));
+    safeCollection('automation')
+      .deleteMany({ guildId, channelId, type })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
 
   createGiveaway(messageId, channelId, guildId, prize, winners, host, endTime, emoji) {
     const doc = { messageId, channelId, guildId, prize, winners, host, endTime, emoji, ended: 0, paused: 0 };
     cache.giveaways.set(messageId, doc);
-    safeCollection('giveaways').insertOne(doc).catch((err) => logger.error(err));
+    safeCollection('giveaways')
+      .insertOne(doc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   getGiveaway(messageId) {
@@ -1191,7 +1323,9 @@ const helpers = {
   },
   removeWhitelist(guildId, targetId) {
     cache.whitelist = cache.whitelist.filter((w) => !(w.guildId === guildId && w.targetId === targetId));
-    safeCollection('whitelist').deleteMany({ guildId, targetId }).catch((err) => logger.error(err));
+    safeCollection('whitelist')
+      .deleteMany({ guildId, targetId })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   addBlacklist(guildId, targetId, type) {
@@ -1207,7 +1341,9 @@ const helpers = {
   },
   removeBlacklist(guildId, targetId) {
     cache.blacklist = cache.blacklist.filter((b) => !(b.guildId === guildId && b.targetId === targetId));
-    safeCollection('blacklist').deleteMany({ guildId, targetId }).catch((err) => logger.error(err));
+    safeCollection('blacklist')
+      .deleteMany({ guildId, targetId })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   isWhitelisted(guildId, targetId) {
@@ -1274,7 +1410,9 @@ const helpers = {
 
     const newDoc = { guildId, count, roleId };
     cache.invite_ranks.push(newDoc);
-    safeCollection('invite_ranks').insertOne(newDoc).catch((err) => logger.error(err));
+    safeCollection('invite_ranks')
+      .insertOne(newDoc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   getInviteLogs(guildId) {
@@ -1313,8 +1451,7 @@ const helpers = {
     if (data.panel_channel !== undefined) current.panel_channel = data.panel_channel;
     if (data.support_message !== undefined) current.support_message = data.support_message;
     if (data.ticket_message !== undefined) current.ticket_message = data.ticket_message;
-    if (data.panel_data !== undefined)
-      current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
+    if (data.panel_data !== undefined) current.panel_data = safeJsonParse(data.panel_data, {});
 
     cache.ticket_settings.set(guildId, current);
     return safeCollection('ticket_settings')
@@ -1329,22 +1466,49 @@ const helpers = {
     if (!cache.ticket_categories) cache.ticket_categories = [];
     const newDoc = { guildId, ...category };
     cache.ticket_categories.push(newDoc);
-    safeCollection('ticket_categories').insertOne(newDoc).catch((err) => logger.error(err));
+    safeCollection('ticket_categories')
+      .insertOne(newDoc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeTicketCategory(guildId, name) {
     if (cache.ticket_categories) {
       cache.ticket_categories = cache.ticket_categories.filter((c) => !(c.guildId === guildId && c.name === name));
     }
-    safeCollection('ticket_categories').deleteMany({ guildId, name }).catch((err) => logger.error(err));
+    safeCollection('ticket_categories')
+      .deleteMany({ guildId, name })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
-  createTicket(guildId, userId, channelId, category) {
+  createTicket(guildId, userId, channelId, category, extra = {}) {
     const timestamp = Math.floor(Date.now() / 1000);
-    const doc = { guildId, userId, channelId, status: 'open', category, created_at: timestamp };
+    const doc = {
+      guildId,
+      userId,
+      channelId,
+      status: 'open',
+      category: category || 'عام',
+      department: category || 'عام',
+      subject: extra.subject || 'بدون موضوع',
+      description: extra.description || '',
+      priority: extra.priority || 'medium',
+      departmentRole: extra.departmentRole || null,
+      claimedBy: null,
+      claimedAt: null,
+      created_at: timestamp,
+      lastMessageAt: Date.now(),
+      firstResponseAt: null,
+      firstResponseTimeSeconds: null,
+      closedAt: null,
+      closedBy: null,
+      resolutionTimeSeconds: null,
+      staleWarned: false
+    };
     cache.tickets.push(doc);
-    safeCollection('tickets').insertOne(doc).catch((err) => logger.error(err));
-    return { changes: 1 };
+    safeCollection('tickets')
+      .insertOne(doc)
+      .catch((err) => logger.error(err));
+    return { changes: 1, ticket: doc };
   },
   getTicketByChannel(channelId) {
     return cache.tickets.find((t) => t.channelId === channelId);
@@ -1353,22 +1517,330 @@ const helpers = {
     const t = cache.tickets.find((tk) => tk.channelId === channelId);
     if (t) {
       t.status = status;
-      safeCollection('tickets').updateOne({ channelId }, { $set: { status } }).catch((err) => logger.error(err));
+      safeCollection('tickets')
+        .updateOne({ channelId }, { $set: { status } })
+        .catch((err) => logger.error(err));
     }
     return { changes: 1 };
   },
-  claimTicket(channelId, userId) {
+  updateTicketActivity(channelId, authorId, isStaff) {
     const ticket = cache.tickets.find((t) => t.channelId === channelId);
+    if (!ticket) return null;
+    ticket.lastMessageAt = Date.now();
+    const updateFields = { lastMessageAt: ticket.lastMessageAt };
 
-    if (!ticket) return false;
-
-    ticket.claimedBy = userId;
+    if (isStaff && !ticket.firstResponseAt && authorId !== ticket.userId) {
+      ticket.firstResponseAt = Date.now();
+      ticket.firstResponseTimeSeconds = Math.floor((ticket.firstResponseAt - ticket.created_at * 1000) / 1000);
+      updateFields.firstResponseAt = ticket.firstResponseAt;
+      updateFields.firstResponseTimeSeconds = ticket.firstResponseTimeSeconds;
+    }
 
     safeCollection('tickets')
-      .updateOne({ channelId }, { $set: { claimedBy: userId } })
+      .updateOne({ channelId }, { $set: updateFields })
+      .catch(() => null);
+    return ticket;
+  },
+  updateTicketPriority(channelId, priority) {
+    const ticket = cache.tickets.find((t) => t.channelId === channelId);
+    if (ticket) {
+      ticket.priority = priority;
+      safeCollection('tickets')
+        .updateOne({ channelId }, { $set: { priority } })
+        .catch(() => null);
+    }
+    return ticket;
+  },
+  updateTicketDepartment(channelId, category, departmentRole) {
+    const ticket = cache.tickets.find((t) => t.channelId === channelId);
+    if (ticket) {
+      ticket.category = category;
+      ticket.department = category;
+      ticket.departmentRole = departmentRole;
+      safeCollection('tickets')
+        .updateOne({ channelId }, { $set: { category, department: category, departmentRole } })
+        .catch(() => null);
+    }
+    return ticket;
+  },
+  claimTicket(channelId, userId) {
+    const ticket = cache.tickets.find((t) => t.channelId === channelId);
+    if (!ticket) return false;
+    ticket.claimedBy = userId;
+    ticket.claimedAt = Date.now();
+    safeCollection('tickets')
+      .updateOne({ channelId }, { $set: { claimedBy: userId, claimedAt: ticket.claimedAt } })
       .catch((err) => logger.error(err));
-
     return true;
+  },
+  unclaimTicket(channelId) {
+    const ticket = cache.tickets.find((t) => t.channelId === channelId);
+    if (!ticket) return false;
+    ticket.claimedBy = null;
+    ticket.claimedAt = null;
+    safeCollection('tickets')
+      .updateOne({ channelId }, { $set: { claimedBy: null, claimedAt: null } })
+      .catch((err) => logger.error(err));
+    return true;
+  },
+  closeTicket(channelId, closedBy, resolutionReason = '') {
+    const ticket = cache.tickets.find((t) => t.channelId === channelId);
+    if (!ticket) return null;
+    ticket.status = 'closed';
+    ticket.closedBy = closedBy;
+    ticket.closedAt = Date.now();
+    ticket.resolutionReason = resolutionReason;
+    ticket.resolutionTimeSeconds = Math.floor((ticket.closedAt - ticket.created_at * 1000) / 1000);
+    safeCollection('tickets')
+      .updateOne(
+        { channelId },
+        {
+          $set: {
+            status: 'closed',
+            closedBy,
+            closedAt: ticket.closedAt,
+            resolutionReason,
+            resolutionTimeSeconds: ticket.resolutionTimeSeconds
+          }
+        }
+      )
+      .catch(() => null);
+    return ticket;
+  },
+  markTicketStaleWarned(channelId) {
+    const ticket = cache.tickets.find((t) => t.channelId === channelId);
+    if (ticket) {
+      ticket.staleWarned = true;
+      safeCollection('tickets')
+        .updateOne({ channelId }, { $set: { staleWarned: true } })
+        .catch(() => null);
+    }
+    return ticket;
+  },
+  getOpenTickets(guildId) {
+    return cache.tickets.filter((t) => (!guildId || t.guildId === guildId) && t.status === 'open');
+  },
+  addTicketRating(guildId, channelId, userId, staffId, rating, comment = '') {
+    const doc = {
+      guildId,
+      channelId,
+      userId,
+      staffId: staffId || null,
+      rating: Number(rating),
+      comment: comment || '',
+      createdAt: Date.now()
+    };
+    cache.ticket_ratings.push(doc);
+    if (cache.ticket_ratings.length > 5000) {
+      cache.ticket_ratings = cache.ticket_ratings.slice(-5000);
+    }
+    safeCollection('ticket_ratings')
+      .insertOne(doc)
+      .catch((err) => logger.error('[DB ticket_ratings]', err));
+    return doc;
+  },
+  getTicketRatings(guildId, limit = 50) {
+    return cache.ticket_ratings
+      .filter((r) => !guildId || r.guildId === guildId)
+      .slice(-limit)
+      .reverse();
+  },
+  addCannedResponse(guildId, shortcut, content, addedBy = null) {
+    shortcut = shortcut.toLowerCase().trim();
+    const existingIndex = cache.canned_responses.findIndex(
+      (c) => c.guildId === guildId && (c.shortcut === shortcut || c.name === shortcut)
+    );
+    const doc = { guildId, shortcut, name: shortcut, content, addedBy, updatedAt: Date.now() };
+    if (existingIndex !== -1) {
+      cache.canned_responses[existingIndex] = doc;
+    } else {
+      cache.canned_responses.push(doc);
+    }
+    safeCollection('canned_responses')
+      .updateOne({ guildId, shortcut }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error('[DB canned_responses]', err));
+    return doc;
+  },
+  removeCannedResponse(guildId, shortcut) {
+    shortcut = shortcut.toLowerCase().trim();
+    const before = cache.canned_responses.length;
+    cache.canned_responses = cache.canned_responses.filter(
+      (c) => !(c.guildId === guildId && (c.shortcut === shortcut || c.name === shortcut))
+    );
+    safeCollection('canned_responses')
+      .deleteOne({ guildId, shortcut })
+      .catch((err) => logger.error('[DB canned_responses remove]', err));
+    return cache.canned_responses.length < before;
+  },
+  getCannedResponses(guildId) {
+    return cache.canned_responses.filter((c) => c.guildId === guildId);
+  },
+  getCannedResponse(guildId, shortcut) {
+    const key = shortcut.toLowerCase().trim();
+    return cache.canned_responses.find((c) => c.guildId === guildId && (c.shortcut === key || c.name === key));
+  },
+  saveWebTranscript(arg1, arg2, arg3, arg4, arg5) {
+    let guildId, channelId, userId, channelName, htmlContent;
+    if (typeof arg5 !== 'undefined') {
+      guildId = arg1;
+      channelId = arg2;
+      userId = arg3;
+      channelName = arg4;
+      htmlContent = arg5;
+    } else if (typeof arg3 === 'undefined') {
+      channelId = arg1;
+      htmlContent = arg2;
+      guildId = null;
+      userId = null;
+      channelName = `ticket-${channelId}`;
+    } else {
+      channelId = arg1;
+      guildId = arg2;
+      userId = arg3;
+      htmlContent = arg4;
+      channelName = '';
+    }
+    const doc = {
+      guildId,
+      channelId,
+      userId,
+      channelName: channelName || `ticket-${channelId}`,
+      html: htmlContent,
+      savedAt: Date.now()
+    };
+    cache.ticket_transcripts.set(channelId, doc);
+    if (cache.ticket_transcripts.size > 100) {
+      const firstKey = cache.ticket_transcripts.keys().next().value;
+      if (firstKey) cache.ticket_transcripts.delete(firstKey);
+    }
+    safeCollection('ticket_transcripts')
+      .updateOne({ channelId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error('[DB ticket_transcripts save]', err));
+    return doc;
+  },
+  async getWebTranscript(channelId) {
+    let item = cache.ticket_transcripts.get(channelId);
+    if (!item && mongoDb) {
+      item = await safeCollection('ticket_transcripts')
+        .findOne({ channelId })
+        .catch(() => null);
+      if (item) cache.ticket_transcripts.set(channelId, item);
+    }
+    return item ? item.html || item : null;
+  },
+  getTicketAnalytics(guildId) {
+    const guildTickets = cache.tickets.filter((t) => t.guildId === guildId);
+    const openCount = guildTickets.filter((t) => t.status === 'open').length;
+    const closedTickets = guildTickets.filter((t) => t.status === 'closed');
+    const closedCount = closedTickets.length;
+
+    // Response times
+    const respondedTickets = guildTickets.filter((t) => t.firstResponseTimeSeconds && t.firstResponseTimeSeconds > 0);
+    const avgFirstResponseSeconds =
+      respondedTickets.length > 0
+        ? Math.round(respondedTickets.reduce((acc, t) => acc + t.firstResponseTimeSeconds, 0) / respondedTickets.length)
+        : 0;
+
+    // Resolution times
+    const resolvedTickets = closedTickets.filter((t) => t.resolutionTimeSeconds && t.resolutionTimeSeconds > 0);
+    const avgResolutionSeconds =
+      resolvedTickets.length > 0
+        ? Math.round(resolvedTickets.reduce((acc, t) => acc + t.resolutionTimeSeconds, 0) / resolvedTickets.length)
+        : 0;
+
+    // Ratings
+    const ratings = cache.ticket_ratings.filter((r) => r.guildId === guildId);
+    const avgRating =
+      ratings.length > 0 ? (ratings.reduce((acc, r) => acc + r.rating, 0) / ratings.length).toFixed(1) : '5.0';
+
+    // Staff breakdown
+    const staffMap = {};
+    for (const t of guildTickets) {
+      if (t.claimedBy) {
+        if (!staffMap[t.claimedBy])
+          staffMap[t.claimedBy] = { staffId: t.claimedBy, claimed: 0, closed: 0, ratings: [] };
+        staffMap[t.claimedBy].claimed++;
+        if (t.status === 'closed') staffMap[t.claimedBy].closed++;
+      }
+    }
+    for (const r of ratings) {
+      if (r.staffId && staffMap[r.staffId]) {
+        staffMap[r.staffId].ratings.push(r.rating);
+      }
+    }
+    const staffLeaderboard = Object.values(staffMap)
+      .map((s) => ({
+        staffId: s.staffId,
+        claimed: s.claimed,
+        closed: s.closed,
+        avgScore: s.ratings.length > 0 ? (s.ratings.reduce((a, b) => a + b, 0) / s.ratings.length).toFixed(1) : '-'
+      }))
+      .sort((a, b) => b.claimed - a.claimed);
+
+    return {
+      total: guildTickets.length,
+      totalTickets: guildTickets.length,
+      open: openCount,
+      openTickets: openCount,
+      closed: closedCount,
+      closedTickets: closedCount,
+      avgFirstResponseSeconds,
+      avgFirstResponseMinutes: Math.round(avgFirstResponseSeconds / 60),
+      avgResolutionSeconds,
+      avgResolutionMinutes: Math.round(avgResolutionSeconds / 60),
+      averageRating: Number(avgRating) || 5.0,
+      totalRatings: ratings.length,
+      staffLeaderboard
+    };
+  },
+
+  // ── Sticky Roles System ──────────────────────────────
+  getStickyRoleSettings(guildId) {
+    let doc = cache.sticky_role_settings.get(guildId);
+    if (!doc) {
+      doc = { guildId, enabled: true, ignoredRoles: [] };
+      cache.sticky_role_settings.set(guildId, doc);
+    }
+    return doc;
+  },
+  setStickyRoleSettings(guildId, settings) {
+    const doc = { ...helpers.getStickyRoleSettings(guildId), ...settings };
+    cache.sticky_role_settings.set(guildId, doc);
+    safeCollection('sticky_role_settings')
+      .updateOne({ guildId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error('[DB sticky_role_settings]', err));
+    return doc;
+  },
+  saveStickyRoles(guildId, userId, roleIds) {
+    const key = `${guildId}_${userId}`;
+    const doc = {
+      guildId,
+      userId,
+      roleIds: Array.from(new Set(roleIds)),
+      savedAt: Date.now()
+    };
+    cache.sticky_roles.set(key, doc);
+    safeCollection('sticky_roles')
+      .updateOne({ guildId, userId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error('[DB sticky_roles save]', err));
+    return doc;
+  },
+  getStickyRoles(guildId, userId) {
+    return cache.sticky_roles.get(`${guildId}_${userId}`);
+  },
+  deleteStickyRoles(guildId, userId) {
+    const key = `${guildId}_${userId}`;
+    cache.sticky_roles.delete(key);
+    safeCollection('sticky_roles')
+      .deleteOne({ guildId, userId })
+      .catch((err) => logger.error('[DB sticky_roles delete]', err));
+  },
+  getAllStickyRoles(guildId) {
+    const out = [];
+    for (const doc of cache.sticky_roles.values()) {
+      if (doc.guildId === guildId) out.push(doc);
+    }
+    return out;
   },
 
   addTicketBlacklist(guildId, userId) {
@@ -1424,12 +1896,16 @@ const helpers = {
   addAutoReply(guildId, trigger, response, deleteTrigger = 0, mode = 'reply') {
     const doc = { guildId, trigger, response, deleteTrigger: Number(deleteTrigger), mode };
     cache.auto_reply.push(doc);
-    safeCollection('auto_reply').insertOne(doc).catch((err) => logger.error(err));
+    safeCollection('auto_reply')
+      .insertOne(doc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeAutoReply(guildId, trigger) {
     cache.auto_reply = cache.auto_reply.filter((a) => !(a.guildId === guildId && a.trigger === trigger));
-    safeCollection('auto_reply').deleteMany({ guildId, trigger }).catch((err) => logger.error(err));
+    safeCollection('auto_reply')
+      .deleteMany({ guildId, trigger })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
 
@@ -1483,12 +1959,16 @@ const helpers = {
   addAlias(guildId, shortcut, command) {
     const doc = { guildId, shortcut, command };
     cache.aliases.push(doc);
-    safeCollection('aliases').insertOne(doc).catch((err) => logger.error(err));
+    safeCollection('aliases')
+      .insertOne(doc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   removeAlias(guildId, shortcut) {
     cache.aliases = cache.aliases.filter((a) => !(a.guildId === guildId && a.shortcut === shortcut));
-    safeCollection('aliases').deleteMany({ guildId, shortcut }).catch((err) => logger.error(err));
+    safeCollection('aliases')
+      .deleteMany({ guildId, shortcut })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
 
@@ -1506,10 +1986,8 @@ const helpers = {
   updateFormsSettings(guildId, data) {
     const current = this.getFormsSettings(guildId);
     if (data.log_channel !== undefined) current.log_channel = data.log_channel;
-    if (data.panel_data !== undefined)
-      current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
-    if (data.questions !== undefined)
-      current.questions = typeof data.questions === 'string' ? JSON.parse(data.questions) : data.questions;
+    if (data.panel_data !== undefined) current.panel_data = safeJsonParse(data.panel_data, {});
+    if (data.questions !== undefined) current.questions = safeJsonParse(data.questions, []);
 
     cache.forms_settings.set(guildId, current);
     return safeCollection('forms_settings')
@@ -1531,10 +2009,8 @@ const helpers = {
   },
   updateReactionRoles(guildId, data) {
     const current = this.getReactionRoles(guildId);
-    if (data.panel_data !== undefined)
-      current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
-    if (data.roles_data !== undefined)
-      current.roles_data = typeof data.roles_data === 'string' ? JSON.parse(data.roles_data) : data.roles_data;
+    if (data.panel_data !== undefined) current.panel_data = safeJsonParse(data.panel_data, {});
+    if (data.roles_data !== undefined) current.roles_data = safeJsonParse(data.roles_data, []);
 
     cache.reaction_roles.set(guildId, current);
     return safeCollection('reaction_roles')
@@ -1547,7 +2023,9 @@ const helpers = {
     cache.reactroles = cache.reactroles.filter((r) => !(r.messageId === messageId && r.emoji === emoji));
     const newDoc = { messageId, guildId, emoji, roleId };
     cache.reactroles.push(newDoc);
-    safeCollection('reactroles').insertOne(newDoc).catch((err) => logger.error(err));
+    safeCollection('reactroles')
+      .insertOne(newDoc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   getReactRole(messageId, emoji) {
@@ -1581,8 +2059,7 @@ const helpers = {
     if (data.unverified_role !== undefined) current.unverified_role = data.unverified_role;
     if (data.verified_role !== undefined) current.verified_role = data.verified_role;
     if (data.panel_channel !== undefined) current.panel_channel = data.panel_channel;
-    if (data.panel_data !== undefined)
-      current.panel_data = typeof data.panel_data === 'string' ? JSON.parse(data.panel_data) : data.panel_data;
+    if (data.panel_data !== undefined) current.panel_data = safeJsonParse(data.panel_data, {});
 
     cache.captcha_settings.set(guildId, current);
     return safeCollection('captcha_settings')
@@ -1859,21 +2336,28 @@ const helpers = {
     return cache.social_alerts;
   },
   addSocialAlert(guildId, platform, channelId, socialId, message) {
-    const doc = { id: Date.now().toString(36), guildId, platform, channelId, socialId, lastVideoId: null, message };
+    const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    const doc = { id, guildId, platform, channelId, socialId, lastVideoId: null, message, changes: 1 };
     cache.social_alerts.push(doc);
-    safeCollection('social_alerts').insertOne(doc).catch((err) => logger.error(err));
-    return { changes: 1 };
+    safeCollection('social_alerts')
+      .insertOne(doc)
+      .catch((err) => logger.error(err));
+    return doc;
   },
   removeSocialAlert(id, guildId) {
     cache.social_alerts = cache.social_alerts.filter((a) => !(a.id === id && a.guildId === guildId));
-    safeCollection('social_alerts').deleteOne({ id, guildId }).catch((err) => logger.error(err));
+    safeCollection('social_alerts')
+      .deleteOne({ id, guildId })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   updateSocialAlertLastVideo(id, lastVideoId) {
     const idx = cache.social_alerts.findIndex((a) => a.id === id);
     if (idx !== -1) {
       cache.social_alerts[idx].lastVideoId = lastVideoId;
-      safeCollection('social_alerts').updateOne({ id }, { $set: { lastVideoId } }).catch((err) => logger.error(err));
+      safeCollection('social_alerts')
+        .updateOne({ id }, { $set: { lastVideoId } })
+        .catch((err) => logger.error(err));
     }
     return { changes: 1 };
   },
@@ -1881,7 +2365,9 @@ const helpers = {
     const idx = cache.social_alerts.findIndex((a) => a.id === id);
     if (idx !== -1) {
       cache.social_alerts[idx].socialId = socialId;
-      safeCollection('social_alerts').updateOne({ id }, { $set: { socialId } }).catch((err) => logger.error(err));
+      safeCollection('social_alerts')
+        .updateOne({ id }, { $set: { socialId } })
+        .catch((err) => logger.error(err));
     }
     return { changes: 1 };
   },
@@ -1909,39 +2395,69 @@ const helpers = {
     return doc || null;
   },
   async getKV(key) {
+    if (!key || typeof key !== 'string') return null;
+    if (!cache.quick_db) cache.quick_db = new Map();
+    if (cache.quick_db.has(key)) return cache.quick_db.get(key);
     if (!mongoDb) return null;
     const doc = await safeCollection('quick_db')
       .findOne({ key })
       .catch(() => null);
-    return doc ? doc.value : null;
+    if (doc) {
+      cache.quick_db.set(key, doc.value);
+      return doc.value;
+    }
+    return null;
   },
   async setKV(key, value) {
-    if (!mongoDb) return value;
-    await safeCollection('quick_db')
-      .updateOne({ key }, { $set: { value } }, { upsert: true })
-      .catch((err) => logger.error('[DB] Mongo write failed:', err));
-    return value;
+    if (!key || typeof key !== 'string') return null;
+    let safeVal = value;
+    if (typeof safeVal === 'number' && Number.isNaN(safeVal)) safeVal = 0;
+    if (!cache.quick_db) cache.quick_db = new Map();
+    cache.quick_db.set(key, safeVal);
+    if (mongoDb) {
+      await safeCollection('quick_db')
+        .updateOne({ key }, { $set: { value: safeVal } }, { upsert: true })
+        .catch((err) => logger.error('[DB] Mongo write failed:', err));
+    }
+    return safeVal;
   },
   async deleteKV(key) {
-    if (!mongoDb) return false;
-    await safeCollection('quick_db')
-      .deleteOne({ key })
-      .catch((err) => logger.error('[DB] Mongo write failed:', err));
+    if (!key || typeof key !== 'string') return false;
+    if (!cache.quick_db) cache.quick_db = new Map();
+    cache.quick_db.delete(key);
+    if (mongoDb) {
+      await safeCollection('quick_db')
+        .deleteOne({ key })
+        .catch((err) => logger.error('[DB] Mongo write failed:', err));
+    }
     return true;
   },
   async getTopBalances(limit = 6) {
-    if (!mongoDb) return [];
-    const docs = await safeCollection('quick_db')
-      .find({ key: { $regex: /^balance_/ } })
-      .toArray()
-      .catch(() => []);
-    return docs
-      .map((d) => ({
-        userId: d.key.replace('balance_', ''),
-        balance: d.value
-      }))
-      .sort((a, b) => b.balance - a.balance)
-      .slice(0, limit);
+    if (mongoDb) {
+      const docs = await safeCollection('quick_db')
+        .find({ key: { $regex: /^balance_/ } })
+        .toArray()
+        .catch(() => []);
+      if (docs.length > 0) {
+        return docs
+          .map((d) => ({
+            userId: d.key.replace('balance_', ''),
+            balance: d.value
+          }))
+          .sort((a, b) => b.balance - a.balance)
+          .slice(0, limit);
+      }
+    }
+    if (cache.quick_db) {
+      const list = [];
+      for (const [k, v] of cache.quick_db.entries()) {
+        if (k.startsWith('balance_')) {
+          list.push({ userId: k.replace('balance_', ''), balance: v });
+        }
+      }
+      return list.sort((a, b) => b.balance - a.balance).slice(0, limit);
+    }
+    return [];
   },
 
   getAutomod(guildId) {
@@ -1960,9 +2476,8 @@ const helpers = {
     const current = this.getAutomod(guildId);
     if (data.enabled !== undefined) current.enabled = data.enabled;
     if (data.action !== undefined) current.action = data.action;
-    if (data.words !== undefined) current.words = typeof data.words === 'string' ? JSON.parse(data.words) : data.words;
-    if (data.bypass_roles !== undefined)
-      current.bypass_roles = typeof data.bypass_roles === 'string' ? JSON.parse(data.bypass_roles) : data.bypass_roles;
+    if (data.words !== undefined) current.words = safeJsonParse(data.words, []);
+    if (data.bypass_roles !== undefined) current.bypass_roles = safeJsonParse(data.bypass_roles, []);
 
     cache.automod_settings.set(guildId, current);
     return safeCollection('automod_settings')
@@ -1981,12 +2496,16 @@ const helpers = {
   addCustomCommand(guildId, id, trigger, actions) {
     const newDoc = { id, guildId, trigger, actions };
     cache.custom_commands.push(newDoc);
-    safeCollection('custom_commands').insertOne(newDoc).catch((err) => logger.error(err));
+    safeCollection('custom_commands')
+      .insertOne(newDoc)
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   deleteCustomCommand(guildId, id) {
     cache.custom_commands = cache.custom_commands.filter((c) => !(c.guildId === guildId && c.id === id));
-    safeCollection('custom_commands').deleteOne({ guildId, id }).catch((err) => logger.error(err));
+    safeCollection('custom_commands')
+      .deleteOne({ guildId, id })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
 
@@ -2006,7 +2525,9 @@ const helpers = {
       timestamp: Date.now()
     };
     cache.mod_actions.push(newDoc);
-    safeCollection('mod_actions').insertOne(newDoc).catch((err) => logger.error(err));
+    safeCollection('mod_actions')
+      .insertOne(newDoc)
+      .catch((err) => logger.error(err));
     return newDoc;
   },
   getModHistory(guildId, targetId, limit = 50) {
@@ -2017,7 +2538,9 @@ const helpers = {
   },
   clearModHistory(guildId, targetId) {
     cache.mod_actions = cache.mod_actions.filter((a) => !(a.guildId === guildId && a.targetId === targetId));
-    safeCollection('mod_actions').deleteMany({ guildId, targetId }).catch((err) => logger.error(err));
+    safeCollection('mod_actions')
+      .deleteMany({ guildId, targetId })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
   getAllModActions(guildId) {
@@ -2025,7 +2548,9 @@ const helpers = {
   },
   clearAllModActions(guildId) {
     cache.mod_actions = cache.mod_actions.filter((a) => a.guildId !== guildId);
-    safeCollection('mod_actions').deleteMany({ guildId }).catch((err) => logger.error(err));
+    safeCollection('mod_actions')
+      .deleteMany({ guildId })
+      .catch((err) => logger.error(err));
     return { changes: 1 };
   },
 
@@ -2056,7 +2581,9 @@ const helpers = {
       timestamp: Date.now()
     };
     cache.suggestions.set(messageId, newDoc);
-    safeCollection('suggestions').insertOne(newDoc).catch((err) => logger.error(err));
+    safeCollection('suggestions')
+      .insertOne(newDoc)
+      .catch((err) => logger.error(err));
     return newDoc;
   },
   getSuggestion(messageId) {
@@ -2081,7 +2608,9 @@ const helpers = {
       doc.downvoters = downvoters;
       cache.suggestions.set(messageId, doc);
     }
-    safeCollection('suggestions').updateOne({ messageId }, { $set: { upvoters, downvoters } }).catch((err) => logger.error(err));
+    safeCollection('suggestions')
+      .updateOne({ messageId }, { $set: { upvoters, downvoters } })
+      .catch((err) => logger.error(err));
   },
 
   // ═══════════════════════════════════════════
@@ -2101,7 +2630,9 @@ const helpers = {
   },
   removeAFK(guildId, userId) {
     cache.afk_users.delete(`${userId}_${guildId}`);
-    safeCollection('afk_users').deleteOne({ guildId, userId }).catch((err) => logger.error(err));
+    safeCollection('afk_users')
+      .deleteOne({ guildId, userId })
+      .catch((err) => logger.error(err));
   },
   getAllAFK(guildId) {
     const result = [];
@@ -2131,7 +2662,9 @@ const helpers = {
   addStarboardPost(guildId, originalMessageId, starboardMessageId, stars) {
     const doc = { guildId, originalMessageId, starboardMessageId, stars };
     cache.starboard_posts.set(originalMessageId, doc);
-    safeCollection('starboard_posts').insertOne(doc).catch((err) => logger.error(err));
+    safeCollection('starboard_posts')
+      .insertOne(doc)
+      .catch((err) => logger.error(err));
     return doc;
   },
   updateStarboardPost(originalMessageId, stars, starboardMessageId) {
@@ -2143,11 +2676,15 @@ const helpers = {
     }
     const update = { stars };
     if (starboardMessageId) update.starboardMessageId = starboardMessageId;
-    safeCollection('starboard_posts').updateOne({ originalMessageId }, { $set: update }).catch((err) => logger.error(err));
+    safeCollection('starboard_posts')
+      .updateOne({ originalMessageId }, { $set: update })
+      .catch((err) => logger.error(err));
   },
   removeStarboardPost(originalMessageId) {
     cache.starboard_posts.delete(originalMessageId);
-    safeCollection('starboard_posts').deleteOne({ originalMessageId }).catch((err) => logger.error(err));
+    safeCollection('starboard_posts')
+      .deleteOne({ originalMessageId })
+      .catch((err) => logger.error(err));
   },
 
   // ═══════════════════════════════════════════
@@ -2176,7 +2713,9 @@ const helpers = {
   },
   removeStickyMessage(channelId) {
     cache.sticky_messages.delete(channelId);
-    safeCollection('sticky_messages').deleteOne({ channelId }).catch((err) => logger.error(err));
+    safeCollection('sticky_messages')
+      .deleteOne({ channelId })
+      .catch((err) => logger.error(err));
   },
   getAllStickyMessages(guildId) {
     return Array.from(cache.sticky_messages.values()).filter((m) => m.guildId === guildId);
@@ -2198,7 +2737,9 @@ const helpers = {
       timestamp: Date.now()
     };
     cache.form_submissions.push(newDoc);
-    safeCollection('form_submissions').insertOne(newDoc).catch((err) => logger.error(err));
+    safeCollection('form_submissions')
+      .insertOne(newDoc)
+      .catch((err) => logger.error(err));
     return newDoc;
   },
   getFormSubmission(guildId, formId, userId) {
@@ -2226,6 +2767,156 @@ const helpers = {
         { $set: { status, reviewedBy, reviewNote: reviewNote || null } }
       )
       .catch((err) => logger.error(err));
+  },
+
+  // ── Booster Roles System ──────────────────────────────
+  getBoosterRole(guildId, userId) {
+    return cache.booster_roles.get(`${guildId}_${userId}`) || null;
+  },
+  getBoosterRoleByRoleId(guildId, roleId) {
+    for (const doc of cache.booster_roles.values()) {
+      if (doc.guildId === guildId && doc.roleId === roleId) return doc;
+    }
+    return null;
+  },
+  getAllBoosterRoles(guildId) {
+    return Array.from(cache.booster_roles.values()).filter((r) => r.guildId === guildId);
+  },
+  setBoosterRole(guildId, userId, roleData) {
+    const key = `${guildId}_${userId}`;
+    const doc = { guildId, userId, ...roleData, updatedAt: Date.now() };
+    cache.booster_roles.set(key, doc);
+    safeCollection('booster_roles')
+      .updateOne({ guildId, userId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error('[DB booster_roles set]', err));
+    return doc;
+  },
+  deleteBoosterRole(guildId, userId) {
+    const key = `${guildId}_${userId}`;
+    const existed = cache.booster_roles.delete(key);
+    safeCollection('booster_roles')
+      .deleteOne({ guildId, userId })
+      .catch((err) => logger.error('[DB booster_roles delete]', err));
+    return existed;
+  },
+  addBoosterRoleShare(guildId, userId, friendId) {
+    const role = helpers.getBoosterRole(guildId, userId);
+    if (!role) return false;
+    const shared = new Set(role.sharedWith || []);
+    shared.add(friendId);
+    role.sharedWith = Array.from(shared);
+    helpers.setBoosterRole(guildId, userId, role);
+    return true;
+  },
+  removeBoosterRoleShare(guildId, userId, friendId) {
+    const role = helpers.getBoosterRole(guildId, userId);
+    if (!role) return false;
+    role.sharedWith = (role.sharedWith || []).filter((id) => id !== friendId);
+    helpers.setBoosterRole(guildId, userId, role);
+    return true;
+  },
+
+  // ── Server Role Shop ─────────────────────────────────
+  getShopRoles(guildId) {
+    return Array.from(cache.shop_roles.values()).filter((r) => r.guildId === guildId);
+  },
+  getShopRole(guildId, roleId) {
+    return cache.shop_roles.get(`${guildId}_${roleId}`) || null;
+  },
+  addShopRole(guildId, roleId, price, description = '') {
+    const key = `${guildId}_${roleId}`;
+    const doc = {
+      guildId,
+      roleId,
+      price: Number(price),
+      description: description || '',
+      addedAt: Date.now()
+    };
+    cache.shop_roles.set(key, doc);
+    safeCollection('shop_roles')
+      .updateOne({ guildId, roleId }, { $set: stripId(doc) }, { upsert: true })
+      .catch((err) => logger.error('[DB shop_roles add]', err));
+    return doc;
+  },
+  removeShopRole(guildId, roleId) {
+    const key = `${guildId}_${roleId}`;
+    const existed = cache.shop_roles.delete(key);
+    safeCollection('shop_roles')
+      .deleteOne({ guildId, roleId })
+      .catch((err) => logger.error('[DB shop_roles remove]', err));
+    return existed;
+  },
+  addShopTransaction(guildId, userId, roleId, price) {
+    const doc = {
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+      guildId,
+      userId,
+      roleId,
+      price: Number(price),
+      timestamp: Date.now()
+    };
+    cache.shop_transactions.push(doc);
+    if (cache.shop_transactions.length > 5000) {
+      cache.shop_transactions = cache.shop_transactions.slice(-5000);
+    }
+    safeCollection('shop_transactions')
+      .insertOne(doc)
+      .catch((err) => logger.error('[DB shop_transactions insert]', err));
+    return doc;
+  },
+  recordShopTransaction(guildId, userId, roleId, price) {
+    return this.addShopTransaction(guildId, userId, roleId, price);
+  },
+
+  // ── Daily Quests System ──────────────────────────────
+  getDailyQuests(userId, dateStr = new Date().toISOString().slice(0, 10)) {
+    const key = `${userId}_${dateStr}`;
+    let doc = cache.daily_quests.get(key);
+    if (!doc) {
+      doc = {
+        userId,
+        date: dateStr,
+        progress: {
+          chat: 0,
+          voice: 0,
+          transfer: 0,
+          daily: 0
+        },
+        claimed: {
+          chat: false,
+          voice: false,
+          transfer: false,
+          daily: false
+        }
+      };
+      cache.daily_quests.set(key, doc);
+      safeCollection('daily_quests')
+        .insertOne(doc)
+        .catch(() => null);
+    }
+    return doc;
+  },
+  incrementQuestProgress(userId, questType, amount = 1, dateStr = new Date().toISOString().slice(0, 10)) {
+    const doc = helpers.getDailyQuests(userId, dateStr);
+    if (doc && doc.progress) {
+      doc.progress[questType] = (doc.progress[questType] || 0) + amount;
+      cache.daily_quests.set(`${userId}_${dateStr}`, doc);
+      safeCollection('daily_quests')
+        .updateOne({ userId, date: dateStr }, { $set: stripId(doc) }, { upsert: true })
+        .catch(() => null);
+    }
+    return doc;
+  },
+  claimDailyQuest(userId, questType, dateStr = new Date().toISOString().slice(0, 10)) {
+    const doc = helpers.getDailyQuests(userId, dateStr);
+    if (doc && doc.claimed) {
+      doc.claimed[questType] = true;
+      cache.daily_quests.set(`${userId}_${dateStr}`, doc);
+      safeCollection('daily_quests')
+        .updateOne({ userId, date: dateStr }, { $set: stripId(doc) }, { upsert: true })
+        .catch(() => null);
+    }
+    return doc;
   }
 };
 
@@ -2234,3 +2925,6 @@ helpers.safeSet = safeSet;
 helpers.client = client;
 helpers.prepare = (sql) => helpers.db.prepare(sql);
 module.exports = helpers;
+if (typeof logger.setDb === 'function') {
+  logger.setDb(helpers);
+}

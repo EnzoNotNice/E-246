@@ -12,22 +12,20 @@ user = typeof user !== 'undefined' ? user : null;
     <!-- Page Header -->
     <div class="content-header">
         <h1><i class="fa-solid fa-server"></i> لوحة التحكم</h1>
-        <p>تحكم في إعدادات البوت عبر جميع سيرفراتك بكل سهولة واحترافية</p>
+        <p>إدارة سريعة ومتكاملة لجميع سيرفراتك وإعدادات البوت في مكان واحد</p>
     </div>
 
-    <!-- Stats Row -->
-    <div class="bento-grid cols-4" style="margin-bottom: 28px;">
+    <!-- Stats Overview -->
+    <div class="bento-grid cols-4" style="margin-bottom: 24px;">
 
-        <!-- السيرفرات المتاحة -->
         <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
                 <i class="fa-solid fa-server"></i>
             </div>
             <div class="metric-value" data-count="<%= guilds.length %>"><%= guilds.length %></div>
-            <div class="metric-label">سيرفراتك</div>
+            <div class="metric-label">سيرفراتك المتاحة</div>
         </div>
 
-        <!-- سيرفرات البوت -->
         <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
                 <i class="fa-solid fa-globe"></i>
@@ -36,106 +34,115 @@ user = typeof user !== 'undefined' ? user : null;
             <div class="metric-label">سيرفرات البوت الكلية</div>
         </div>
 
-        <!-- مدة التشغيل -->
         <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
                 <i class="fa-solid fa-clock-rotate-left"></i>
             </div>
-            <div class="metric-value uptime-display" style="font-size: 1.2rem; line-height: 1.3; margin-top: 4px;">
+            <div class="metric-value uptime-display" style="font-size: 1.25rem; line-height: 1.2; direction: ltr;">
                 <%= typeof stats !== 'undefined' ? stats.uptime : '—' %>
             </div>
             <div class="metric-label">مدة التشغيل</div>
         </div>
 
-        <!-- البينج -->
         <div class="glass-panel reveal metric-card">
             <div class="metric-icon">
                 <i class="fa-solid fa-signal"></i>
             </div>
-            <div class="metric-value" style="font-size: 1.4rem;">
+            <div class="metric-value" style="font-size: 1.35rem; direction: ltr;">
                 <%= typeof stats !== 'undefined' ? stats.ping : '—' %>
             </div>
-            <div class="metric-label">البينج (Ping)</div>
+            <div class="metric-label">زمن الاستجابة (Ping)</div>
         </div>
 
     </div>
 
-    <!-- Divider Label -->
     <% if (guilds.length > 0) { %>
-    <div class="section-divider reveal">
-        <span>السيرفرات المتاحة للإدارة</span>
-    </div>
-    <% } %>
+    <!-- Guilds Filter & Search Controls -->
+    <div class="guild-controls-bar reveal">
+        <div class="guild-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="guildSearchInput" class="guild-search-input" placeholder="ابحث باسم السيرفر..." autocomplete="off">
+        </div>
 
-    <!-- Guild Cards -->
-    <% if (guilds.length > 0) { %>
-    <div class="guild-grid reveal">
+        <div class="filter-pills-wrap">
+            <button type="button" class="filter-pill active" data-filter="all">الكل</button>
+            <button type="button" class="filter-pill" data-filter="active">مفعّل</button>
+            <button type="button" class="filter-pill" data-filter="inactive">غير مضاف</button>
+        </div>
+
+        <div class="guild-count-badge">
+            عرض <span id="visibleGuildsCount"><%= guilds.length %></span> من <%= guilds.length %> سيرفر
+        </div>
+    </div>
+
+    <!-- Guilds Grid -->
+    <div class="guild-grid reveal" id="guildGrid">
         <% guilds.forEach(guild => { %>
             <% const isBotInGuild = botGuilds.has(guild.id); %>
-            <div class="glass-panel reveal guild-card">
-                <div class="guild-icon-wrapper">
+            <div class="guild-card" data-name="<%= (guild.name || '').toLowerCase() %>" data-status="<%= isBotInGuild ? 'active' : 'inactive' %>">
+                
+                <span class="guild-card-badge <%= isBotInGuild ? 'active' : 'inactive' %>">
+                    <% if (isBotInGuild) { %>
+                        <i class="fa-solid fa-circle-check"></i> مفعّل
+                    <% } else { %>
+                        <i class="fa-solid fa-plus"></i> غير مضاف
+                    <% } %>
+                </span>
+
+                <div class="guild-icon-wrap">
                     <% if (guild.icon) { %>
                         <img
                             src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png?size=128"
                             alt="<%= guild.name %>"
                             loading="lazy"
-                            class="guild-icon"
+                            class="guild-icon-img"
+                            onerror="this.onerror=null;this.src='/img/logo.png';"
                         >
                     <% } else { %>
-                        <div class="no-icon guild-icon"><%= guild.name.charAt(0).toUpperCase() %></div>
+                        <div class="guild-icon-fallback"><%= (guild.name || 'S').charAt(0).toUpperCase() %></div>
                     <% } %>
                 </div>
 
-                <h3 title="<%= guild.name %>" class="guild-name"><%= guild.name %></h3>
+                <h3 class="guild-title" title="<%= guild.name %>"><%= guild.name %></h3>
 
-                <% if (isBotInGuild) { %>
-                    <a href="/dashboard/<%= guild.id %>" class="btn btn-primary btn-large" style="width: 100%; margin-top: auto;">
-                        <i class="fa-solid fa-sliders"></i> إدارة السيرفر
-                    </a>
-                <% } else { %>
-                    <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands&guild_id=<%= guild.id %>&disable_guild_select=true" class="btn btn-success btn-large" style="width: 100%; margin-top: auto;">
-                        <i class="fa-solid fa-plus"></i> إضافة البوت
-                    </a>
-                <% } %>
+                <div class="guild-card-footer">
+                    <% if (isBotInGuild) { %>
+                        <a href="/dashboard/<%= guild.id %>" class="btn btn-primary btn-block">
+                            <i class="fa-solid fa-sliders"></i> لوحة التحكم
+                        </a>
+                    <% } else { %>
+                        <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands&guild_id=<%= guild.id %>&disable_guild_select=true" class="btn btn-secondary btn-block">
+                            <i class="fa-solid fa-plus"></i> إضافة البوت
+                        </a>
+                    <% } %>
+                </div>
+
             </div>
         <% }) %>
     </div>
+
+    <!-- No Search Results Found Placeholder -->
+    <div id="noSearchResults" class="glass-panel text-center" style="display: none; padding: 48px 20px; margin-top: 16px;">
+        <i class="fa-solid fa-magnifying-glass" style="font-size: 2.2rem; color: var(--text-3); margin-bottom: 12px; display: inline-block;"></i>
+        <h3 style="font-size: 1.1rem; color: var(--text-1); margin-bottom: 6px;">لا توجد سيرفرات مطابقة</h3>
+        <p style="color: var(--text-2); font-size: 0.85rem;">لم يتم العثور على أي سيرفر يطابق معايير البحث أو الفلتر المحددة</p>
+    </div>
+
     <% } else { %>
     <!-- Empty State -->
     <div class="glass-panel reveal empty-state">
         <div class="empty-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
         <h2>لا يوجد سيرفرات متاحة</h2>
-        <p>ليس لديك صلاحيات إدارية في أي سيرفر متواجد فيه البوت حالياً</p>
+        <p>ليس لديك صلاحيات إدارية (Manage Server أو Administrator) في أي سيرفر حتى الآن</p>
     </div>
     <% } %>
 
 </main>
 
 <style>
-/* Section divider */
-.section-divider {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin: 0 0 20px;
-    color: var(--text-3);
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-.section-divider::before,
-.section-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-}
-
-/* Empty state */
 .empty-state {
     text-align: center;
-    padding: 60px 24px;
+    padding: 64px 24px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -144,7 +151,7 @@ user = typeof user !== 'undefined' ? user : null;
 .empty-state .empty-icon {
     font-size: 3rem;
     color: var(--text-3);
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     line-height: 1;
 }
 .empty-state h2 {
@@ -159,58 +166,6 @@ user = typeof user !== 'undefined' ? user : null;
     max-width: 360px;
     margin: 0 auto;
     line-height: 1.5;
-}
-
-/* Uptime metric value */
-.uptime-display {
-    font-variant-numeric: tabular-nums;
-    direction: ltr;
-}
-
-/* Guild Card styling */
-.guild-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 20px;
-    gap: 14px;
-    min-height: 240px;
-}
-
-.guild-icon-wrapper {
-    margin-bottom: 4px;
-}
-
-.guild-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: var(--r-sm);
-    object-fit: cover;
-    border: 1px solid var(--border);
-    transition: all var(--t-base);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--text-1);
-    background: var(--bg-2);
-}
-
-.guild-card:hover .guild-icon {
-    border-color: var(--accent);
-}
-
-.guild-name {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-1);
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width: 100%;
 }
 </style>
 

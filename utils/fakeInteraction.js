@@ -30,37 +30,67 @@ async function createFakeInteraction(message, cmd, args) {
     let val = args[argIndex];
 
     if (optType === 3) {
-      const isLast = optionDefs.indexOf(opt) === optionDefs.length - 1;
-      if (isLast) {
-        val = args.slice(argIndex).join(' ');
-        argIndex = args.length;
+      const remainingOpts = optionDefs.slice(optionDefs.indexOf(opt) + 1);
+      const hasMoreStrings = remainingOpts.some((o) => o.type === 3);
+
+      if (!hasMoreStrings) {
+        // Check if trailing arg is a number for a subsequent integer option (e.g. delete_messages in ban)
+        const hasSubsequentInt = remainingOpts.some((o) => o.type === 4 || o.type === 10);
+        const lastArg = args[args.length - 1];
+        if (hasSubsequentInt && args.length - argIndex > 1 && /^\d+$/.test(lastArg)) {
+          val = args.slice(argIndex, -1).join(' ');
+          argIndex = args.length - 1;
+        } else {
+          val = args.slice(argIndex).join(' ');
+          argIndex = args.length;
+        }
       } else {
         argIndex++;
       }
       optionValues[optName] = val;
     } else if (optType === 4 || optType === 10) {
-      let multiplier = 1;
       let lowerVal = String(val).toLowerCase();
-      if (lowerVal === 'all' || lowerVal === 'كل' || lowerVal === 'الكل') {
-        const db = require('../database/db');
-        const userBalance = (await db.getKV(`balance_${message.author.id}`)) || 0;
-        optionValues[optName] = userBalance;
-      } else {
-        if (lowerVal.endsWith('k')) {
-          multiplier = 1000;
-          lowerVal = lowerVal.slice(0, -1);
-        } else if (lowerVal.endsWith('m')) {
-          multiplier = 1000000;
-          lowerVal = lowerVal.slice(0, -1);
-        } else if (lowerVal.endsWith('b')) {
-          multiplier = 1000000000;
-          lowerVal = lowerVal.slice(0, -1);
+      if (optName === 'duration') {
+        let dur = parseFloat(lowerVal);
+        if (lowerVal.endsWith('m') || lowerVal.endsWith('د')) {
+          dur = parseFloat(lowerVal.slice(0, -1));
+        } else if (lowerVal.endsWith('h') || lowerVal.endsWith('س')) {
+          dur = parseFloat(lowerVal.slice(0, -1)) * 60;
+        } else if (lowerVal.endsWith('d') || lowerVal.endsWith('ي')) {
+          dur = parseFloat(lowerVal.slice(0, -1)) * 1440;
+        } else if (lowerVal.endsWith('w') || lowerVal.endsWith('أ')) {
+          dur = parseFloat(lowerVal.slice(0, -1)) * 10080;
         }
+        if (isNaN(dur)) {
+          // If duration was omitted by user (e.g. "#mute @user spam"), default to 60m and keep arg for next option (reason)
+          optionValues[optName] = 60;
+        } else {
+          optionValues[optName] = Math.floor(dur);
+          argIndex++;
+        }
+      } else {
+        let multiplier = 1;
+        if (lowerVal === 'all' || lowerVal === 'كل' || lowerVal === 'الكل') {
+          const db = require('../database/db');
+          const userBalance = (await db.getKV(`balance_${message.author.id}`)) || 0;
+          optionValues[optName] = userBalance;
+        } else {
+          if (lowerVal.endsWith('k')) {
+            multiplier = 1000;
+            lowerVal = lowerVal.slice(0, -1);
+          } else if (lowerVal.endsWith('m')) {
+            multiplier = 1000000;
+            lowerVal = lowerVal.slice(0, -1);
+          } else if (lowerVal.endsWith('b')) {
+            multiplier = 1000000000;
+            lowerVal = lowerVal.slice(0, -1);
+          }
 
-        const parsed = parseFloat(lowerVal) * multiplier;
-        optionValues[optName] = isNaN(parsed) ? null : parsed;
+          const parsed = parseFloat(lowerVal) * multiplier;
+          optionValues[optName] = isNaN(parsed) ? null : parsed;
+        }
+        argIndex++;
       }
-      argIndex++;
     } else if (optType === 5) {
       val = val.toLowerCase();
       optionValues[optName] = val === 'true' || val === 'yes' || val === '1' || val === 'نعم';

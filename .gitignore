@@ -10,3 +10,10 @@ enzo.txt
 scratch/
 package-lock.json
 .env
+*.rar
+*.zip
+*.7z
+/.agents
+/backups
+/tests
+/scripts

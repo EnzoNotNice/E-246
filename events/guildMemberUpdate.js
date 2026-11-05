@@ -1,5 +1,6 @@
 const { Events, EmbedBuilder, PermissionFlagsBits, AuditLogEvent } = require('discord.js');
-const { sendLog } = require('../utils/logger');
+const logger = require('../utils/logger');
+const { sendLog } = logger;
 
 module.exports = {
   name: Events.GuildMemberUpdate,
@@ -21,6 +22,41 @@ module.exports = {
           .setTimestamp()
           .setFooter({ text: `ID: ${newMember.id}` });
         await sendLog(guild.client, guild.id, embed, 'nick_change');
+      }
+
+      // Booster unboost detection: member stopped boosting
+      if (oldMember.premiumSince && !newMember.premiumSince) {
+        const db = require('../database/db');
+        const boosterRoleData = db.getBoosterRole(guild.id, newMember.id);
+        if (boosterRoleData) {
+          try {
+            const role =
+              guild.roles.cache.get(boosterRoleData.roleId) ||
+              (await guild.roles.fetch(boosterRoleData.roleId).catch(() => null));
+            if (role) {
+              await role.delete('User unboosted server - auto cleaning custom role').catch(() => null);
+            }
+          } catch (e) {
+            // Role may already be deleted
+          }
+
+          db.deleteBoosterRole(guild.id, newMember.id);
+
+          const embed = new EmbedBuilder()
+            .setTitle('{emoji:trash} تنظيف رتبة البوستر التلقائي')
+            .setColor(0xed4245)
+            .setDescription(
+              `تم حذف رتبة البوستر المخصصة للعضو <@${newMember.id}> تلقائياً لانتهاء أو إلغاء اشتراك البوست.`
+            )
+            .setTimestamp();
+          await sendLog(guild.client, guild.id, embed, 'protection').catch(() => null);
+
+          await newMember
+            .send({
+              content: `تم حذف رتبتك المخصصة في سيرفر **${guild.name}** بسبب انتهاء أو إلغاء تعزيز السيرفر (Server Boost).`
+            })
+            .catch(() => null);
+        }
       }
 
       const oldRoles = oldMember.roles?.cache;

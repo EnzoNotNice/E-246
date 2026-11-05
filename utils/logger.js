@@ -40,13 +40,26 @@ const logger = winston.createLogger({
   ]
 });
 
+let dbInstance = null;
+function setDb(db) {
+  dbInstance = db;
+}
+
 async function sendLog(client, guildId, embedOrPayload, eventType) {
   try {
     if (!client || !guildId) return;
-    const db = require('../database/db');
+    let db = dbInstance;
+    if (!db) {
+      try {
+        const dbPath = '../database/db';
+        db = require(dbPath);
+      } catch {
+        db = null;
+      }
+    }
 
-    const logSettings = db.getLogSettings ? db.getLogSettings(guildId) : null;
-    const guildSettings = db.getGuildSettings ? db.getGuildSettings(guildId) : null;
+    const logSettings = db && db.getLogSettings ? db.getLogSettings(guildId) : null;
+    const guildSettings = db && db.getGuildSettings ? db.getGuildSettings(guildId) : null;
     const mainLogChannel = guildSettings?.log_channel || null;
 
     let targetChannelId = null;
@@ -72,3 +85,4 @@ async function sendLog(client, guildId, embedOrPayload, eventType) {
 module.exports = logger;
 module.exports.logger = logger;
 module.exports.sendLog = sendLog;
+module.exports.setDb = setDb;

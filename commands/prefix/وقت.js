@@ -23,9 +23,6 @@ module.exports = {
         { name: 'الراتب اليومي', key: 'cooldown_salary_', limit: 86400000 },
         { name: 'الاستثمار', key: 'cooldown_invest_', limit: 14400000 },
         { name: 'التداول', key: 'cooldown_trade_', limit: 14400000 },
-        { name: 'المقامرة', key: 'cooldown_gamble_', limit: 14400000 },
-        { name: 'رمي النرد', key: 'cooldown_dice_', limit: 14400000 },
-        { name: 'رمي العملة', key: 'cooldown_coin_', limit: 7200000 },
         { name: 'سرقة ونهب', key: 'cooldown_rob_', limit: 14400000 }
       ];
 

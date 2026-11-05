@@ -1,5 +1,6 @@
 const { Events, EmbedBuilder, AuditLogEvent } = require('discord.js');
-const { sendLog } = require('../utils/logger');
+const logger = require('../utils/logger');
+const { sendLog } = logger;
 const { handleLimit } = require('../utils/protectionAction');
 
 module.exports = {
@@ -18,10 +19,14 @@ module.exports = {
 
       await sendLog(role.client, role.guild.id, embed, 'role_create');
 
-      const logs = await role.guild.fetchAuditLogs({ type: AuditLogEvent.RoleCreate, limit: 1 });
-      const entry = logs.entries.first();
-      if (entry && entry.target?.id === role.id && Date.now() - entry.createdTimestamp < 15000) {
-        await handleLimit(role.guild, entry.executor, 'role', 'role_limit', 'تجاوز حد الرتب');
+      try {
+        const logs = await role.guild.fetchAuditLogs({ type: AuditLogEvent.RoleCreate, limit: 1 });
+        const entry = logs.entries.first();
+        if (entry && entry.target?.id === role.id && Date.now() - entry.createdTimestamp < 15000) {
+          await handleLimit(role.guild, entry.executor, 'role', 'role_limit', 'تجاوز حد الرتب');
+        }
+      } catch (error) {
+        logger.debug('Could not fetch audit log for role create:', error.message);
       }
     } catch (err) {
       logger.error('[Event Error - roleCreate]:', err);

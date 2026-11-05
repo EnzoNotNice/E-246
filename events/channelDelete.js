@@ -1,12 +1,24 @@
 const { Events, EmbedBuilder, AuditLogEvent } = require('discord.js');
 const { sendLog, logger } = require('../utils/logger');
 const { handleLimit } = require('../utils/protectionAction');
+const db = require('../database/db');
 
 module.exports = {
   name: Events.ChannelDelete,
   async execute(channel) {
     try {
       if (!channel?.guild) return;
+
+      // Clean up temporary voice or ticket state if deleted channel matches
+      try {
+        db.removeTempVoiceChannel(channel.id);
+        const ticket = db.getTicketByChannel(channel.id);
+        if (ticket && ticket.status !== 'closed') {
+          db.closeTicket(channel.id, 'channel_deleted', 'Channel was deleted manually');
+        }
+      } catch (dbErr) {
+        logger.debug('[ChannelDelete] DB cleanup error:', dbErr.message);
+      }
 
       const embed = new EmbedBuilder()
         .setTitle('{emoji:circlex} تم حذف روم')

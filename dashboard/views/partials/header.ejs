@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#000000">
     <title>E-246 — لوحة التحكم</title>
+    <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
+    <link rel="alternate icon" type="image/png" href="/img/logo.png">
+    <link rel="apple-touch-icon" href="/img/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
 
@@ -17,23 +20,33 @@
     <nav class="top-nav">
         <div class="top-nav-left">
             <button id="sidebarToggle" class="sidebar-toggle" title="تبديل القائمة">
-                <i class="fa-solid fa-bars"></i>
+                <i class="fa-solid fa-bars-staggered"></i>
             </button>
             <a href="/" class="brand">
-                <i class="fa-solid fa-robot"></i>
+                <img src="/img/logo.svg" alt="E-246 Logo" class="brand-logo">
                 <span>E-246</span>
             </a>
+            <% if (typeof guild !== 'undefined' && guild && guild.name) { %>
+                <div class="top-nav-breadcrumbs">
+                    <span class="breadcrumb-sep">/</span>
+                    <a href="/dashboard" class="breadcrumb-link">السيرفرات</a>
+                    <span class="breadcrumb-sep">/</span>
+                    <span class="breadcrumb-current"><%= guild.name %></span>
+                </div>
+            <% } %>
         </div>
         <div class="top-nav-right">
-            <button class="nav-icon-btn" title="الإشعارات">
-                <i class="fa-solid fa-bell"></i>
-                <span class="badge"></span>
-            </button>
+            <div class="bot-status-pill" title="حالة اتصال البوت">
+                <span class="status-dot-pulse"></span>
+                <span class="status-text">متصل</span>
+            </div>
             <% if (typeof user !== 'undefined' && user) { %>
-                <a href="/dashboard" class="user-menu">
-                    <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" alt="Avatar">
-                    <span><%= user.username %></span>
-                </a>
+                <div class="user-dropdown-wrap">
+                    <a href="/dashboard" class="user-menu">
+                        <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" alt="Avatar" onerror="this.onerror=null;this.src='/img/logo.png';">
+                        <span><%= user.username %></span>
+                    </a>
+                </div>
             <% } else { %>
                 <a href="/auth/login" class="btn btn-primary btn-sm">
                     <i class="fa-brands fa-discord"></i> تسجيل الدخول
@@ -47,7 +60,10 @@
         <button id="mobileSidebarToggle" class="mobile-menu-btn">
             <i class="fa-solid fa-bars"></i>
         </button>
-        <span class="mobile-logo"><i class="fa-solid fa-robot"></i> E-246</span>
+        <a href="/" class="mobile-logo">
+            <img src="/img/logo.svg" alt="E-246 Logo" class="brand-logo">
+            <span>E-246</span>
+        </a>
         <div class="mobile-spacer"></div>
     </header>
 

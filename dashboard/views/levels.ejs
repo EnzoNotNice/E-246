@@ -3,84 +3,253 @@
 guild = typeof guild !== 'undefined' && guild ? guild : { id: '', name: 'Server' };
 settings = typeof settings !== 'undefined' && settings ? settings : {};
 textChannels = textChannels && (Array.isArray(textChannels) || typeof textChannels.forEach === 'function') ? textChannels : [];
+roles = typeof roles !== 'undefined' && roles ? roles : [];
+
+let currentRewards = [];
+try {
+    currentRewards = JSON.parse(settings.role_rewards || '[]');
+    if (!Array.isArray(currentRewards)) currentRewards = [];
+} catch(_) {
+    currentRewards = [];
+}
 %>
 <%- include('partials/sidebar', { guild, activeTab: 'levels' }) %>
 
 <main class="app-content">
     <div class="content-header">
-        <h1><i class="fa-solid fa-arrow-up-right-dots"></i> نظام المستويات</h1>
-        <p>اضبط نظام الـ XP والمستويات لأعضاء سيرفرك</p>
+        <h1><i class="fa-solid fa-arrow-up-right-dots"></i> نظام المستويات والخبرة (Leveling)</h1>
+        <p>تحفيز التفاعل وضبط نظام نقاط الخبرة ومكافآت الرتب التلقائية مثل بروبوت</p>
     </div>
 
-    <div class="glass-panel reveal">
-        <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
-            <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
-        <% } %>
+    <% if (typeof req !== 'undefined' && req && req.query && req.query.success) { %>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <%= req.query.success %></div>
+    <% } %>
 
-        <form action="/dashboard/<%= guild.id %>/levels" method="POST" class="settings-form">
-            <div class="section-title"><i class="fa-solid fa-sliders"></i> إعدادات الـ XP</div>
+    <form action="/dashboard/<%= guild.id %>/levels" method="POST" class="settings-form" data-ajax="true">
 
-            <div class="form-group">
-                <label for="enabled">حالة نظام المستويات</label>
-                <select id="enabled" name="enabled" class="glass-input">
-                    <option value="1" <%= settings.enabled === 1 ? 'selected' : '' %>>مفعّل</option>
-                    <option value="0" <%= settings.enabled === 0 ? 'selected' : '' %>>معطّل</option>
-                </select>
-                <small>قم بتفعيل أو تعطيل كسب الخبرة (XP) والترقيات في السيرفر بالكامل</small>
+        <!-- Main Switch & Announce Channel -->
+        <div class="glass-panel reveal">
+            <div class="panel-header-with-switch">
+                <div>
+                    <div class="section-title mb-1"><i class="fa-solid fa-sliders"></i> تفعيل نظام المستويات</div>
+                    <span class="text-muted font-sm">تشغيل أو إيقاف احتساب نقاط الـ XP والترقيات في السيرفر بالكامل</span>
+                </div>
+                <label class="pro-switch">
+                    <input type="checkbox" id="enabled_switch" <%= settings.enabled === 1 ? 'checked' : '' %> onchange="document.getElementById('enabled').value = this.checked ? '1' : '0'">
+                    <span class="pro-switch-slider"></span>
+                    <span class="pro-switch-label">مفعّل</span>
+                </label>
+                <input type="hidden" id="enabled" name="enabled" value="<%= settings.enabled === 1 ? '1' : '0' %>">
             </div>
 
             <div class="form-group">
-                <label for="channel">قناة إعلانات الترقية</label>
+                <label for="channel"><i class="fa-solid fa-bullhorn"></i> قناة إعلانات الترقية</label>
                 <select id="channel" name="channel" class="glass-input">
-                    <option value="" <%= !settings.channel ? 'selected' : '' %>>نفس القناة التي يكتب فيها العضو</option>
+                    <option value="" <%= !settings.channel ? 'selected' : '' %>>نفس القناة التي يكتب فيها العضو (افتراضي)</option>
                     <% textChannels.forEach(c => { %>
                         <option value="<%= c.id %>" <%= settings.channel === c.id ? 'selected' : '' %>># <%= c.name %></option>
                     <% }) %>
                 </select>
-                <small>القناة التي سيرسل البوت فيها تهنئة ترقية المستوى للأعضاء</small>
+                <small class="text-muted">الروم الذي يقوم البوت بإرسال تهنئة الترقية فيه عند صعود العضو لمستوى جديد</small>
             </div>
 
+            <div class="grid-form-2 mt-3">
+                <div class="form-group">
+                    <label for="xp_min"><i class="fa-solid fa-message"></i> الحد الأدنى للـ XP (لكل رسالة)</label>
+                    <input type="number" id="xp_min" name="xp_min" class="glass-input" value="<%= settings.xp_min || 15 %>" min="1" max="100" required>
+                    <small class="text-muted">معيار بروبوت القياسي: 15 XP</small>
+                </div>
+                <div class="form-group">
+                    <label for="xp_max"><i class="fa-solid fa-message"></i> الحد الأقصى للـ XP (لكل رسالة)</label>
+                    <input type="number" id="xp_max" name="xp_max" class="glass-input" value="<%= settings.xp_max || 25 %>" min="1" max="100" required>
+                    <small class="text-muted">معيار بروبوت القياسي: 25 XP</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Voice Leveling Settings -->
+        <div class="glass-panel reveal" style="animation-delay: 0.1s;">
+            <div class="panel-header-with-switch">
+                <div>
+                    <div class="section-title mb-1"><i class="fa-solid fa-microphone"></i> مستويات الرومات الصوتية (Voice XP)</div>
+                    <span class="text-muted font-sm">كسب نقاط خبرة تلقائياً أثناء التحدث أو التواجد في القنوات الصوتية</span>
+                </div>
+                <label class="pro-switch">
+                    <input type="checkbox" id="voice_enabled_switch" <%= settings.voice_enabled !== 0 ? 'checked' : '' %> onchange="document.getElementById('voice_enabled').value = this.checked ? '1' : '0'">
+                    <span class="pro-switch-slider"></span>
+                    <span class="pro-switch-label">مفعّل</span>
+                </label>
+                <input type="hidden" id="voice_enabled" name="voice_enabled" value="<%= settings.voice_enabled !== 0 ? '1' : '0' %>">
+            </div>
 
             <div class="grid-form-2">
                 <div class="form-group">
-                    <label for="xp_min">الحد الأدنى من الـ XP لكل رسالة</label>
-                    <input type="number" id="xp_min" name="xp_min" class="glass-input" value="<%= settings.xp_min %>" required>
-                    <small>أقل كمية نقاط يحصل عليها العضو عند إرسال رسالة</small>
+                    <label for="voice_xp_min">الحد الأدنى لـ XP الصوت (لكل دقيقة)</label>
+                    <input type="number" id="voice_xp_min" name="voice_xp_min" class="glass-input" value="<%= settings.voice_xp_min !== undefined ? settings.voice_xp_min : 10 %>" min="1" required>
                 </div>
                 <div class="form-group">
-                    <label for="xp_max">الحد الأقصى من الـ XP لكل رسالة</label>
-                    <input type="number" id="xp_max" name="xp_max" class="glass-input" value="<%= settings.xp_max %>" required>
-                    <small>أقصى كمية نقاط يحصل عليها العضو عند إرسال رسالة</small>
+                    <label for="voice_xp_max">الحد الأقصى لـ XP الصوت (لكل دقيقة)</label>
+                    <input type="number" id="voice_xp_max" name="voice_xp_max" class="glass-input" value="<%= settings.voice_xp_max !== undefined ? settings.voice_xp_max : 20 %>" min="1" required>
                 </div>
             </div>
+        </div>
 
-            <div class="section-title mt-4"><i class="fa-solid fa-microphone"></i> إعدادات مستويات الصوت (Voice Leveling)</div>
+        <!-- Role Rewards Table (ProBot Style) -->
+        <div class="glass-panel reveal" style="animation-delay: 0.2s;">
+            <div class="section-title"><i class="fa-solid fa-award"></i> مكافآت الرتب التلقائية (Role Rewards)</div>
+            <p class="text-muted mb-3">منح رتب تلقائياً للأعضاء فور وصولهم لمستوى محدد</p>
 
-            <div class="form-group">
-                <label for="voice_enabled">حالة مستويات الصوت</label>
-                <select id="voice_enabled" name="voice_enabled" class="glass-input">
-                    <option value="1" <%= settings.voice_enabled !== 0 ? 'selected' : '' %>>مفعّل</option>
-                    <option value="0" <%= settings.voice_enabled === 0 ? 'selected' : '' %>>معطّل</option>
-                </select>
-                <small>تفعيل أو تعطيل كسب نقاط الخبرة أثناء التواجد في الغرف الصوتية</small>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover" id="rewardsTable" style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                    <thead>
+                        <tr style="color: var(--text-2, #9ca3af); font-size: 0.85rem; text-align: right;">
+                            <th style="padding: 10px 16px;">المستوى المطلوب (Level)</th>
+                            <th style="padding: 10px 16px;">الرتبة الممنوحة</th>
+                            <th style="padding: 10px 16px; width: 80px; text-align: center;">إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rewardsTbody">
+                        <% if (currentRewards.length === 0) { %>
+                            <tr id="noRewardsRow">
+                                <td colspan="3" class="text-center text-muted" style="padding: 24px;">لا توجد مكافآت رتب محددة حالياً</td>
+                            </tr>
+                        <% } else { %>
+                            <% currentRewards.sort((a, b) => a.level - b.level).forEach((r, idx) => { %>
+                                <tr class="reward-row" data-index="<%= idx %>" style="background: rgba(255, 255, 255, 0.02); border-radius: 8px;">
+                                    <td style="padding: 12px 16px;">
+                                        <span class="badge" style="background: rgba(88, 101, 242, 0.2); color: #818cf8; padding: 6px 12px; border-radius: 6px; font-weight: bold;">
+                                            المستوى <%= r.level %>
+                                        </span>
+                                        <input type="hidden" class="reward-level" value="<%= r.level %>">
+                                    </td>
+                                    <td style="padding: 12px 16px;">
+                                        <% const foundRole = roles.find(rl => rl.id === r.roleId); %>
+                                        <span style="font-weight: 500;">
+                                            <i class="fa-solid fa-shield-halved" style="color: #5865F2; margin-left: 6px;"></i>
+                                            <%= foundRole ? foundRole.name : ('رتبة غير معروفة (' + r.roleId + ')') %>
+                                        </span>
+                                        <input type="hidden" class="reward-role-id" value="<%= r.roleId %>">
+                                    </td>
+                                    <td style="padding: 12px 16px; text-align: center;">
+                                        <button type="button" class="btn btn-sm btn-danger remove-reward-btn" onclick="removeRewardRow(this)">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } %>
+                    </tbody>
+                </table>
             </div>
 
-            <div class="grid-form-2">
-                <div class="form-group">
-                    <label for="voice_xp_min">الحد الأدنى للـ XP الصوتي (لكل دقيقة)</label>
-                    <input type="number" id="voice_xp_min" name="voice_xp_min" class="glass-input" value="<%= settings.voice_xp_min !== undefined ? settings.voice_xp_min : 10 %>" required>
-                    <small>أقل نقاط خبرة تمنح للعضو كل دقيقة نشاط صوتي</small>
+            <!-- Add Reward Inline Controls -->
+            <div class="d-flex flex-wrap gap-2 align-items-center mt-3 p-3" style="background: rgba(0, 0, 0, 0.25); border-radius: 8px; border: 1px dashed var(--border, #2e3346);">
+                <div style="flex: 1; min-width: 140px;">
+                    <input type="number" id="newRewardLevel" class="glass-input" placeholder="رقم المستوى (مثال: 5)" min="1">
                 </div>
-                <div class="form-group">
-                    <label for="voice_xp_max">الحد الأقصى للـ XP الصوتي (لكل دقيقة)</label>
-                    <input type="number" id="voice_xp_max" name="voice_xp_max" class="glass-input" value="<%= settings.voice_xp_max !== undefined ? settings.voice_xp_max : 20 %>" required>
-                    <small>أقصى نقاط خبرة تمنح للعضو كل دقيقة نشاط صوتي</small>
+                <div style="flex: 2; min-width: 220px;">
+                    <select id="newRewardRole" class="glass-input">
+                        <option value="">اختر الرتبة الممنوحة...</option>
+                        <% roles.forEach(r => { %>
+                            <option value="<%= r.id %>" data-name="<%= r.name %>">@ <%= r.name %></option>
+                        <% }) %>
+                    </select>
                 </div>
+                <button type="button" class="btn btn-secondary" onclick="addRewardRow()">
+                    <i class="fa-solid fa-plus"></i> إضافة مكافأة
+                </button>
             </div>
 
-            <button type="submit" class="btn btn-primary mt-3"><i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات</button>
-        </form>
-    </div>
+            <input type="hidden" id="role_rewards_input" name="role_rewards" value="<%= JSON.stringify(currentRewards) %>">
+        </div>
+
+        <div class="form-group mt-4 d-flex justify-content-between align-items-center">
+            <span class="text-muted font-sm"><i class="fa-solid fa-bolt"></i> يتم الحفظ بدون إعادة تحميل الصفحة</span>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات المستويات</button>
+        </div>
+    </form>
 </main>
+
+<script>
+    function syncRoleRewards() {
+        const rows = document.querySelectorAll('.reward-row');
+        const rewards = [];
+        rows.forEach(r => {
+            const level = parseInt(r.querySelector('.reward-level').value);
+            const roleId = r.querySelector('.reward-role-id').value;
+            if (level && roleId) {
+                rewards.push({ level, roleId });
+            }
+        });
+        rewards.sort((a, b) => a.level - b.level);
+        document.getElementById('role_rewards_input').value = JSON.stringify(rewards);
+    }
+
+    function removeRewardRow(btn) {
+        const row = btn.closest('tr');
+        if (row) {
+            row.remove();
+            syncRoleRewards();
+            const tbody = document.getElementById('rewardsTbody');
+            if (tbody.querySelectorAll('.reward-row').length === 0) {
+                tbody.innerHTML = '<tr id="noRewardsRow"><td colspan="3" class="text-center text-muted" style="padding: 24px;">لا توجد مكافآت رتب محددة حالياً</td></tr>';
+            }
+            if (window.showToast) window.showToast('تم حذف المكافأة من القائمة', 'info', 2000);
+        }
+    }
+
+    function addRewardRow() {
+        const levelInput = document.getElementById('newRewardLevel');
+        const roleSelect = document.getElementById('newRewardRole');
+        const level = parseInt(levelInput.value);
+        const roleId = roleSelect.value;
+        const roleName = roleSelect.options[roleSelect.selectedIndex]?.getAttribute('data-name') || roleId;
+
+        if (!level || level < 1) {
+            if (window.showToast) window.showToast('يرجى إدخال مستوى صالح أكبر من 0', 'error');
+            return;
+        }
+        if (!roleId) {
+            if (window.showToast) window.showToast('يرجى اختيار الرتبة المراد منحها', 'error');
+            return;
+        }
+
+        const noRow = document.getElementById('noRewardsRow');
+        if (noRow) noRow.remove();
+
+        const tbody = document.getElementById('rewardsTbody');
+        const tr = document.createElement('tr');
+        tr.className = 'reward-row';
+        tr.style.background = 'rgba(255, 255, 255, 0.02)';
+        tr.style.borderRadius = '8px';
+        tr.innerHTML = `
+            <td style="padding: 12px 16px;">
+                <span class="badge" style="background: rgba(88, 101, 242, 0.2); color: #818cf8; padding: 6px 12px; border-radius: 6px; font-weight: bold;">
+                    المستوى ${level}
+                </span>
+                <input type="hidden" class="reward-level" value="${level}">
+            </td>
+            <td style="padding: 12px 16px;">
+                <span style="font-weight: 500;">
+                    <i class="fa-solid fa-shield-halved" style="color: #5865F2; margin-left: 6px;"></i>
+                    ${roleName}
+                </span>
+                <input type="hidden" class="reward-role-id" value="${roleId}">
+            </td>
+            <td style="padding: 12px 16px; text-align: center;">
+                <button type="button" class="btn btn-sm btn-danger remove-reward-btn" onclick="removeRewardRow(this)">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Reset inputs
+        levelInput.value = '';
+        roleSelect.value = '';
+        syncRoleRewards();
+        if (window.showToast) window.showToast(`تمت إضافة مكافأة المستوى ${level}`, 'success');
+    }
+</script>
 
 <%- include('partials/footer') %>

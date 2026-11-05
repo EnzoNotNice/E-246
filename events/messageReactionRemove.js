@@ -16,6 +16,14 @@ module.exports = {
         }
       }
 
+      if (reaction?.message?.partial) {
+        try {
+          await reaction.message.fetch();
+        } catch (error) {
+          return;
+        }
+      }
+
       const guildId = reaction?.message?.guildId;
       if (!guildId) return;
 

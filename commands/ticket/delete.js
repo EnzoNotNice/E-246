@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const locale = require('../../utils/locale');
 const { error } = require('../../utils/embeds');
 const db = require('../../database/db');
+const logger = require('../../utils/logger');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -42,8 +43,10 @@ module.exports = {
         })
         .catch(() => null);
 
-      if (attachment) {
-        const logCh = interaction.guild.channels.cache.get(settings.log_channel);
+      if (attachment && settings?.log_channel) {
+        const logCh =
+          interaction.guild.channels.cache.get(settings.log_channel) ||
+          (await interaction.guild.channels.fetch(settings.log_channel).catch(() => null));
         if (logCh) {
           await logCh
             .send({

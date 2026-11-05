@@ -1,6 +1,7 @@
 const db = require('../database/db');
 const { EmbedBuilder } = require('discord.js');
-const { sendLog } = require('../utils/logger');
+const logger = require('../utils/logger');
+const { sendLog } = logger;
 
 module.exports = {
   name: 'messageDelete',

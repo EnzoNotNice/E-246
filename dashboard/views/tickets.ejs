@@ -6,6 +6,9 @@ settings = typeof settings !== 'undefined' && settings ? settings : {};
 categories = categories && (Array.isArray(categories) || typeof categories.forEach === 'function') ? categories : [];
 roles = roles && (Array.isArray(roles) || typeof roles.forEach === 'function') ? roles : [];
 channels = channels && (Array.isArray(channels) || typeof channels.forEach === 'function') ? channels : [];
+ticketAnalytics = typeof ticketAnalytics !== 'undefined' && ticketAnalytics ? ticketAnalytics : { totalTickets: 0, openTickets: 0, closedTickets: 0, avgFirstResponseSeconds: 0, averageRating: 0 };
+ticketRatings = typeof ticketRatings !== 'undefined' && Array.isArray(ticketRatings) ? ticketRatings : [];
+cannedResponses = typeof cannedResponses !== 'undefined' && Array.isArray(cannedResponses) ? cannedResponses : [];
 let pData = {};
 try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
 %>
@@ -15,8 +18,43 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
 <main class="app-content">
 
     <div class="content-header">
-        <h1><i class="fa-solid fa-ticket"></i> منشئ نظام التذاكر</h1>
-        <p>قم بتهيئة وتصميم نظام تذاكر متكامل (الدعم الفني، الشكاوى) في سيرفرك</p>
+        <h1><i class="fa-solid fa-ticket"></i> منشئ نظام التذاكر المتقدم</h1>
+        <p>إدارة وتوجيه التذاكر متعددة الأقسام، التحليلات، الردود السريعة، وأرشفة الويب</p>
+    </div>
+
+    <!-- Support Performance & CSAT Analytics -->
+    <div class="stats-grid reveal mb-3" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="stat-card" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fa-solid fa-ticket"></i> إجمالي التذاكر</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #5865F2;"><%= ticketAnalytics.totalTickets || 0 %></div>
+        </div>
+        <div class="stat-card" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fa-solid fa-folder-open"></i> مفتوحة حالياً</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #eab308;"><%= ticketAnalytics.openTickets || 0 %></div>
+        </div>
+        <div class="stat-card" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fa-solid fa-clock"></i> سرعة أول استجابة</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #3b82f6;">
+                <% 
+                const s = ticketAnalytics.avgFirstResponseSeconds || 0;
+                let sText = 'سريع';
+                if (s > 0) {
+                    if (s < 60) sText = s + ' ثانية';
+                    else if (s < 3600) sText = Math.round(s / 60) + ' دقيقة';
+                    else sText = (s / 3600).toFixed(1) + ' ساعة';
+                } else {
+                    sText = 'فوري';
+                }
+                %>
+                <%= sText %>
+            </div>
+        </div>
+        <div class="stat-card" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 6px;"><i class="fa-solid fa-star"></i> متوسط التقييم CSAT</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #22c55e;">
+                <%= ticketAnalytics.averageRating ? ticketAnalytics.averageRating + ' / 5 ⭐' : '5.0 / 5 ⭐' %>
+            </div>
+        </div>
     </div>
 
     <% if (typeof success !== 'undefined' && success) { %>
@@ -525,6 +563,98 @@ try { pData = JSON.parse(settings.panel_data || '{}'); } catch(e) {}
         <% } else { %>
             <div class="alert alert-info" style="background: rgba(255,255,255,0.02); border: 1px dashed var(--border); text-align: center; padding: 20px; color: var(--text-muted);">
                 <i class="fa-solid fa-info-circle"></i> لم يتم إضافة أي أقسام مخصصة بعد. سيتم استخدام الإعداد العام.
+            </div>
+        <% } %>
+    </div>
+
+    <!-- Canned Responses Library (Feature 105) -->
+    <div class="glass-panel reveal mt-3" style="animation-delay: 0.25s;">
+        <div class="section-title"><i class="fa-solid fa-comments"></i> مكتبة الردود السريعة الجاهزة (Canned Responses)</div>
+        <p class="text-muted">أضف ردوداً نموذجية متكررة للمشرفين لاستخدامها بنقرة زر واحدة أو عبر الأمر <code>/ticket canned send</code></p>
+
+        <form action="/dashboard/<%= guild.id %>/tickets/canned/add" method="POST" class="settings-form mb-4" style="border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+            <div class="grid-form-2">
+                <div class="form-group">
+                    <label>اسم أو اختصار الرد السريع</label>
+                    <input type="text" name="name" class="glass-input" placeholder="مثال: ترحيب، قوانين، تم_الحل" required>
+                    <small>الاسم الذي سيظهر في القائمة المنسدلة للمشرفين</small>
+                </div>
+                <div class="form-group">
+                    <label>نص الرد الكامل</label>
+                    <input type="text" name="content" class="glass-input" placeholder="مثال: أهلاً بك! تم استلام طلبك وجاري مراجعته الآن..." required>
+                    <small>الرسالة التي سيتم إرسالها فوراً في القناة</small>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3"><i class="fa-solid fa-plus"></i> إضافة رد سريع جديد</button>
+        </form>
+
+        <div class="section-title mb-2"><i class="fa-solid fa-list-check"></i> الردود الجاهزة الحالية</div>
+        <% if (typeof cannedResponses !== 'undefined' && cannedResponses && cannedResponses.length > 0) { %>
+            <div class="table-responsive">
+                <table class="glass-table w-100" style="border-collapse: collapse; text-align: right;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted);">
+                            <th style="padding: 10px;">الاسم / الكود</th>
+                            <th style="padding: 10px;">المحتوى</th>
+                            <th style="padding: 10px; text-align: center;">إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% cannedResponses.forEach(c => { %>
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 10px; font-weight: bold; color: #5865F2;"><code><%= c.name %></code></td>
+                                <td style="padding: 10px; color: var(--text-light);"><%= c.content %></td>
+                                <td style="padding: 10px; text-align: center;">
+                                    <form action="/dashboard/<%= guild.id %>/tickets/canned/delete" method="POST" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الرد؟');">
+                                        <input type="hidden" name="name" value="<%= c.name %>">
+                                        <button type="submit" class="btn btn-danger btn-sm" style="padding: 4px 8px;"><i class="fa-solid fa-trash"></i> حذف</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div class="alert alert-info" style="background: rgba(255,255,255,0.02); border: 1px dashed var(--border); text-align: center; padding: 20px; color: var(--text-muted);">
+                <i class="fa-solid fa-info-circle"></i> لا توجد ردود سريعة مسجلة بعد.
+            </div>
+        <% } %>
+    </div>
+
+    <!-- CSAT Customer Ratings (Feature 103) -->
+    <div class="glass-panel reveal mt-3" style="animation-delay: 0.3s;">
+        <div class="section-title"><i class="fa-solid fa-star-half-stroke"></i> أحدث تقييمات جودة الدعم الفني (CSAT)</div>
+        <p class="text-muted">مراقبة آراء وتقييمات الأعضاء بعد إغلاق التذاكر لقياس رضا العملاء وأداء المشرفين</p>
+
+        <% if (typeof ticketRatings !== 'undefined' && ticketRatings && ticketRatings.length > 0) { %>
+            <div class="table-responsive">
+                <table class="glass-table w-100" style="border-collapse: collapse; text-align: right;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border); color: var(--text-muted);">
+                            <th style="padding: 10px;">العضو</th>
+                            <th style="padding: 10px;">التقييم</th>
+                            <th style="padding: 10px;">المشرف</th>
+                            <th style="padding: 10px;">الملاحظات والتعليق</th>
+                            <th style="padding: 10px;">التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% ticketRatings.slice(-10).reverse().forEach(r => { %>
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 10px;"><code><%= r.userId %></code></td>
+                                <td style="padding: 10px; color: #eab308; font-size: 1.1rem;"><%= '⭐'.repeat(r.rating || 5) %> (<%= r.rating %>/5)</td>
+                                <td style="padding: 10px;"><%= r.staffId ? r.staffId : 'عام' %></td>
+                                <td style="padding: 10px;"><%= r.comment || 'لا توجد ملاحظات' %></td>
+                                <td style="padding: 10px; color: var(--text-muted); font-size: 0.85rem;"><%= new Date(r.createdAt || Date.now()).toLocaleDateString('ar-SA') %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div class="alert alert-info" style="background: rgba(255,255,255,0.02); border: 1px dashed var(--border); text-align: center; padding: 20px; color: var(--text-muted);">
+                <i class="fa-solid fa-info-circle"></i> لم يتم تسجيل أي تقييمات بعد في هذا السيرفر.
             </div>
         <% } %>
     </div>

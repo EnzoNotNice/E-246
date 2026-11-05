@@ -2,6 +2,8 @@
 <%
 bot = typeof bot !== 'undefined' ? bot : null;
 user = typeof user !== 'undefined' ? user : null;
+stats = typeof stats !== 'undefined' ? stats : null;
+const inviteUrl = "https://discord.com/api/oauth2/authorize?client_id=" + (process.env.CLIENT_ID || "") + "&permissions=8&scope=bot%20applications.commands";
 %>
 <%- include('partials/sidebar', { activeTab: 'home' }) %>
 
@@ -9,46 +11,57 @@ user = typeof user !== 'undefined' ? user : null;
 
     <!-- Hero Section -->
     <div class="hero-section reveal">
-        <% if (bot) { %>
-            <div class="hero-avatar-wrap">
-                <img src="<%= bot.displayAvatarURL({ size: 256 }) %>" alt="<%= bot.username %>">
-                <span class="hero-status"></span>
-            </div>
-            <h1 class="hero-name"><%= bot.username %></h1>
-        <% } else { %>
-            <div class="hero-avatar-wrap hero-avatar-placeholder">
-                <i class="fa-solid fa-robot"></i>
-            </div>
-            <h1 class="hero-name">E-246 Bot</h1>
-        <% } %>
-        <p class="hero-sub">التجربة المثالية والشاملة لإدارة سيرفرك باحترافية</p>
+        <div class="hero-pill-badge">
+            <i class="fa-solid fa-sparkles"></i>
+            <span>الإصدار 2.0 • تجربة تحكم أسرع وأحدث</span>
+        </div>
 
-        <div class="hero-actions">
-            <% if (!user) { %>
-                <a href="/auth/login" class="btn btn-primary btn-large hero-btn">
-                    <i class="fa-brands fa-discord"></i> ابدأ الآن
-                </a>
+        <div class="hero-avatar-wrap">
+            <% if (bot && bot.displayAvatarURL) { %>
+                <img src="<%= bot.displayAvatarURL({ size: 256 }) %>" alt="<%= bot.username %>" class="hero-avatar-img" onerror="this.onerror=null;this.src='/img/logo.png';">
             <% } else { %>
+                <img src="/img/logo.svg" alt="E-246 Logo" class="hero-avatar-img">
+            <% } %>
+            <span class="hero-status"></span>
+        </div>
+
+        <h1 class="hero-headline">
+            <span class="gradient-accent">E-246</span> تجربة إدارة متكاملة
+        </h1>
+        <p class="hero-subhead">
+            لوحة تحكم احترافية وسريعة لإدارة مجتمعك على ديسكورد، بأنظمة حماية ذكية، تذاكر متطورة، رتب تفاعلية وتصميم عصري مريح للعين.
+        </p>
+
+        <div class="hero-cta-group">
+            <% if (user) { %>
                 <a href="/dashboard" class="btn btn-primary btn-large hero-btn">
                     <i class="fa-solid fa-server"></i> لوحة التحكم
                 </a>
+            <% } else { %>
+                <a href="/auth/login" class="btn btn-primary btn-large hero-btn">
+                    <i class="fa-brands fa-discord"></i> تسجيل الدخول عبر ديسكورد
+                </a>
             <% } %>
+
+            <a href="<%= inviteUrl %>" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-large hero-btn">
+                <i class="fa-solid fa-plus"></i> أضف البوت لسيرفرك
+            </a>
         </div>
     </div>
 
-    <!-- Stats Cards -->
-    <% if (typeof stats !== 'undefined') { %>
-    <div class="bento-grid cols-4 reveal" style="max-width: 900px; margin: 0 auto 40px;">
+    <!-- Live Stats Grid -->
+    <% if (stats) { %>
+    <div class="bento-grid cols-4 reveal" style="max-width: 980px; margin: 0 auto 36px;">
 
-        <div class="metric-card text-center">
+        <div class="glass-panel metric-card text-center">
             <div class="metric-icon" style="margin: 0 auto 12px;">
                 <i class="fa-solid fa-server"></i>
             </div>
             <div class="metric-value" data-count="<%= stats.totalGuilds %>"><%= stats.totalGuilds %></div>
-            <div class="metric-label">إجمالي السيرفرات</div>
+            <div class="metric-label">السيرفرات النشطة</div>
         </div>
 
-        <div class="metric-card text-center">
+        <div class="glass-panel metric-card text-center">
             <div class="metric-icon" style="margin: 0 auto 12px;">
                 <i class="fa-solid fa-users"></i>
             </div>
@@ -56,7 +69,7 @@ user = typeof user !== 'undefined' ? user : null;
             <div class="metric-label">إجمالي الأعضاء</div>
         </div>
 
-        <div class="metric-card text-center">
+        <div class="glass-panel metric-card text-center">
             <div class="metric-icon" style="margin: 0 auto 12px;">
                 <i class="fa-solid fa-microchip"></i>
             </div>
@@ -64,56 +77,99 @@ user = typeof user !== 'undefined' ? user : null;
             <div class="metric-label">استهلاك الذاكرة</div>
         </div>
 
-        <div class="metric-card text-center">
+        <div class="glass-panel metric-card text-center">
             <div class="metric-icon" style="margin: 0 auto 12px;">
                 <i class="fa-solid fa-clock-rotate-left"></i>
             </div>
-            <div class="metric-value" style="font-size: 1.2rem; direction: ltr;"><%= stats.uptime %></div>
+            <div class="metric-value" style="font-size: 1.25rem; direction: ltr;"><%= stats.uptime %></div>
             <div class="metric-label">مدة التشغيل</div>
         </div>
 
     </div>
     <% } %>
 
+    <!-- Features Showcase Bento Grid -->
+    <div style="max-width: 980px; margin: 0 auto 48px;">
+        <div class="section-title reveal" style="margin-bottom: 16px; justify-content: center;">
+            <i class="fa-solid fa-layer-group"></i> أبرز الميزات والأنظمة
+        </div>
+
+        <div class="bento-grid cols-2 reveal">
+            <!-- Feature 1 -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3 class="feature-title">حماية متطورة وفلتر ذكي (AutoMod & Shield)</h3>
+                <p class="feature-desc">
+                    كشف لحظي للروابط الخارجية غير المصرح بها، سبام الرسائل، والكلمات الممنوعة بأساليب التخفي، مع حظر تلقائي وسجلات رقابية فورية لإبقاء سيرفرك آمناً على مدار الساعة.
+                </p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-ticket"></i>
+                </div>
+                <h3 class="feature-title">نظام تذاكر احترافي (Support Tickets)</h3>
+                <p class="feature-desc">
+                    أقسام متعددة للتذاكر، ردود جاهزة بنقرة واحدة، أرشفة HTML كاملة للمحادثات، وتقييم جودة الخدمة ورضا الأعضاء (CSAT) بنظام النجوم والتعليقات.
+                </p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-masks-theater"></i>
+                </div>
+                <h3 class="feature-title">رتب تفاعلية ونماذج تقديم (Roles & Forms)</h3>
+                <p class="feature-desc">
+                    واجهات أزرار وقوائم سريعة لتسليم وتوزيع الرتب بنقرة واحدة، بالإضافة لنظام تقديمات ذكي يرسل الإجابات مباشرة للروم الإداري للموافقة أو الرفض التلقائي.
+                </p>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <h3 class="feature-title">غرف صوتية مؤقتة ومستويات (Voice & Levels)</h3>
+                <p class="feature-desc">
+                    إنشاء فوري للغرف الصوتية الخاصة مع لوحة تحكم كاملة بالعضو (طرد، إقفال، كتم)، ونظام مستويات تفاعلي يمنح رتباً ونقاط خبرة عند التفاعل في الشات.
+                </p>
+            </div>
+        </div>
+    </div>
+
 </main>
 
 <style>
-/* Hero Section */
 .hero-section {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 48px 24px 52px;
+    padding: 40px 20px 48px;
 }
-
 .hero-avatar-wrap {
     position: relative;
-    width: 100px;
-    height: 100px;
-    margin-bottom: 20px;
+    width: 96px;
+    height: 96px;
+    margin-bottom: 22px;
 }
-.hero-avatar-wrap img {
+.hero-avatar-img {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
-    border: 2px solid var(--border);
-    display: block;
-}
-.hero-avatar-placeholder {
-    background: var(--bg-3);
-    border-radius: 50%;
-    border: 2px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.5rem;
-    color: var(--text-2);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    background: var(--bg-1);
+    object-fit: cover;
+    box-shadow: var(--shadow-md);
 }
 .hero-status {
     position: absolute;
-    bottom: 4px;
-    right: 4px;
+    bottom: -2px;
+    right: -2px;
     width: 18px;
     height: 18px;
     background: var(--success);
@@ -121,34 +177,18 @@ user = typeof user !== 'undefined' ? user : null;
     border: 3px solid var(--bg-0);
     animation: hero-pulse 2.5s ease-in-out infinite;
 }
-
 @keyframes hero-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5); }
-    50%       { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+    50%       { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
 }
-
-.hero-name {
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    color: var(--text-1);
-    margin-bottom: 10px;
+.hero-btn {
+    min-width: 190px;
 }
-
-.hero-sub {
-    color: var(--text-2);
-    font-size: 0.95rem;
-    max-width: 400px;
-    line-height: 1.6;
-    margin-bottom: 28px;
-}
-
-.hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.hero-btn { min-width: 180px; }
-
 @media (max-width: 768px) {
-    .hero-section { padding: 32px 16px 36px; }
-    .hero-name { font-size: 1.5rem; }
+    .hero-section { padding: 28px 14px 36px; }
+    .hero-headline { font-size: 1.8rem; }
+    .hero-cta-group { flex-direction: column; width: 100%; }
+    .hero-btn { width: 100%; }
 }
 </style>
 

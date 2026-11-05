@@ -116,8 +116,11 @@ module.exports = {
 
             const durationSeconds = Math.floor((now - startTime) / 1000);
             if (durationSeconds > 0) {
-              db.addVoiceXP(userId, guildId, durationSeconds);
+              const isBooster = Boolean(voiceState.member?.premiumSince);
+              const xpSeconds = isBooster ? Math.floor(durationSeconds * 1.5) : durationSeconds;
+              db.addVoiceXP(userId, guildId, xpSeconds);
               db.addDailyVoiceSeconds(guildId, durationSeconds);
+              db.incrementQuestProgress(userId, 'voice', durationSeconds);
               client.voiceSessions.set(sessionKey, now);
               await checkLevelUp(client, userId, guildId);
             }
@@ -133,6 +136,78 @@ module.exports = {
       } catch (err) {
         logger.error('[Ready] Failed to initialize database backup scheduler:', err);
       }
+
+      // 🕒 Stale Ticket Periodic Auto-Close Checker (every 5 minutes)
+      const discordTranscripts = require('discord-html-transcripts');
+      setInterval(async () => {
+        try {
+          const now = Date.now();
+          const openTickets = db.getOpenTickets();
+          for (const ticket of openTickets) {
+            const lastActivity = ticket.lastMessageAt || ticket.created_at * 1000 || now;
+            const diff = now - lastActivity;
+            const channel = client.channels.cache.get(ticket.channelId);
+            if (!channel) continue;
+
+            // 1. 24h Warning
+            if (diff >= 86400000 && !ticket.staleWarned) {
+              db.markTicketStaleWarned(ticket.channelId);
+              const warnEmbed = new (require('discord.js').EmbedBuilder)()
+                .setColor(0xf59e0b)
+                .setTitle('{emoji:clock} تنبيه خمول التذكرة')
+                .setDescription(
+                  '⚠️ لم يتم تسجيل أي نشاط أو رسائل في هذه التذكرة منذ أكثر من **24 ساعة**.\n' +
+                    'إذا لم يتم التفاعل خلال **24 ساعة قادمة**، سيتم إغلاق التذكرة وأرشفتها تلقائياً.'
+                )
+                .setTimestamp();
+              await channel.send({ embeds: [warnEmbed] }).catch(() => null);
+            }
+
+            // 2. 48h Auto-Close
+            if (diff >= 172800000 && ticket.staleWarned) {
+              const settings = await db.getTicketSettings(ticket.guildId);
+              try {
+                const transcriptHtml = await discordTranscripts.createTranscript(channel, {
+                  limit: -1,
+                  returnType: 'string',
+                  filename: `${channel.name}.html`
+                });
+                db.saveWebTranscript(ticket.guildId, ticket.channelId, ticket.userId, channel.name, transcriptHtml);
+
+                const logCh =
+                  client.channels.cache.get(settings?.log_channel) ||
+                  (await client.channels.fetch(settings?.log_channel).catch(() => null));
+                if (logCh) {
+                  const { AttachmentBuilder } = require('discord.js');
+                  const attachment = new AttachmentBuilder(Buffer.from(transcriptHtml, 'utf-8'), {
+                    name: `${channel.name}.html`
+                  });
+                  await logCh
+                    .send({
+                      content: `⏰ **تم إغلاق تذكرة خاملة تلقائياً (48 ساعة بدون رد):** \`${channel.name}\``,
+                      files: [attachment]
+                    })
+                    .catch(() => null);
+                }
+              } catch (err) {
+                logger.error('[Stale Ticket Transcript Error]:', err);
+              }
+
+              db.closeTicket(ticket.channelId, client.user.id, 'Auto-closed due to 48 hours inactivity');
+              await channel
+                .send({
+                  content: '🔒 تم إغلاق التذكرة تلقائياً بسبب الخمول لأكثر من 48 ساعة. سيتم حذف القناة خلال لحظات...'
+                })
+                .catch(() => null);
+              setTimeout(() => {
+                channel.delete('Auto-close stale ticket').catch(() => null);
+              }, 5000);
+            }
+          }
+        } catch (err) {
+          logger.error('[Stale Ticket Checker Error]:', err);
+        }
+      }, 300000);
     } catch (err) {
       logger.error('Error in ready event execute:', err);
     }
