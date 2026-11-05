@@ -104,7 +104,8 @@ const cache = {
   canned_responses: [],
   ticket_transcripts: new Map(),
   streak_settings: new Map(),
-  user_streaks: new Map()
+  user_streaks: new Map(),
+  theme_color: []
 };
 
 const unhandledSqlStatements = [];
@@ -204,6 +205,7 @@ async function loadMongoCache() {
     'command_restrictions',
     'mod_actions',
     'form_submissions',
+    'theme_color',
     'shop_transactions',
     'ticket_ratings',
     'canned_responses'
